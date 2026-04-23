@@ -1,0 +1,1685 @@
+create extension if not exists pgcrypto;
+
+do $$
+begin
+  if not exists (select 1 from pg_type where typname = 'app_role') then
+    create type public.app_role as enum ('admin', 'user');
+  end if;
+
+  if not exists (select 1 from pg_type where typname = 'task_status') then
+    create type public.task_status as enum ('pending', 'completed');
+  end if;
+
+  if not exists (select 1 from pg_type where typname = 'rsvp_status') then
+    create type public.rsvp_status as enum ('going', 'not_going');
+  end if;
+
+  if not exists (select 1 from pg_type where typname = 'prayer_status') then
+    create type public.prayer_status as enum ('open', 'prayed', 'answered');
+  end if;
+
+  if not exists (select 1 from pg_type where typname = 'resource_type') then
+    create type public.resource_type as enum ('note', 'pdf', 'link');
+  end if;
+
+  if not exists (select 1 from pg_type where typname = 'leadership_type') then
+    create type public.leadership_type as enum ('prayer_session', 'bible_study');
+  end if;
+
+  if not exists (select 1 from pg_type where typname = 'notification_type') then
+    create type public.notification_type as enum ('task_assigned', 'event_created', 'new_message');
+  end if;
+end $$;
+
+do $$
+begin
+  if not exists (
+    select 1
+    from pg_enum
+    where enumtypid = 'public.notification_type'::regtype
+      and enumlabel = 'prayer_reminder'
+  ) then
+    alter type public.notification_type add value 'prayer_reminder';
+  end if;
+
+  if not exists (
+    select 1
+    from pg_enum
+    where enumtypid = 'public.notification_type'::regtype
+      and enumlabel = 'event_reminder'
+  ) then
+    alter type public.notification_type add value 'event_reminder';
+  end if;
+
+  if not exists (
+    select 1
+    from pg_enum
+    where enumtypid = 'public.notification_type'::regtype
+      and enumlabel = 'announcement_posted'
+  ) then
+    alter type public.notification_type add value 'announcement_posted';
+  end if;
+end $$;
+
+create table if not exists public.profiles (
+  id uuid primary key references auth.users (id) on delete cascade,
+  email text not null unique,
+  full_name text,
+  role public.app_role not null default 'user',
+  is_active boolean not null default true,
+  last_seen_at timestamptz,
+  created_at timestamptz not null default timezone('utc', now()),
+  updated_at timestamptz not null default timezone('utc', now())
+);
+
+alter table public.profiles
+add column if not exists avatar_url text;
+
+alter table public.profiles
+add column if not exists last_seen_at timestamptz;
+
+create table if not exists public.events (
+  id uuid primary key default gen_random_uuid(),
+  title text not null check (char_length(trim(title)) > 0),
+  description text not null default '',
+  location text not null default '',
+  starts_at timestamptz not null,
+  ends_at timestamptz,
+  created_by uuid references public.profiles (id) on delete set null,
+  created_at timestamptz not null default timezone('utc', now()),
+  updated_at timestamptz not null default timezone('utc', now())
+);
+
+create table if not exists public.event_ideas (
+  id uuid primary key default gen_random_uuid(),
+  event_id uuid not null references public.events (id) on delete cascade,
+  user_id uuid not null references public.profiles (id) on delete cascade,
+  content text not null check (char_length(trim(content)) between 1 and 1000),
+  created_at timestamptz not null default timezone('utc', now())
+);
+
+create table if not exists public.idea_votes (
+  idea_id uuid not null references public.event_ideas (id) on delete cascade,
+  user_id uuid not null references public.profiles (id) on delete cascade,
+  created_at timestamptz not null default timezone('utc', now()),
+  primary key (idea_id, user_id)
+);
+
+create table if not exists public.tasks (
+  id uuid primary key default gen_random_uuid(),
+  event_id uuid not null references public.events (id) on delete cascade,
+  title text not null check (char_length(trim(title)) > 0),
+  details text not null default '',
+  assignee_id uuid references public.profiles (id) on delete set null,
+  status public.task_status not null default 'pending',
+  due_at timestamptz,
+  created_by uuid references public.profiles (id) on delete set null,
+  created_at timestamptz not null default timezone('utc', now()),
+  updated_at timestamptz not null default timezone('utc', now())
+);
+
+create table if not exists public.rsvps (
+  event_id uuid not null references public.events (id) on delete cascade,
+  user_id uuid not null references public.profiles (id) on delete cascade,
+  status public.rsvp_status not null,
+  updated_at timestamptz not null default timezone('utc', now()),
+  primary key (event_id, user_id)
+);
+
+create table if not exists public.messages (
+  id uuid primary key default gen_random_uuid(),
+  sender_id uuid not null references public.profiles (id) on delete cascade,
+  recipient_id uuid references public.profiles (id) on delete cascade,
+  reply_to_message_id uuid references public.messages (id) on delete set null,
+  title text not null default '',
+  content text not null check (char_length(trim(content)) between 1 and 2000),
+  created_at timestamptz not null default timezone('utc', now()),
+  updated_at timestamptz not null default timezone('utc', now())
+);
+
+alter table public.messages
+add column if not exists reply_to_message_id uuid references public.messages (id) on delete set null;
+
+create table if not exists public.prayer_points (
+  id uuid primary key default gen_random_uuid(),
+  title text not null check (char_length(trim(title)) between 1 and 160),
+  details text not null default '',
+  created_by uuid not null references public.profiles (id) on delete cascade,
+  is_anonymous boolean not null default false,
+  status public.prayer_status not null default 'open',
+  created_at timestamptz not null default timezone('utc', now()),
+  updated_at timestamptz not null default timezone('utc', now())
+);
+
+create table if not exists public.resources (
+  id uuid primary key default gen_random_uuid(),
+  title text not null check (char_length(trim(title)) between 1 and 200),
+  description text not null default '',
+  resource_type public.resource_type not null,
+  note_content text not null default '',
+  external_url text,
+  file_path text,
+  file_name text,
+  created_by uuid references public.profiles (id) on delete set null,
+  created_at timestamptz not null default timezone('utc', now()),
+  updated_at timestamptz not null default timezone('utc', now())
+);
+
+create table if not exists public.notifications (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references public.profiles (id) on delete cascade,
+  notification_type public.notification_type not null,
+  title text not null,
+  body text not null default '',
+  entity_table text,
+  entity_id uuid,
+  read_at timestamptz,
+  created_at timestamptz not null default timezone('utc', now())
+);
+
+create table if not exists public.announcements (
+  id uuid primary key default gen_random_uuid(),
+  title text not null check (char_length(trim(title)) between 1 and 180),
+  body text not null default '' check (char_length(trim(body)) between 1 and 2500),
+  pinned boolean not null default false,
+  created_by uuid references public.profiles (id) on delete set null,
+  created_at timestamptz not null default timezone('utc', now()),
+  updated_at timestamptz not null default timezone('utc', now())
+);
+
+create table if not exists public.prayer_reminders (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references public.profiles (id) on delete cascade,
+  prayer_point_id uuid not null references public.prayer_points (id) on delete cascade,
+  frequency text not null check (frequency in ('daily', 'weekly')),
+  remind_at time not null default '08:00:00',
+  day_of_week integer check (day_of_week between 0 and 6),
+  is_active boolean not null default true,
+  last_sent_at timestamptz,
+  last_prayed_at timestamptz,
+  created_at timestamptz not null default timezone('utc', now()),
+  updated_at timestamptz not null default timezone('utc', now()),
+  unique (user_id, prayer_point_id, frequency)
+);
+
+create table if not exists public.leadership_assignments (
+  id uuid primary key default gen_random_uuid(),
+  assignment_type public.leadership_type not null,
+  assignment_date date not null,
+  leader_id uuid not null references public.profiles (id) on delete cascade,
+  title text not null default '',
+  notes text not null default '',
+  created_by uuid references public.profiles (id) on delete set null,
+  created_at timestamptz not null default timezone('utc', now()),
+  updated_at timestamptz not null default timezone('utc', now()),
+  unique (assignment_type, assignment_date)
+);
+
+create table if not exists public.event_check_ins (
+  id uuid primary key default gen_random_uuid(),
+  event_id uuid not null references public.events (id) on delete cascade,
+  user_id uuid not null references public.profiles (id) on delete cascade,
+  location_label text not null default '',
+  latitude double precision,
+  longitude double precision,
+  checked_in_at timestamptz not null default timezone('utc', now()),
+  unique (event_id, user_id)
+);
+
+create index if not exists idx_events_starts_at on public.events (starts_at);
+create index if not exists idx_event_ideas_event_id on public.event_ideas (event_id);
+create index if not exists idx_event_ideas_user_id on public.event_ideas (user_id);
+create index if not exists idx_tasks_event_id on public.tasks (event_id);
+create index if not exists idx_tasks_assignee_id on public.tasks (assignee_id);
+create index if not exists idx_rsvps_event_id on public.rsvps (event_id);
+create index if not exists idx_messages_recipient_id on public.messages (recipient_id);
+create index if not exists idx_messages_sender_id on public.messages (sender_id);
+create index if not exists idx_messages_created_at on public.messages (created_at desc);
+create index if not exists idx_messages_reply_to_message_id on public.messages (reply_to_message_id);
+create index if not exists idx_profiles_last_seen_at on public.profiles (last_seen_at desc);
+create index if not exists idx_prayer_points_created_at on public.prayer_points (created_at desc);
+create index if not exists idx_prayer_points_status on public.prayer_points (status);
+create index if not exists idx_resources_type on public.resources (resource_type);
+create index if not exists idx_resources_created_at on public.resources (created_at desc);
+create index if not exists idx_notifications_user_created_at on public.notifications (user_id, created_at desc);
+create index if not exists idx_notifications_user_read_at on public.notifications (user_id, read_at);
+create index if not exists idx_announcements_created_at on public.announcements (created_at desc);
+create index if not exists idx_announcements_pinned_created_at on public.announcements (pinned desc, created_at desc);
+create index if not exists idx_leadership_assignments_date on public.leadership_assignments (assignment_date);
+create index if not exists idx_leadership_assignments_leader_id on public.leadership_assignments (leader_id);
+create index if not exists idx_event_check_ins_event_id on public.event_check_ins (event_id);
+create index if not exists idx_event_check_ins_user_id on public.event_check_ins (user_id);
+create index if not exists idx_prayer_reminders_user_id on public.prayer_reminders (user_id);
+create index if not exists idx_prayer_reminders_prayer_point_id on public.prayer_reminders (prayer_point_id);
+
+create or replace function public.set_updated_at()
+returns trigger
+language plpgsql
+as $$
+begin
+  new.updated_at = timezone('utc', now());
+  return new;
+end;
+$$;
+
+create or replace function public.is_active_user()
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select exists (
+    select 1
+    from public.profiles
+    where id = auth.uid() and is_active = true
+  );
+$$;
+
+create or replace function public.is_admin()
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select exists (
+    select 1
+    from public.profiles
+    where id = auth.uid()
+      and role = 'admin'
+      and is_active = true
+  );
+$$;
+
+create or replace function public.current_user_role()
+returns public.app_role
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select role
+  from public.profiles
+  where id = auth.uid()
+  limit 1;
+$$;
+
+create or replace function public.current_user_is_active()
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select coalesce(
+    (
+      select is_active
+      from public.profiles
+      where id = auth.uid()
+      limit 1
+    ),
+    false
+  );
+$$;
+
+create or replace function public.ensure_admin_exists()
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  bootstrap_admin uuid;
+begin
+  if exists (
+    select 1
+    from public.profiles
+    where role = 'admin'
+      and is_active = true
+  ) then
+    return;
+  end if;
+
+  select id
+  into bootstrap_admin
+  from public.profiles
+  where is_active = true
+  order by created_at asc, id asc
+  limit 1;
+
+  if bootstrap_admin is null then
+    select id
+    into bootstrap_admin
+    from public.profiles
+    order by created_at asc, id asc
+    limit 1;
+  end if;
+
+  if bootstrap_admin is not null then
+    update public.profiles
+    set role = 'admin',
+        is_active = true,
+        updated_at = timezone('utc', now())
+    where id = bootstrap_admin;
+  end if;
+end;
+$$;
+
+create or replace function public.backfill_profiles_from_auth()
+returns integer
+language plpgsql
+security definer
+set search_path = public, auth
+as $$
+declare
+  inserted_count integer := 0;
+begin
+  insert into public.profiles (id, email, full_name, role, is_active)
+  select
+    auth_user.id,
+    coalesce(auth_user.email, ''),
+    coalesce(
+      auth_user.raw_user_meta_data ->> 'full_name',
+      split_part(coalesce(auth_user.email, ''), '@', 1)
+    ),
+    'user'::public.app_role,
+    true
+  from auth.users auth_user
+  where not exists (
+    select 1
+    from public.profiles profile
+    where profile.id = auth_user.id
+  );
+
+  get diagnostics inserted_count = row_count;
+
+  perform public.ensure_admin_exists();
+  return inserted_count;
+end;
+$$;
+
+create or replace function public.ensure_current_user_profile()
+returns jsonb
+language plpgsql
+security definer
+set search_path = public, auth
+as $$
+declare
+  auth_user auth.users%rowtype;
+  ensured_profile public.profiles;
+begin
+  if auth.uid() is null then
+    raise exception 'Not authenticated.';
+  end if;
+
+  perform pg_advisory_xact_lock(20260421::bigint);
+
+  select *
+  into auth_user
+  from auth.users
+  where id = auth.uid();
+
+  if auth_user.id is null then
+    raise exception 'Authenticated user record not found.';
+  end if;
+
+  insert into public.profiles (id, email, full_name, role, is_active)
+  values (
+    auth_user.id,
+    coalesce(auth_user.email, ''),
+    coalesce(
+      auth_user.raw_user_meta_data ->> 'full_name',
+      split_part(coalesce(auth_user.email, ''), '@', 1)
+    ),
+    case
+      when exists (
+        select 1
+        from public.profiles
+        where role = 'admin'
+          and is_active = true
+          and id <> auth.uid()
+      ) then 'user'::public.app_role
+      else 'admin'::public.app_role
+    end,
+    true
+  )
+  on conflict (id) do update
+    set email = excluded.email,
+        full_name = coalesce(excluded.full_name, public.profiles.full_name),
+        is_active = true,
+        updated_at = timezone('utc', now())
+  returning * into ensured_profile;
+
+  perform public.ensure_admin_exists();
+
+  select *
+  into ensured_profile
+  from public.profiles
+  where id = auth.uid();
+
+  return to_jsonb(ensured_profile);
+end;
+$$;
+
+create or replace function public.claim_admin_if_no_active_admin()
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  claimed_profile public.profiles;
+begin
+  if auth.uid() is null then
+    raise exception 'Not authenticated.';
+  end if;
+
+  perform pg_advisory_xact_lock(20260422::bigint);
+
+  update public.profiles
+  set role = 'admin',
+      is_active = true,
+      updated_at = timezone('utc', now())
+  where id = auth.uid()
+    and not exists (
+      select 1
+      from public.profiles
+      where role = 'admin'
+        and is_active = true
+        and id <> auth.uid()
+    )
+  returning * into claimed_profile;
+
+  if claimed_profile.id is null then
+    select *
+    into claimed_profile
+    from public.profiles
+    where id = auth.uid();
+  end if;
+
+  return to_jsonb(claimed_profile);
+end;
+$$;
+
+create or replace function public.admin_delete_user(target_user_id uuid)
+returns void
+language plpgsql
+security definer
+set search_path = public, auth
+as $$
+declare
+  target_profile public.profiles;
+begin
+  if auth.uid() is null then
+    raise exception 'Not authenticated.';
+  end if;
+
+  if not public.is_admin() then
+    raise exception 'Admin privileges are required.';
+  end if;
+
+  if target_user_id is null then
+    raise exception 'A target user id is required.';
+  end if;
+
+  if target_user_id = auth.uid() then
+    raise exception 'Use another admin account before deleting your own user.';
+  end if;
+
+  select *
+  into target_profile
+  from public.profiles
+  where id = target_user_id
+  limit 1;
+
+  if target_profile.id is null then
+    raise exception 'The selected user was not found.';
+  end if;
+
+  if target_profile.role = 'admin'
+     and (
+       select count(*)
+       from public.profiles
+       where role = 'admin'
+         and is_active = true
+     ) <= 1 then
+    raise exception 'Keep at least one active admin account in the system.';
+  end if;
+
+  delete from auth.users
+  where id = target_user_id;
+
+  if not found then
+    raise exception 'The selected auth user was not found.';
+  end if;
+end;
+$$;
+
+create or replace function public.handle_new_user()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  insert into public.profiles (id, email, full_name, role)
+  values (
+    new.id,
+    coalesce(new.email, ''),
+    coalesce(new.raw_user_meta_data ->> 'full_name', split_part(coalesce(new.email, ''), '@', 1)),
+    case
+      when exists (
+        select 1
+        from public.profiles
+        where role = 'admin'
+          and is_active = true
+      ) then 'user'::public.app_role
+      else 'admin'::public.app_role
+    end
+  )
+  on conflict (id) do update
+    set email = excluded.email,
+        full_name = excluded.full_name;
+
+  perform public.ensure_admin_exists();
+
+  return new;
+end;
+$$;
+
+create or replace function public.sync_auth_user()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  update public.profiles
+  set
+    email = coalesce(new.email, old.email),
+    full_name = coalesce(new.raw_user_meta_data ->> 'full_name', public.profiles.full_name),
+    updated_at = timezone('utc', now())
+  where id = new.id;
+
+  return new;
+end;
+$$;
+
+create or replace function public.toggle_task_completion(target_task uuid, next_status public.task_status)
+returns public.tasks
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  updated_task public.tasks;
+begin
+  update public.tasks
+  set status = next_status,
+      updated_at = timezone('utc', now())
+  where id = target_task
+    and (public.is_admin() or assignee_id = auth.uid())
+  returning * into updated_task;
+
+  if updated_task.id is null then
+    raise exception 'You do not have permission to update this task.';
+  end if;
+
+  return updated_task;
+end;
+$$;
+
+create or replace function public.create_notification(
+  target_user_id uuid,
+  target_type public.notification_type,
+  target_title text,
+  target_body text,
+  target_entity_table text default null,
+  target_entity_id uuid default null
+)
+returns void
+language sql
+security definer
+set search_path = public
+as $$
+  insert into public.notifications (
+    user_id,
+    notification_type,
+    title,
+    body,
+    entity_table,
+    entity_id
+  )
+  values (
+    target_user_id,
+    target_type,
+    target_title,
+    target_body,
+    target_entity_table,
+    target_entity_id
+  );
+$$;
+
+create or replace function public.handle_event_notification()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  insert into public.notifications (
+    user_id,
+    notification_type,
+    title,
+    body,
+    entity_table,
+    entity_id
+  )
+  select
+    profiles.id,
+    'event_created'::public.notification_type,
+    'New event created',
+    coalesce(new.title, 'A new event') || ' • ' || to_char(new.starts_at, 'DD Mon YYYY HH24:MI'),
+    'events',
+    new.id
+  from public.profiles
+  where profiles.is_active = true;
+
+  return new;
+end;
+$$;
+
+create or replace function public.handle_task_notification()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if new.assignee_id is null then
+    return new;
+  end if;
+
+  if tg_op = 'INSERT' or old.assignee_id is distinct from new.assignee_id then
+    perform public.create_notification(
+      new.assignee_id,
+      'task_assigned',
+      'You were assigned a task',
+      coalesce(new.title, 'A task') || ' is now assigned to you.',
+      'tasks',
+      new.id
+    );
+  end if;
+
+  return new;
+end;
+$$;
+
+create or replace function public.handle_message_notification()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if new.recipient_id is not null then
+    if new.recipient_id <> new.sender_id then
+      perform public.create_notification(
+        new.recipient_id,
+        'new_message',
+        'You have a new message',
+        coalesce(new.title, left(new.content, 80), 'New message'),
+        'messages',
+        new.id
+      );
+    end if;
+
+    return new;
+  end if;
+
+  insert into public.notifications (
+    user_id,
+    notification_type,
+    title,
+    body,
+    entity_table,
+    entity_id
+  )
+  select
+    profiles.id,
+    'new_message'::public.notification_type,
+    'You have a new message',
+    coalesce(new.title, left(new.content, 80), 'New message'),
+    'messages',
+    new.id
+  from public.profiles
+  where profiles.is_active = true
+    and profiles.id <> new.sender_id;
+
+  return new;
+end;
+$$;
+
+create or replace function public.handle_announcement_notification()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  insert into public.notifications (
+    user_id,
+    notification_type,
+    title,
+    body,
+    entity_table,
+    entity_id
+  )
+  select
+    profiles.id,
+    'announcement_posted'::public.notification_type,
+    'New announcement posted',
+    coalesce(new.title, 'Announcement'),
+    'announcements',
+    new.id
+  from public.profiles
+  where profiles.is_active = true
+    and profiles.id is distinct from new.created_by;
+
+  return new;
+end;
+$$;
+
+create or replace function public.create_scheduled_reminders()
+returns integer
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  created_count integer := 0;
+  newly_inserted integer := 0;
+begin
+  if auth.uid() is null then
+    raise exception 'Not authenticated.';
+  end if;
+
+  with due_prayer_reminders as (
+    select
+      reminder.id as reminder_id,
+      reminder.user_id,
+      reminder.prayer_point_id,
+      prayer.title as prayer_title
+    from public.prayer_reminders reminder
+    join public.prayer_points prayer on prayer.id = reminder.prayer_point_id
+    where reminder.user_id = auth.uid()
+      and reminder.is_active = true
+      and prayer.status <> 'answered'
+      and (
+        (reminder.frequency = 'daily' and timezone('utc', now())::time >= reminder.remind_at)
+        or (
+          reminder.frequency = 'weekly'
+          and extract(dow from timezone('utc', now()))::int = coalesce(reminder.day_of_week, 0)
+          and timezone('utc', now())::time >= reminder.remind_at
+        )
+      )
+      and (
+        reminder.last_sent_at is null
+        or date(reminder.last_sent_at at time zone 'utc') < date(timezone('utc', now()))
+      )
+  ),
+  inserted_prayer as (
+    insert into public.notifications (
+      user_id,
+      notification_type,
+      title,
+      body,
+      entity_table,
+      entity_id
+    )
+    select
+      due.user_id,
+      'prayer_reminder'::public.notification_type,
+      'You have a prayer reminder',
+      coalesce(due.prayer_title, 'Remember to pray today.'),
+      'prayer_points',
+      due.prayer_point_id
+    from due_prayer_reminders due
+    returning entity_id
+  )
+  update public.prayer_reminders reminder
+  set last_sent_at = timezone('utc', now()),
+      updated_at = timezone('utc', now())
+  where reminder.id in (select due_prayer_reminders.reminder_id from due_prayer_reminders);
+
+  get diagnostics created_count = row_count;
+
+  insert into public.notifications (
+    user_id,
+    notification_type,
+    title,
+    body,
+    entity_table,
+    entity_id
+  )
+  select
+    auth.uid(),
+    'event_reminder'::public.notification_type,
+    'Upcoming event reminder',
+    coalesce(event_item.title, 'An event') || ' starts at '
+      || to_char(event_item.starts_at, 'DD Mon YYYY HH24:MI'),
+    'events',
+    event_item.id
+  from public.events event_item
+  where event_item.starts_at > timezone('utc', now())
+    and event_item.starts_at <= timezone('utc', now()) + interval '24 hours'
+    and not exists (
+      select 1
+      from public.notifications notification
+      where notification.user_id = auth.uid()
+        and notification.notification_type = 'event_reminder'
+        and notification.entity_table = 'events'
+        and notification.entity_id = event_item.id
+        and notification.created_at > timezone('utc', now()) - interval '26 hours'
+    );
+
+  get diagnostics newly_inserted = row_count;
+  created_count := created_count + newly_inserted;
+  return created_count;
+end;
+$$;
+
+create or replace function public.recommend_next_leader(target_type public.leadership_type)
+returns uuid
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  with active_users as (
+    select id
+    from public.profiles
+    where is_active = true
+  ),
+  ranked as (
+    select
+      active_users.id,
+      max(leadership.assignment_date) as last_assigned_date
+    from active_users
+    left join public.leadership_assignments leadership
+      on leadership.leader_id = active_users.id
+      and leadership.assignment_type = target_type
+    group by active_users.id
+  )
+  select ranked.id
+  from ranked
+  order by ranked.last_assigned_date asc nulls first, ranked.id asc
+  limit 1;
+$$;
+
+grant execute on function public.toggle_task_completion(uuid, public.task_status) to authenticated;
+grant execute on function public.ensure_current_user_profile() to authenticated;
+grant execute on function public.claim_admin_if_no_active_admin() to authenticated;
+grant execute on function public.admin_delete_user(uuid) to authenticated;
+grant execute on function public.create_scheduled_reminders() to authenticated;
+grant execute on function public.recommend_next_leader(public.leadership_type) to authenticated;
+
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values (
+  'avatars',
+  'avatars',
+  true,
+  1048576,
+  array['image/png', 'image/jpeg', 'image/webp', 'image/gif']
+)
+on conflict (id) do update
+set public = excluded.public,
+    file_size_limit = excluded.file_size_limit,
+    allowed_mime_types = excluded.allowed_mime_types;
+
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values (
+  'resources',
+  'resources',
+  true,
+  10485760,
+  array['application/pdf']
+)
+on conflict (id) do update
+set public = excluded.public,
+    file_size_limit = excluded.file_size_limit,
+    allowed_mime_types = excluded.allowed_mime_types;
+
+drop trigger if exists set_profiles_updated_at on public.profiles;
+create trigger set_profiles_updated_at
+before update on public.profiles
+for each row
+execute function public.set_updated_at();
+
+drop trigger if exists set_events_updated_at on public.events;
+create trigger set_events_updated_at
+before update on public.events
+for each row
+execute function public.set_updated_at();
+
+drop trigger if exists set_tasks_updated_at on public.tasks;
+create trigger set_tasks_updated_at
+before update on public.tasks
+for each row
+execute function public.set_updated_at();
+
+drop trigger if exists set_rsvps_updated_at on public.rsvps;
+create trigger set_rsvps_updated_at
+before update on public.rsvps
+for each row
+execute function public.set_updated_at();
+
+drop trigger if exists set_messages_updated_at on public.messages;
+create trigger set_messages_updated_at
+before update on public.messages
+for each row
+execute function public.set_updated_at();
+
+drop trigger if exists set_prayer_points_updated_at on public.prayer_points;
+create trigger set_prayer_points_updated_at
+before update on public.prayer_points
+for each row
+execute function public.set_updated_at();
+
+drop trigger if exists set_resources_updated_at on public.resources;
+create trigger set_resources_updated_at
+before update on public.resources
+for each row
+execute function public.set_updated_at();
+
+drop trigger if exists set_leadership_assignments_updated_at on public.leadership_assignments;
+create trigger set_leadership_assignments_updated_at
+before update on public.leadership_assignments
+for each row
+execute function public.set_updated_at();
+
+drop trigger if exists set_announcements_updated_at on public.announcements;
+create trigger set_announcements_updated_at
+before update on public.announcements
+for each row
+execute function public.set_updated_at();
+
+drop trigger if exists set_prayer_reminders_updated_at on public.prayer_reminders;
+create trigger set_prayer_reminders_updated_at
+before update on public.prayer_reminders
+for each row
+execute function public.set_updated_at();
+
+drop trigger if exists on_event_created_notify on public.events;
+create trigger on_event_created_notify
+after insert on public.events
+for each row
+execute function public.handle_event_notification();
+
+drop trigger if exists on_task_created_notify on public.tasks;
+create trigger on_task_created_notify
+after insert or update on public.tasks
+for each row
+execute function public.handle_task_notification();
+
+drop trigger if exists on_message_created_notify on public.messages;
+create trigger on_message_created_notify
+after insert on public.messages
+for each row
+execute function public.handle_message_notification();
+
+drop trigger if exists on_announcement_created_notify on public.announcements;
+create trigger on_announcement_created_notify
+after insert on public.announcements
+for each row
+execute function public.handle_announcement_notification();
+
+drop trigger if exists on_auth_user_created on auth.users;
+create trigger on_auth_user_created
+after insert on auth.users
+for each row
+execute function public.handle_new_user();
+
+drop trigger if exists on_auth_user_updated on auth.users;
+create trigger on_auth_user_updated
+after update on auth.users
+for each row
+execute function public.sync_auth_user();
+
+alter table public.profiles enable row level security;
+alter table public.events enable row level security;
+alter table public.event_ideas enable row level security;
+alter table public.idea_votes enable row level security;
+alter table public.tasks enable row level security;
+alter table public.rsvps enable row level security;
+alter table public.messages enable row level security;
+alter table public.prayer_points enable row level security;
+alter table public.resources enable row level security;
+alter table public.notifications enable row level security;
+alter table public.announcements enable row level security;
+alter table public.leadership_assignments enable row level security;
+alter table public.event_check_ins enable row level security;
+alter table public.prayer_reminders enable row level security;
+
+drop policy if exists "profiles_select" on public.profiles;
+create policy "profiles_select"
+on public.profiles
+for select
+to authenticated
+using (public.is_active_user());
+
+drop policy if exists "profiles_insert_self" on public.profiles;
+create policy "profiles_insert_self"
+on public.profiles
+for insert
+to authenticated
+with check (auth.uid() = id);
+
+drop policy if exists "profiles_update_self_or_admin" on public.profiles;
+create policy "profiles_update_self_or_admin"
+on public.profiles
+for update
+to authenticated
+using (auth.uid() = id or public.is_admin())
+with check (
+  public.is_admin()
+  or (
+    auth.uid() = id
+    and role = public.current_user_role()
+    and is_active = public.current_user_is_active()
+  )
+);
+
+drop policy if exists "events_select" on public.events;
+create policy "events_select"
+on public.events
+for select
+to authenticated
+using (public.is_active_user());
+
+drop policy if exists "events_admin_insert" on public.events;
+create policy "events_admin_insert"
+on public.events
+for insert
+to authenticated
+with check (public.is_admin());
+
+drop policy if exists "events_admin_update" on public.events;
+create policy "events_admin_update"
+on public.events
+for update
+to authenticated
+using (public.is_admin())
+with check (public.is_admin());
+
+drop policy if exists "events_admin_delete" on public.events;
+create policy "events_admin_delete"
+on public.events
+for delete
+to authenticated
+using (public.is_admin());
+
+drop policy if exists "ideas_select" on public.event_ideas;
+create policy "ideas_select"
+on public.event_ideas
+for select
+to authenticated
+using (public.is_active_user());
+
+drop policy if exists "ideas_insert" on public.event_ideas;
+create policy "ideas_insert"
+on public.event_ideas
+for insert
+to authenticated
+with check (public.is_active_user() and auth.uid() = user_id);
+
+drop policy if exists "ideas_update_owner_or_admin" on public.event_ideas;
+create policy "ideas_update_owner_or_admin"
+on public.event_ideas
+for update
+to authenticated
+using (public.is_admin() or auth.uid() = user_id)
+with check (public.is_admin() or auth.uid() = user_id);
+
+drop policy if exists "ideas_delete_owner_or_admin" on public.event_ideas;
+create policy "ideas_delete_owner_or_admin"
+on public.event_ideas
+for delete
+to authenticated
+using (public.is_admin() or auth.uid() = user_id);
+
+drop policy if exists "votes_select" on public.idea_votes;
+create policy "votes_select"
+on public.idea_votes
+for select
+to authenticated
+using (public.is_active_user());
+
+drop policy if exists "votes_insert" on public.idea_votes;
+create policy "votes_insert"
+on public.idea_votes
+for insert
+to authenticated
+with check (public.is_active_user() and auth.uid() = user_id);
+
+drop policy if exists "votes_delete_own" on public.idea_votes;
+create policy "votes_delete_own"
+on public.idea_votes
+for delete
+to authenticated
+using (public.is_admin() or auth.uid() = user_id);
+
+drop policy if exists "tasks_select" on public.tasks;
+create policy "tasks_select"
+on public.tasks
+for select
+to authenticated
+using (public.is_active_user());
+
+drop policy if exists "tasks_admin_insert" on public.tasks;
+create policy "tasks_admin_insert"
+on public.tasks
+for insert
+to authenticated
+with check (public.is_admin());
+
+drop policy if exists "tasks_admin_update" on public.tasks;
+create policy "tasks_admin_update"
+on public.tasks
+for update
+to authenticated
+using (public.is_admin())
+with check (public.is_admin());
+
+drop policy if exists "tasks_admin_delete" on public.tasks;
+create policy "tasks_admin_delete"
+on public.tasks
+for delete
+to authenticated
+using (public.is_admin());
+
+drop policy if exists "rsvps_select" on public.rsvps;
+create policy "rsvps_select"
+on public.rsvps
+for select
+to authenticated
+using (public.is_active_user());
+
+drop policy if exists "rsvps_insert_own" on public.rsvps;
+create policy "rsvps_insert_own"
+on public.rsvps
+for insert
+to authenticated
+with check (public.is_active_user() and auth.uid() = user_id);
+
+drop policy if exists "rsvps_update_own" on public.rsvps;
+create policy "rsvps_update_own"
+on public.rsvps
+for update
+to authenticated
+using (public.is_admin() or auth.uid() = user_id)
+with check (public.is_admin() or auth.uid() = user_id);
+
+drop policy if exists "rsvps_delete_own_or_admin" on public.rsvps;
+create policy "rsvps_delete_own_or_admin"
+on public.rsvps
+for delete
+to authenticated
+using (public.is_admin() or auth.uid() = user_id);
+
+drop policy if exists "messages_select" on public.messages;
+create policy "messages_select"
+on public.messages
+for select
+to authenticated
+using (
+  public.is_active_user()
+  and (
+    public.is_admin()
+    or recipient_id = auth.uid()
+    or recipient_id is null
+    or sender_id = auth.uid()
+  )
+);
+
+drop policy if exists "messages_admin_insert" on public.messages;
+drop policy if exists "messages_insert_authenticated" on public.messages;
+create policy "messages_insert_authenticated"
+on public.messages
+for insert
+to authenticated
+with check (
+  public.is_active_user()
+  and sender_id = auth.uid()
+  and (
+    recipient_id is null
+    or recipient_id in (
+      select id
+      from public.profiles
+      where is_active = true
+    )
+  )
+);
+
+drop policy if exists "messages_admin_update" on public.messages;
+drop policy if exists "messages_update_owner_or_admin" on public.messages;
+create policy "messages_update_owner_or_admin"
+on public.messages
+for update
+to authenticated
+using (public.is_admin() or sender_id = auth.uid())
+with check (public.is_admin() or sender_id = auth.uid());
+
+drop policy if exists "messages_admin_delete" on public.messages;
+drop policy if exists "messages_delete_owner_or_admin" on public.messages;
+create policy "messages_delete_owner_or_admin"
+on public.messages
+for delete
+to authenticated
+using (public.is_admin() or sender_id = auth.uid());
+
+drop policy if exists "prayer_points_select" on public.prayer_points;
+create policy "prayer_points_select"
+on public.prayer_points
+for select
+to authenticated
+using (public.is_active_user());
+
+drop policy if exists "prayer_points_insert" on public.prayer_points;
+create policy "prayer_points_insert"
+on public.prayer_points
+for insert
+to authenticated
+with check (public.is_active_user() and created_by = auth.uid());
+
+drop policy if exists "prayer_points_update" on public.prayer_points;
+create policy "prayer_points_update"
+on public.prayer_points
+for update
+to authenticated
+using (public.is_active_user())
+with check (public.is_active_user());
+
+drop policy if exists "prayer_points_delete" on public.prayer_points;
+create policy "prayer_points_delete"
+on public.prayer_points
+for delete
+to authenticated
+using (public.is_admin() or created_by = auth.uid());
+
+drop policy if exists "resources_select" on public.resources;
+create policy "resources_select"
+on public.resources
+for select
+to authenticated
+using (public.is_active_user());
+
+drop policy if exists "resources_admin_insert" on public.resources;
+create policy "resources_admin_insert"
+on public.resources
+for insert
+to authenticated
+with check (public.is_admin());
+
+drop policy if exists "resources_admin_update" on public.resources;
+create policy "resources_admin_update"
+on public.resources
+for update
+to authenticated
+using (public.is_admin())
+with check (public.is_admin());
+
+drop policy if exists "resources_admin_delete" on public.resources;
+create policy "resources_admin_delete"
+on public.resources
+for delete
+to authenticated
+using (public.is_admin());
+
+drop policy if exists "notifications_select_own" on public.notifications;
+create policy "notifications_select_own"
+on public.notifications
+for select
+to authenticated
+using (auth.uid() = user_id or public.is_admin());
+
+drop policy if exists "notifications_update_own" on public.notifications;
+create policy "notifications_update_own"
+on public.notifications
+for update
+to authenticated
+using (auth.uid() = user_id or public.is_admin())
+with check (auth.uid() = user_id or public.is_admin());
+
+drop policy if exists "notifications_delete_own" on public.notifications;
+create policy "notifications_delete_own"
+on public.notifications
+for delete
+to authenticated
+using (auth.uid() = user_id or public.is_admin());
+
+drop policy if exists "announcements_select" on public.announcements;
+create policy "announcements_select"
+on public.announcements
+for select
+to authenticated
+using (public.is_active_user());
+
+drop policy if exists "announcements_admin_insert" on public.announcements;
+create policy "announcements_admin_insert"
+on public.announcements
+for insert
+to authenticated
+with check (public.is_admin());
+
+drop policy if exists "announcements_admin_update" on public.announcements;
+create policy "announcements_admin_update"
+on public.announcements
+for update
+to authenticated
+using (public.is_admin())
+with check (public.is_admin());
+
+drop policy if exists "announcements_admin_delete" on public.announcements;
+create policy "announcements_admin_delete"
+on public.announcements
+for delete
+to authenticated
+using (public.is_admin());
+
+drop policy if exists "prayer_reminders_select_own" on public.prayer_reminders;
+create policy "prayer_reminders_select_own"
+on public.prayer_reminders
+for select
+to authenticated
+using (auth.uid() = user_id or public.is_admin());
+
+drop policy if exists "prayer_reminders_insert_own" on public.prayer_reminders;
+create policy "prayer_reminders_insert_own"
+on public.prayer_reminders
+for insert
+to authenticated
+with check (auth.uid() = user_id and public.is_active_user());
+
+drop policy if exists "prayer_reminders_update_own" on public.prayer_reminders;
+create policy "prayer_reminders_update_own"
+on public.prayer_reminders
+for update
+to authenticated
+using (auth.uid() = user_id or public.is_admin())
+with check (auth.uid() = user_id or public.is_admin());
+
+drop policy if exists "prayer_reminders_delete_own" on public.prayer_reminders;
+create policy "prayer_reminders_delete_own"
+on public.prayer_reminders
+for delete
+to authenticated
+using (auth.uid() = user_id or public.is_admin());
+
+drop policy if exists "leadership_assignments_select" on public.leadership_assignments;
+create policy "leadership_assignments_select"
+on public.leadership_assignments
+for select
+to authenticated
+using (public.is_active_user());
+
+drop policy if exists "leadership_assignments_admin_insert" on public.leadership_assignments;
+create policy "leadership_assignments_admin_insert"
+on public.leadership_assignments
+for insert
+to authenticated
+with check (public.is_admin());
+
+drop policy if exists "leadership_assignments_admin_update" on public.leadership_assignments;
+create policy "leadership_assignments_admin_update"
+on public.leadership_assignments
+for update
+to authenticated
+using (public.is_admin())
+with check (public.is_admin());
+
+drop policy if exists "leadership_assignments_admin_delete" on public.leadership_assignments;
+create policy "leadership_assignments_admin_delete"
+on public.leadership_assignments
+for delete
+to authenticated
+using (public.is_admin());
+
+drop policy if exists "event_check_ins_select" on public.event_check_ins;
+create policy "event_check_ins_select"
+on public.event_check_ins
+for select
+to authenticated
+using (public.is_active_user());
+
+drop policy if exists "event_check_ins_insert_own" on public.event_check_ins;
+create policy "event_check_ins_insert_own"
+on public.event_check_ins
+for insert
+to authenticated
+with check (public.is_active_user() and user_id = auth.uid());
+
+drop policy if exists "event_check_ins_update_own" on public.event_check_ins;
+create policy "event_check_ins_update_own"
+on public.event_check_ins
+for update
+to authenticated
+using (public.is_admin() or user_id = auth.uid())
+with check (public.is_admin() or user_id = auth.uid());
+
+drop policy if exists "event_check_ins_delete_own" on public.event_check_ins;
+create policy "event_check_ins_delete_own"
+on public.event_check_ins
+for delete
+to authenticated
+using (public.is_admin() or user_id = auth.uid());
+
+drop policy if exists "avatars_insert_own" on storage.objects;
+create policy "avatars_insert_own"
+on storage.objects
+for insert
+to authenticated
+with check (
+  bucket_id = 'avatars'
+  and (storage.foldername(name))[1] = auth.uid()::text
+);
+
+drop policy if exists "avatars_update_own" on storage.objects;
+create policy "avatars_update_own"
+on storage.objects
+for update
+to authenticated
+using (
+  bucket_id = 'avatars'
+  and (storage.foldername(name))[1] = auth.uid()::text
+)
+with check (
+  bucket_id = 'avatars'
+  and (storage.foldername(name))[1] = auth.uid()::text
+);
+
+drop policy if exists "avatars_delete_own" on storage.objects;
+create policy "avatars_delete_own"
+on storage.objects
+for delete
+to authenticated
+using (
+  bucket_id = 'avatars'
+  and (storage.foldername(name))[1] = auth.uid()::text
+);
+
+drop policy if exists "resources_select_all" on storage.objects;
+create policy "resources_select_all"
+on storage.objects
+for select
+to authenticated
+using (bucket_id = 'resources');
+
+drop policy if exists "resources_admin_insert" on storage.objects;
+create policy "resources_admin_insert"
+on storage.objects
+for insert
+to authenticated
+with check (bucket_id = 'resources' and public.is_admin());
+
+drop policy if exists "resources_admin_update" on storage.objects;
+create policy "resources_admin_update"
+on storage.objects
+for update
+to authenticated
+using (bucket_id = 'resources' and public.is_admin())
+with check (bucket_id = 'resources' and public.is_admin());
+
+drop policy if exists "resources_admin_delete" on storage.objects;
+create policy "resources_admin_delete"
+on storage.objects
+for delete
+to authenticated
+using (bucket_id = 'resources' and public.is_admin());
+
+select public.backfill_profiles_from_auth();
+select public.ensure_admin_exists();
+
+do $$
+begin
+  if not exists (
+    select 1
+    from pg_publication_tables
+    where pubname = 'supabase_realtime'
+      and schemaname = 'public'
+      and tablename = 'profiles'
+  ) then
+    alter publication supabase_realtime add table public.profiles;
+  end if;
+
+  if not exists (
+    select 1
+    from pg_publication_tables
+    where pubname = 'supabase_realtime'
+      and schemaname = 'public'
+      and tablename = 'events'
+  ) then
+    alter publication supabase_realtime add table public.events;
+  end if;
+
+  if not exists (
+    select 1
+    from pg_publication_tables
+    where pubname = 'supabase_realtime'
+      and schemaname = 'public'
+      and tablename = 'event_ideas'
+  ) then
+    alter publication supabase_realtime add table public.event_ideas;
+  end if;
+
+  if not exists (
+    select 1
+    from pg_publication_tables
+    where pubname = 'supabase_realtime'
+      and schemaname = 'public'
+      and tablename = 'idea_votes'
+  ) then
+    alter publication supabase_realtime add table public.idea_votes;
+  end if;
+
+  if not exists (
+    select 1
+    from pg_publication_tables
+    where pubname = 'supabase_realtime'
+      and schemaname = 'public'
+      and tablename = 'tasks'
+  ) then
+    alter publication supabase_realtime add table public.tasks;
+  end if;
+
+  if not exists (
+    select 1
+    from pg_publication_tables
+    where pubname = 'supabase_realtime'
+      and schemaname = 'public'
+      and tablename = 'rsvps'
+  ) then
+    alter publication supabase_realtime add table public.rsvps;
+  end if;
+
+  if not exists (
+    select 1
+    from pg_publication_tables
+    where pubname = 'supabase_realtime'
+      and schemaname = 'public'
+      and tablename = 'messages'
+  ) then
+    alter publication supabase_realtime add table public.messages;
+  end if;
+
+  if not exists (
+    select 1
+    from pg_publication_tables
+    where pubname = 'supabase_realtime'
+      and schemaname = 'public'
+      and tablename = 'prayer_points'
+  ) then
+    alter publication supabase_realtime add table public.prayer_points;
+  end if;
+
+  if not exists (
+    select 1
+    from pg_publication_tables
+    where pubname = 'supabase_realtime'
+      and schemaname = 'public'
+      and tablename = 'resources'
+  ) then
+    alter publication supabase_realtime add table public.resources;
+  end if;
+
+  if not exists (
+    select 1
+    from pg_publication_tables
+    where pubname = 'supabase_realtime'
+      and schemaname = 'public'
+      and tablename = 'notifications'
+  ) then
+    alter publication supabase_realtime add table public.notifications;
+  end if;
+
+  if not exists (
+    select 1
+    from pg_publication_tables
+    where pubname = 'supabase_realtime'
+      and schemaname = 'public'
+      and tablename = 'leadership_assignments'
+  ) then
+    alter publication supabase_realtime add table public.leadership_assignments;
+  end if;
+
+  if not exists (
+    select 1
+    from pg_publication_tables
+    where pubname = 'supabase_realtime'
+      and schemaname = 'public'
+      and tablename = 'event_check_ins'
+  ) then
+    alter publication supabase_realtime add table public.event_check_ins;
+  end if;
+
+  if not exists (
+    select 1
+    from pg_publication_tables
+    where pubname = 'supabase_realtime'
+      and schemaname = 'public'
+      and tablename = 'announcements'
+  ) then
+    alter publication supabase_realtime add table public.announcements;
+  end if;
+
+  if not exists (
+    select 1
+    from pg_publication_tables
+    where pubname = 'supabase_realtime'
+      and schemaname = 'public'
+      and tablename = 'prayer_reminders'
+  ) then
+    alter publication supabase_realtime add table public.prayer_reminders;
+  end if;
+end $$;

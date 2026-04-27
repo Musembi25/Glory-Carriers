@@ -29,6 +29,10 @@ begin
   if not exists (select 1 from pg_type where typname = 'notification_type') then
     create type public.notification_type as enum ('task_assigned', 'event_created', 'new_message');
   end if;
+
+  if not exists (select 1 from pg_type where typname = 'reaction_type') then
+    create type public.reaction_type as enum ('like', 'pray', 'love');
+  end if;
 end $$;
 
 do $$
@@ -58,6 +62,33 @@ begin
       and enumlabel = 'announcement_posted'
   ) then
     alter type public.notification_type add value 'announcement_posted';
+  end if;
+
+  if not exists (
+    select 1
+    from pg_enum
+    where enumtypid = 'public.notification_type'::regtype
+      and enumlabel = 'virtual_meeting_scheduled'
+  ) then
+    alter type public.notification_type add value 'virtual_meeting_scheduled';
+  end if;
+
+  if not exists (
+    select 1
+    from pg_enum
+    where enumtypid = 'public.notification_type'::regtype
+      and enumlabel = 'virtual_meeting_reminder'
+  ) then
+    alter type public.notification_type add value 'virtual_meeting_reminder';
+  end if;
+
+  if not exists (
+    select 1
+    from pg_enum
+    where enumtypid = 'public.notification_type'::regtype
+      and enumlabel = 'virtual_meeting_starting'
+  ) then
+    alter type public.notification_type add value 'virtual_meeting_starting';
   end if;
 end $$;
 
@@ -215,6 +246,37 @@ create table if not exists public.leadership_assignments (
   unique (assignment_type, assignment_date)
 );
 
+create table if not exists public.virtual_meetings (
+  id uuid primary key default gen_random_uuid(),
+  title text not null check (char_length(trim(title)) between 1 and 200),
+  description text not null default '',
+  meet_url text not null check (char_length(trim(meet_url)) between 8 and 2048),
+  starts_at timestamptz not null,
+  ends_at timestamptz,
+  leader_id uuid references public.profiles (id) on delete set null,
+  created_by uuid references public.profiles (id) on delete set null,
+  created_at timestamptz not null default timezone('utc', now()),
+  updated_at timestamptz not null default timezone('utc', now()),
+  check (ends_at is null or ends_at > starts_at)
+);
+
+create table if not exists public.virtual_meeting_attendance (
+  meeting_id uuid not null references public.virtual_meetings (id) on delete cascade,
+  user_id uuid not null references public.profiles (id) on delete cascade,
+  joined_at timestamptz not null default timezone('utc', now()),
+  primary key (meeting_id, user_id)
+);
+
+create table if not exists public.reactions (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references public.profiles (id) on delete cascade,
+  entity_table text not null check (char_length(trim(entity_table)) between 1 and 80),
+  entity_id uuid not null,
+  reaction public.reaction_type not null,
+  created_at timestamptz not null default timezone('utc', now()),
+  unique (user_id, entity_table, entity_id, reaction)
+);
+
 create table if not exists public.event_check_ins (
   id uuid primary key default gen_random_uuid(),
   event_id uuid not null references public.events (id) on delete cascade,
@@ -251,6 +313,12 @@ create index if not exists idx_event_check_ins_event_id on public.event_check_in
 create index if not exists idx_event_check_ins_user_id on public.event_check_ins (user_id);
 create index if not exists idx_prayer_reminders_user_id on public.prayer_reminders (user_id);
 create index if not exists idx_prayer_reminders_prayer_point_id on public.prayer_reminders (prayer_point_id);
+create index if not exists idx_virtual_meetings_starts_at on public.virtual_meetings (starts_at);
+create index if not exists idx_virtual_meetings_leader_id on public.virtual_meetings (leader_id);
+create index if not exists idx_virtual_meeting_attendance_meeting_id on public.virtual_meeting_attendance (meeting_id);
+create index if not exists idx_virtual_meeting_attendance_user_id on public.virtual_meeting_attendance (user_id);
+create index if not exists idx_reactions_entity on public.reactions (entity_table, entity_id);
+create index if not exists idx_reactions_user_id on public.reactions (user_id);
 
 create or replace function public.set_updated_at()
 returns trigger
@@ -791,6 +859,36 @@ begin
 end;
 $$;
 
+create or replace function public.handle_virtual_meeting_notification()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  insert into public.notifications (
+    user_id,
+    notification_type,
+    title,
+    body,
+    entity_table,
+    entity_id
+  )
+  select
+    profiles.id,
+    'virtual_meeting_scheduled'::public.notification_type,
+    'New virtual meeting scheduled',
+    coalesce(new.title, 'Virtual meeting') || ' • ' || to_char(new.starts_at, 'DD Mon YYYY HH24:MI'),
+    'virtual_meetings',
+    new.id
+  from public.profiles
+  where profiles.is_active = true
+    and profiles.id is distinct from new.created_by;
+
+  return new;
+end;
+$$;
+
 create or replace function public.create_scheduled_reminders()
 returns integer
 language plpgsql
@@ -882,6 +980,69 @@ begin
         and notification.entity_table = 'events'
         and notification.entity_id = event_item.id
         and notification.created_at > timezone('utc', now()) - interval '26 hours'
+    );
+
+  get diagnostics newly_inserted = row_count;
+  created_count := created_count + newly_inserted;
+
+  insert into public.notifications (
+    user_id,
+    notification_type,
+    title,
+    body,
+    entity_table,
+    entity_id
+  )
+  select
+    auth.uid(),
+    'virtual_meeting_reminder'::public.notification_type,
+    'Virtual meeting reminder',
+    coalesce(meeting.title, 'A virtual meeting') || ' starts at '
+      || to_char(meeting.starts_at, 'DD Mon YYYY HH24:MI'),
+    'virtual_meetings',
+    meeting.id
+  from public.virtual_meetings meeting
+  where meeting.starts_at > timezone('utc', now())
+    and meeting.starts_at <= timezone('utc', now()) + interval '2 hours'
+    and not exists (
+      select 1
+      from public.notifications notification
+      where notification.user_id = auth.uid()
+        and notification.notification_type = 'virtual_meeting_reminder'
+        and notification.entity_table = 'virtual_meetings'
+        and notification.entity_id = meeting.id
+        and notification.created_at > timezone('utc', now()) - interval '4 hours'
+    );
+
+  get diagnostics newly_inserted = row_count;
+  created_count := created_count + newly_inserted;
+
+  insert into public.notifications (
+    user_id,
+    notification_type,
+    title,
+    body,
+    entity_table,
+    entity_id
+  )
+  select
+    auth.uid(),
+    'virtual_meeting_starting'::public.notification_type,
+    'Meeting is starting now',
+    coalesce(meeting.title, 'A virtual meeting') || ' is live now.',
+    'virtual_meetings',
+    meeting.id
+  from public.virtual_meetings meeting
+  where meeting.starts_at <= timezone('utc', now())
+    and meeting.starts_at > timezone('utc', now()) - interval '10 minutes'
+    and not exists (
+      select 1
+      from public.notifications notification
+      where notification.user_id = auth.uid()
+        and notification.notification_type = 'virtual_meeting_starting'
+        and notification.entity_table = 'virtual_meetings'
+        and notification.entity_id = meeting.id
+        and notification.created_at > timezone('utc', now()) - interval '2 hours'
     );
 
   get diagnostics newly_inserted = row_count;
@@ -1005,6 +1166,12 @@ before update on public.announcements
 for each row
 execute function public.set_updated_at();
 
+drop trigger if exists set_virtual_meetings_updated_at on public.virtual_meetings;
+create trigger set_virtual_meetings_updated_at
+before update on public.virtual_meetings
+for each row
+execute function public.set_updated_at();
+
 drop trigger if exists set_prayer_reminders_updated_at on public.prayer_reminders;
 create trigger set_prayer_reminders_updated_at
 before update on public.prayer_reminders
@@ -1035,6 +1202,12 @@ after insert on public.announcements
 for each row
 execute function public.handle_announcement_notification();
 
+drop trigger if exists on_virtual_meeting_created_notify on public.virtual_meetings;
+create trigger on_virtual_meeting_created_notify
+after insert on public.virtual_meetings
+for each row
+execute function public.handle_virtual_meeting_notification();
+
 drop trigger if exists on_auth_user_created on auth.users;
 create trigger on_auth_user_created
 after insert on auth.users
@@ -1061,6 +1234,9 @@ alter table public.announcements enable row level security;
 alter table public.leadership_assignments enable row level security;
 alter table public.event_check_ins enable row level security;
 alter table public.prayer_reminders enable row level security;
+alter table public.virtual_meetings enable row level security;
+alter table public.virtual_meeting_attendance enable row level security;
+alter table public.reactions enable row level security;
 
 drop policy if exists "profiles_select" on public.profiles;
 create policy "profiles_select"
@@ -1446,6 +1622,85 @@ for delete
 to authenticated
 using (public.is_admin());
 
+drop policy if exists "virtual_meetings_select" on public.virtual_meetings;
+create policy "virtual_meetings_select"
+on public.virtual_meetings
+for select
+to authenticated
+using (public.is_active_user());
+
+drop policy if exists "virtual_meetings_admin_insert" on public.virtual_meetings;
+create policy "virtual_meetings_admin_insert"
+on public.virtual_meetings
+for insert
+to authenticated
+with check (public.is_admin());
+
+drop policy if exists "virtual_meetings_admin_update" on public.virtual_meetings;
+create policy "virtual_meetings_admin_update"
+on public.virtual_meetings
+for update
+to authenticated
+using (public.is_admin())
+with check (public.is_admin());
+
+drop policy if exists "virtual_meetings_admin_delete" on public.virtual_meetings;
+create policy "virtual_meetings_admin_delete"
+on public.virtual_meetings
+for delete
+to authenticated
+using (public.is_admin());
+
+drop policy if exists "virtual_meeting_attendance_select" on public.virtual_meeting_attendance;
+create policy "virtual_meeting_attendance_select"
+on public.virtual_meeting_attendance
+for select
+to authenticated
+using (public.is_active_user());
+
+drop policy if exists "virtual_meeting_attendance_insert_self" on public.virtual_meeting_attendance;
+create policy "virtual_meeting_attendance_insert_self"
+on public.virtual_meeting_attendance
+for insert
+to authenticated
+with check (public.is_active_user() and auth.uid() = user_id);
+
+drop policy if exists "virtual_meeting_attendance_update_self_or_admin" on public.virtual_meeting_attendance;
+create policy "virtual_meeting_attendance_update_self_or_admin"
+on public.virtual_meeting_attendance
+for update
+to authenticated
+using (public.is_admin() or auth.uid() = user_id)
+with check (public.is_admin() or auth.uid() = user_id);
+
+drop policy if exists "virtual_meeting_attendance_delete_self_or_admin" on public.virtual_meeting_attendance;
+create policy "virtual_meeting_attendance_delete_self_or_admin"
+on public.virtual_meeting_attendance
+for delete
+to authenticated
+using (public.is_admin() or auth.uid() = user_id);
+
+drop policy if exists "reactions_select" on public.reactions;
+create policy "reactions_select"
+on public.reactions
+for select
+to authenticated
+using (public.is_active_user());
+
+drop policy if exists "reactions_insert_self" on public.reactions;
+create policy "reactions_insert_self"
+on public.reactions
+for insert
+to authenticated
+with check (public.is_active_user() and auth.uid() = user_id);
+
+drop policy if exists "reactions_delete_self_or_admin" on public.reactions;
+create policy "reactions_delete_self_or_admin"
+on public.reactions
+for delete
+to authenticated
+using (public.is_admin() or auth.uid() = user_id);
+
 drop policy if exists "event_check_ins_select" on public.event_check_ins;
 create policy "event_check_ins_select"
 on public.event_check_ins
@@ -1681,5 +1936,35 @@ begin
       and tablename = 'prayer_reminders'
   ) then
     alter publication supabase_realtime add table public.prayer_reminders;
+  end if;
+
+  if not exists (
+    select 1
+    from pg_publication_tables
+    where pubname = 'supabase_realtime'
+      and schemaname = 'public'
+      and tablename = 'virtual_meetings'
+  ) then
+    alter publication supabase_realtime add table public.virtual_meetings;
+  end if;
+
+  if not exists (
+    select 1
+    from pg_publication_tables
+    where pubname = 'supabase_realtime'
+      and schemaname = 'public'
+      and tablename = 'virtual_meeting_attendance'
+  ) then
+    alter publication supabase_realtime add table public.virtual_meeting_attendance;
+  end if;
+
+  if not exists (
+    select 1
+    from pg_publication_tables
+    where pubname = 'supabase_realtime'
+      and schemaname = 'public'
+      and tablename = 'reactions'
+  ) then
+    alter publication supabase_realtime add table public.reactions;
   end if;
 end $$;

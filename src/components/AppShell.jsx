@@ -10,6 +10,7 @@ const sections = [
   { id: "tasks", label: "Tasks", shortLabel: "Tasks", icon: "check-square" },
   { id: "resources", label: "Resources", shortLabel: "Files", icon: "book-open" },
   { id: "leadership", label: "Leadership", shortLabel: "Leaders", icon: "calendar" },
+  { id: "meetings", label: "Virtual Meetings", shortLabel: "Meet", icon: "video" },
   { id: "messages", label: "Messages", shortLabel: "Chats", icon: "chat" },
   { id: "members", label: "Members", shortLabel: "People", icon: "users" },
   { id: "settings", label: "Settings", shortLabel: "Settings", icon: "settings" }
@@ -56,6 +57,15 @@ const emptyLeadershipForm = {
   leader_id: "",
   title: "",
   notes: ""
+};
+
+const emptyMeetingForm = {
+  title: "",
+  description: "",
+  meet_url: "",
+  starts_at: "",
+  ends_at: "",
+  leader_id: ""
 };
 
 const emptyAnnouncementForm = {
@@ -350,6 +360,13 @@ function NavIcon({ name }) {
           <path d="M8 16.5h3" />
         </svg>
       );
+    case "video":
+      return (
+        <svg {...commonProps}>
+          <path d="M4.5 7.5A2.5 2.5 0 0 1 7 5h8a2.5 2.5 0 0 1 2.5 2.5v9A2.5 2.5 0 0 1 15 19H7a2.5 2.5 0 0 1-2.5-2.5v-9Z" />
+          <path d="M17.5 10 21 8v8l-3.5-2" />
+        </svg>
+      );
     case "users":
       return (
         <svg {...commonProps}>
@@ -568,6 +585,10 @@ export function AppShell() {
   const [leadershipAssignments, setLeadershipAssignments] = useState([]);
   const [eventCheckIns, setEventCheckIns] = useState([]);
   const [prayerReminders, setPrayerReminders] = useState([]);
+  const [virtualMeetings, setVirtualMeetings] = useState([]);
+  const [virtualMeetingAttendance, setVirtualMeetingAttendance] = useState([]);
+  const [reactions, setReactions] = useState([]);
+  const [icebreaker, setIcebreaker] = useState(null);
   const [selectedEventId, setSelectedEventId] = useState("");
   const [eventForm, setEventForm] = useState(emptyEventForm);
   const [taskForm, setTaskForm] = useState(emptyTaskForm);
@@ -575,12 +596,14 @@ export function AppShell() {
   const [prayerForm, setPrayerForm] = useState(emptyPrayerForm);
   const [resourceForm, setResourceForm] = useState(emptyResourceForm);
   const [leadershipForm, setLeadershipForm] = useState(emptyLeadershipForm);
+  const [meetingForm, setMeetingForm] = useState(emptyMeetingForm);
   const [announcementForm, setAnnouncementForm] = useState(emptyAnnouncementForm);
   const [editingEventId, setEditingEventId] = useState("");
   const [editingTaskId, setEditingTaskId] = useState("");
   const [editingResourceId, setEditingResourceId] = useState("");
   const [editingLeadershipId, setEditingLeadershipId] = useState("");
   const [editingAnnouncementId, setEditingAnnouncementId] = useState("");
+  const [editingMeetingId, setEditingMeetingId] = useState("");
   const [ideaDraft, setIdeaDraft] = useState("");
   const [profileForm, setProfileForm] = useState({
     full_name: "",
@@ -618,7 +641,9 @@ export function AppShell() {
     notifications: new Set(),
     event_check_ins: new Set(),
     announcements: new Set(),
-    prayer_reminders: new Set()
+    prayer_reminders: new Set(),
+    virtual_meetings: new Set(),
+    reactions: new Set()
   });
   const hasSeededRealtimeIdsRef = useRef(false);
 
@@ -978,6 +1003,15 @@ export function AppShell() {
       return;
     }
 
+    if (table === "virtual_meetings") {
+      announceActivity({
+        title: "New virtual meeting scheduled",
+        body: `${record.title || "Virtual meeting"} • ${formatDateTime(record.starts_at)}`,
+        tone: "info"
+      });
+      return;
+    }
+
     if (table === "event_ideas") {
       announceActivity({
         title: "New planning idea",
@@ -1077,6 +1111,12 @@ export function AppShell() {
   }, [theme]);
 
   useEffect(() => {
+    const hour = liveNow.getHours();
+    const timeOfDay = hour >= 6 && hour < 12 ? "morning" : hour >= 12 && hour < 18 ? "day" : "night";
+    document.documentElement.dataset.timeOfDay = timeOfDay;
+  }, [liveNow]);
+
+  useEffect(() => {
     setNotificationPermission(getBrowserNotificationPermission());
   }, []);
 
@@ -1157,7 +1197,9 @@ export function AppShell() {
       notifications: new Set(),
       event_check_ins: new Set(),
       announcements: new Set(),
-      prayer_reminders: new Set()
+      prayer_reminders: new Set(),
+      virtual_meetings: new Set(),
+      reactions: new Set()
     };
     setToastNotifications([]);
   }, [user?.id]);
@@ -1201,7 +1243,16 @@ export function AppShell() {
         .select("*")
         .order("checked_in_at", { ascending: false }),
       supabase.from("announcements").select("*").order("created_at", { ascending: false }),
-      supabase.from("prayer_reminders").select("*").order("created_at", { ascending: false })
+      supabase.from("prayer_reminders").select("*").order("created_at", { ascending: false }),
+      supabase
+        .from("virtual_meetings")
+        .select("*")
+        .order("starts_at", { ascending: true }),
+      supabase
+        .from("virtual_meeting_attendance")
+        .select("*")
+        .order("joined_at", { ascending: false }),
+      supabase.from("reactions").select("*").order("created_at", { ascending: false })
     ]);
 
     const failingResult = results.find((result) => result.error);
@@ -1227,6 +1278,9 @@ export function AppShell() {
       setEventCheckIns(results[11].data ?? []);
       setAnnouncements(results[12].data ?? []);
       setPrayerReminders(results[13].data ?? []);
+      setVirtualMeetings(results[14].data ?? []);
+      setVirtualMeetingAttendance(results[15].data ?? []);
+      setReactions(results[16].data ?? []);
     });
 
     if (!hasSeededRealtimeIdsRef.current) {
@@ -1244,8 +1298,12 @@ export function AppShell() {
         ),
         event_check_ins: new Set((results[11].data ?? []).map((checkIn) => checkIn.id)),
         announcements: new Set((results[12].data ?? []).map((announcement) => announcement.id)),
-        prayer_reminders: new Set((results[13].data ?? []).map((reminder) => reminder.id))
+        prayer_reminders: new Set((results[13].data ?? []).map((reminder) => reminder.id)),
+        virtual_meetings: new Set((results[14].data ?? []).map((meeting) => meeting.id))
       };
+      knownRealtimeIdsRef.current.reactions = new Set(
+        (results[16].data ?? []).map((reaction) => reaction.id)
+      );
       hasSeededRealtimeIdsRef.current = true;
     }
 
@@ -1364,6 +1422,9 @@ export function AppShell() {
       "resources",
       "notifications",
       "leadership_assignments",
+      "virtual_meetings",
+      "virtual_meeting_attendance",
+      "reactions",
       "event_check_ins",
       "announcements",
       "prayer_reminders"
@@ -1376,6 +1437,7 @@ export function AppShell() {
       "prayer_points",
       "notifications",
       "leadership_assignments",
+      "virtual_meetings",
       "event_check_ins",
       "announcements"
     ];
@@ -3567,6 +3629,8 @@ export function AppShell() {
                             <span className="pill">To {getMessageRecipientLabel(message)}</span>
                           </div>
 
+                          <ReactionBar entityTable="messages" entityId={message.id} />
+
                           {canReplyToMessage(message) || canDeleteMessage(message) ? (
                             <div className="inline-actions">
                               {canReplyToMessage(message) ? (
@@ -3844,6 +3908,8 @@ export function AppShell() {
                     <p className="idea-text">
                       {prayerPoint.details || "No extra details shared for this prayer request."}
                     </p>
+
+                    <ReactionBar entityTable="prayer_points" entityId={prayerPoint.id} />
 
                     <div className="inline-actions">
                       <button
@@ -4315,6 +4381,590 @@ export function AppShell() {
     );
   }
 
+  function formatCountdown(targetDate) {
+    if (!targetDate) {
+      return "";
+    }
+
+    const diffMs = Math.max(0, targetDate.getTime() - liveNow.getTime());
+    const totalSeconds = Math.floor(diffMs / 1000);
+    const hours = Math.floor(totalSeconds / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    const seconds = totalSeconds % 60;
+
+    const pad = (value) => String(value).padStart(2, "0");
+    return `${pad(hours)}:${pad(minutes)}:${pad(seconds)}`;
+  }
+
+  function getVirtualMeetingEnd(meeting) {
+    const start = new Date(meeting.starts_at);
+
+    if (meeting.ends_at) {
+      return new Date(meeting.ends_at);
+    }
+
+    return new Date(start.getTime() + 60 * 60 * 1000);
+  }
+
+  function getVirtualMeetingStatus(meeting) {
+    const start = new Date(meeting.starts_at);
+    const end = getVirtualMeetingEnd(meeting);
+
+    if (liveNow < start) {
+      return "upcoming";
+    }
+
+    if (liveNow <= end) {
+      return "live";
+    }
+
+    return "ended";
+  }
+
+  function canJoinVirtualMeeting(meeting) {
+    const start = new Date(meeting.starts_at);
+    const end = getVirtualMeetingEnd(meeting);
+    const joinOpensAt = new Date(start.getTime() - 10 * 60 * 1000);
+    const joinClosesAt = new Date(end.getTime() + 15 * 60 * 1000);
+
+    return liveNow >= joinOpensAt && liveNow <= joinClosesAt;
+  }
+
+  const reactionMeta = [
+    { reaction: "like", emoji: "👍", label: "Like" },
+    { reaction: "pray", emoji: "🙏", label: "Pray" },
+    { reaction: "love", emoji: "❤️", label: "Love" }
+  ];
+
+  function getReactionStats(entityTable, entityId) {
+    const rows = reactions.filter(
+      (row) => row.entity_table === entityTable && row.entity_id === entityId
+    );
+
+    const stats = {
+      total: rows.length,
+      byType: rows.reduce((acc, row) => {
+        acc[row.reaction] = (acc[row.reaction] ?? 0) + 1;
+        return acc;
+      }, {})
+    };
+
+    return { rows, stats };
+  }
+
+  async function toggleReaction({ entityTable, entityId, reaction }) {
+    if (!supabase || !user?.id) {
+      return;
+    }
+
+    const existing = reactions.find(
+      (row) =>
+        row.entity_table === entityTable &&
+        row.entity_id === entityId &&
+        row.reaction === reaction &&
+        row.user_id === user.id
+    );
+
+    setSubmitting(true);
+    clearFeedback();
+
+    try {
+      if (existing) {
+        const { error } = await supabase.from("reactions").delete().eq("id", existing.id);
+        if (error) {
+          throw error;
+        }
+      } else {
+        const { error } = await supabase.from("reactions").insert([
+          {
+            user_id: user.id,
+            entity_table: entityTable,
+            entity_id: entityId,
+            reaction
+          }
+        ]);
+        if (error) {
+          throw error;
+        }
+      }
+    } catch (error) {
+      setErrorMessage(error.message);
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  function ReactionBar({ entityTable, entityId }) {
+    const { stats } = getReactionStats(entityTable, entityId);
+
+    return (
+      <div className="reaction-bar" role="group" aria-label="Quick reactions">
+        {reactionMeta.map((item) => {
+          const count = stats.byType[item.reaction] ?? 0;
+          const isSelected = reactions.some(
+            (row) =>
+              row.entity_table === entityTable &&
+              row.entity_id === entityId &&
+              row.reaction === item.reaction &&
+              row.user_id === user.id
+          );
+
+          return (
+            <button
+              key={item.reaction}
+              type="button"
+              className={isSelected ? "reaction-chip active" : "reaction-chip"}
+              onClick={() =>
+                toggleReaction({
+                  entityTable,
+                  entityId,
+                  reaction: item.reaction
+                })
+              }
+              disabled={submitting}
+              aria-pressed={isSelected}
+              title={item.label}
+            >
+              <span className="reaction-emoji" aria-hidden="true">
+                {item.emoji}
+              </span>
+              <span className="reaction-count">{count}</span>
+            </button>
+          );
+        })}
+      </div>
+    );
+  }
+
+  function resetMeetingComposer() {
+    setEditingMeetingId("");
+    setMeetingForm(emptyMeetingForm);
+  }
+
+  function beginMeetingEdit(meeting) {
+    setEditingMeetingId(meeting.id);
+    setMeetingForm({
+      title: meeting.title ?? "",
+      description: meeting.description ?? "",
+      meet_url: meeting.meet_url ?? "",
+      starts_at: toLocalDateTimeInput(meeting.starts_at),
+      ends_at: meeting.ends_at ? toLocalDateTimeInput(meeting.ends_at) : "",
+      leader_id: meeting.leader_id ?? ""
+    });
+    setActiveSection("meetings");
+  }
+
+  async function handleMeetingSubmit(event) {
+    event.preventDefault();
+
+    const payload = {
+      title: meetingForm.title.trim(),
+      description: meetingForm.description.trim(),
+      meet_url: meetingForm.meet_url.trim(),
+      starts_at: toIsoString(meetingForm.starts_at),
+      ends_at: toIsoString(meetingForm.ends_at),
+      leader_id: meetingForm.leader_id || null
+    };
+
+    await runAction(async () => {
+      if (!payload.starts_at) {
+        throw new Error("Please choose a start date & time.");
+      }
+
+      if (!payload.meet_url) {
+        throw new Error("Please paste the Google Meet link.");
+      }
+
+      if (editingMeetingId) {
+        const { error } = await supabase
+          .from("virtual_meetings")
+          .update(payload)
+          .eq("id", editingMeetingId);
+
+        if (error) {
+          throw error;
+        }
+      } else {
+        const { error } = await supabase
+          .from("virtual_meetings")
+          .insert([{ ...payload, created_by: user.id }]);
+
+        if (error) {
+          throw error;
+        }
+      }
+
+      resetMeetingComposer();
+    }, editingMeetingId ? "Meeting updated." : "Meeting scheduled.");
+  }
+
+  async function deleteMeeting(meetingId) {
+    await runAction(async () => {
+      const { error } = await supabase.from("virtual_meetings").delete().eq("id", meetingId);
+
+      if (error) {
+        throw error;
+      }
+
+      if (editingMeetingId === meetingId) {
+        resetMeetingComposer();
+      }
+    }, "Meeting deleted.");
+  }
+
+  async function joinMeeting(meeting) {
+    if (!meeting?.meet_url) {
+      setErrorMessage("This meeting does not have a Google Meet link yet.");
+      return;
+    }
+
+    setSubmitting(true);
+    clearFeedback();
+
+    try {
+      const { error } = await supabase.from("virtual_meeting_attendance").upsert(
+        [
+          {
+            meeting_id: meeting.id,
+            user_id: user.id,
+            joined_at: new Date().toISOString()
+          }
+        ],
+        { onConflict: "meeting_id,user_id" }
+      );
+
+      if (error) {
+        throw error;
+      }
+    } catch (error) {
+      setErrorMessage(error.message);
+      return;
+    } finally {
+      setSubmitting(false);
+    }
+
+    window.location.assign(meeting.meet_url);
+  }
+
+  function renderMeetingsSection() {
+    const sortedMeetings = [...virtualMeetings].sort(
+      (left, right) => new Date(left.starts_at) - new Date(right.starts_at)
+    );
+    const liveMeeting = sortedMeetings.find(
+      (meeting) => getVirtualMeetingStatus(meeting) === "live" && canJoinVirtualMeeting(meeting)
+    );
+    const onlineMembers = activeMembers.filter((member) => onlineMemberIds.has(member.id));
+
+    const icebreakers = [
+      { type: "question", text: "What’s one thing you’re grateful for today?" },
+      { type: "question", text: "What’s one prayer request you’re comfortable sharing?" },
+      { type: "question", text: "What’s one highlight from your week so far?" },
+      { type: "question", text: "What’s one thing God has been teaching you recently?" },
+      { type: "activity", text: "30-second round: share your name + one word for how you’re feeling." },
+      { type: "activity", text: "Two minutes of silent prayer, then one sentence each: what stood out?" },
+      { type: "activity", text: "Pick one member to encourage in one sentence (keep it short)." }
+    ];
+
+    const pickIcebreaker = () => {
+      const next = icebreakers[Math.floor(Math.random() * icebreakers.length)];
+      setIcebreaker(next);
+    };
+
+    return (
+      <div className="section-stack">
+        {liveMeeting ? (
+          <div className="live-now-banner">
+            <div>
+              <span className="live-dot" aria-hidden="true" />
+              <strong>Live meeting now</strong>
+              <span className="muted-text">{liveMeeting.title}</span>
+            </div>
+            <button
+              type="button"
+              className="primary-button"
+              onClick={() => joinMeeting(liveMeeting)}
+              disabled={submitting}
+            >
+              Join now
+            </button>
+          </div>
+        ) : null}
+
+        <Panel
+          title="Online now"
+          subtitle="Presence updates live while members keep the app open."
+        >
+          {onlineMembers.length ? (
+            <div className="avatar-stack-row">
+              <div className="avatar-stack">
+                {onlineMembers.slice(0, 12).map((member) => (
+                  <div key={member.id} className="avatar-online" title={member.full_name || member.email}>
+                    <Avatar member={member} size="small" />
+                    <span className="online-dot" aria-hidden="true" />
+                  </div>
+                ))}
+              </div>
+              <span className="pill success">{onlineMembers.length} online</span>
+            </div>
+          ) : (
+            <div className="inline-help">No one is online right now.</div>
+          )}
+        </Panel>
+
+        {liveMeeting ? (
+          <Panel
+            title="Icebreaker (Live)"
+            subtitle="A single prompt to keep the meeting warm and engaging."
+            action={
+              <button type="button" className="ghost-button" onClick={pickIcebreaker} disabled={submitting}>
+                Generate
+              </button>
+            }
+          >
+            <div className="icebreaker-card">
+              <div className="pill info">
+                {icebreaker
+                  ? icebreaker.type === "activity"
+                    ? "Activity"
+                    : "Question"
+                  : "Icebreaker"}
+              </div>
+              <h3>{icebreaker?.text || "Tap Generate for a quick icebreaker prompt."}</h3>
+              {icebreaker ? (
+                <div className="inline-actions">
+                  <button
+                    type="button"
+                    className="secondary-button"
+                    onClick={() => {
+                      navigator?.clipboard?.writeText?.(icebreaker.text);
+                      setStatusMessage("Icebreaker copied.");
+                    }}
+                  >
+                    Copy
+                  </button>
+                  <button type="button" className="ghost-button" onClick={pickIcebreaker}>
+                    Another one
+                  </button>
+                </div>
+              ) : null}
+            </div>
+          </Panel>
+        ) : null}
+
+        {isAdmin ? (
+          <Panel
+            title={editingMeetingId ? "Edit virtual meeting" : "Schedule a virtual meeting"}
+            subtitle="Paste a Google Meet link, pick a leader, and everyone will see it in real time."
+          >
+            <form className="form-grid" onSubmit={handleMeetingSubmit}>
+              <label className="field">
+                <span>Title</span>
+                <input
+                  type="text"
+                  value={meetingForm.title}
+                  onChange={(event) =>
+                    setMeetingForm((current) => ({ ...current, title: event.target.value }))
+                  }
+                  placeholder="Weekly check-in"
+                  required
+                />
+              </label>
+
+              <label className="field">
+                <span>Date & time</span>
+                <input
+                  type="datetime-local"
+                  value={meetingForm.starts_at}
+                  onChange={(event) =>
+                    setMeetingForm((current) => ({ ...current, starts_at: event.target.value }))
+                  }
+                  required
+                />
+              </label>
+
+              <label className="field">
+                <span>Ends at (optional)</span>
+                <input
+                  type="datetime-local"
+                  value={meetingForm.ends_at}
+                  onChange={(event) =>
+                    setMeetingForm((current) => ({ ...current, ends_at: event.target.value }))
+                  }
+                />
+              </label>
+
+              <label className="field">
+                <span>Google Meet link</span>
+                <input
+                  type="url"
+                  value={meetingForm.meet_url}
+                  onChange={(event) =>
+                    setMeetingForm((current) => ({ ...current, meet_url: event.target.value }))
+                  }
+                  placeholder="https://meet.google.com/xxx-yyyy-zzz"
+                  required
+                />
+              </label>
+
+              <label className="field">
+                <span>Leader / host</span>
+                <select
+                  value={meetingForm.leader_id}
+                  onChange={(event) =>
+                    setMeetingForm((current) => ({ ...current, leader_id: event.target.value }))
+                  }
+                >
+                  <option value="">Unassigned</option>
+                  {activeMembers.map((member) => (
+                    <option key={member.id} value={member.id}>
+                      {member.full_name || member.email}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <label className="field">
+                <span>Description</span>
+                <textarea
+                  value={meetingForm.description}
+                  onChange={(event) =>
+                    setMeetingForm((current) => ({ ...current, description: event.target.value }))
+                  }
+                  rows={4}
+                  placeholder="Agenda, prayer points, discussion theme…"
+                />
+              </label>
+
+              <div className="form-actions">
+                <button type="submit" className="primary-button" disabled={submitting}>
+                  {editingMeetingId ? "Save meeting" : "Schedule meeting"}
+                </button>
+                {editingMeetingId ? (
+                  <button
+                    type="button"
+                    className="secondary-button"
+                    onClick={resetMeetingComposer}
+                    disabled={submitting}
+                  >
+                    Cancel edit
+                  </button>
+                ) : null}
+              </div>
+            </form>
+          </Panel>
+        ) : null}
+
+        <Panel
+          title="Virtual Meetings"
+          subtitle="Join scheduled Google Meet sessions with one click. The Join button activates 10 minutes before start."
+        >
+          {sortedMeetings.length ? (
+            <div className="card-list">
+              {sortedMeetings.map((meeting) => {
+                const status = getVirtualMeetingStatus(meeting);
+                const leaderLabel = meeting.leader_id ? getMemberLabel(meeting.leader_id) : "TBD";
+                const attendeeRows = virtualMeetingAttendance.filter(
+                  (row) => row.meeting_id === meeting.id
+                );
+                const hasJoined = attendeeRows.some((row) => row.user_id === user.id);
+                const joinEnabled = canJoinVirtualMeeting(meeting);
+                const startDate = new Date(meeting.starts_at);
+
+                const statusPillClass =
+                  status === "live"
+                    ? "pill success"
+                    : status === "ended"
+                      ? "pill"
+                      : "pill warning";
+
+                return (
+                  <article key={meeting.id} className="task-card">
+                    <div className="task-header">
+                      <div>
+                        <h3>{meeting.title}</h3>
+                        <p>{formatDateTime(meeting.starts_at)}</p>
+                      </div>
+                      <span className={statusPillClass}>
+                        {status === "live" ? "Live" : status === "ended" ? "Ended" : "Upcoming"}
+                      </span>
+                    </div>
+
+                    <p className="task-details">
+                      Leader: {leaderLabel}
+                      {meeting.description ? ` • ${truncateText(meeting.description, 140)}` : ""}
+                    </p>
+
+                    {status === "upcoming" ? (
+                      <div className="inline-help">
+                        Starts in <strong>{formatCountdown(startDate)}</strong>
+                      </div>
+                    ) : null}
+
+                    <ReactionBar entityTable="virtual_meetings" entityId={meeting.id} />
+
+                    <div className="inline-actions">
+                      <button
+                        type="button"
+                        className={joinEnabled ? "primary-button" : "secondary-button"}
+                        onClick={() => joinMeeting(meeting)}
+                        disabled={submitting || !joinEnabled}
+                        title={
+                          joinEnabled
+                            ? "Join the Google Meet session"
+                            : "Join opens 10 minutes before start"
+                        }
+                      >
+                        {hasJoined ? "Re-join meeting" : "Join meeting"}
+                      </button>
+
+                      <span className="pill info">{attendeeRows.length} joined</span>
+
+                      {isAdmin ? (
+                        <>
+                          <button
+                            type="button"
+                            className="ghost-button"
+                            onClick={() => beginMeetingEdit(meeting)}
+                          >
+                            Edit
+                          </button>
+                          <button
+                            type="button"
+                            className="ghost-button danger"
+                            onClick={() => deleteMeeting(meeting.id)}
+                          >
+                            Delete
+                          </button>
+                        </>
+                      ) : null}
+                    </div>
+
+                    {attendeeRows.length ? (
+                      <div className="inline-help">
+                        {attendeeRows
+                          .slice(0, 6)
+                          .map((row) => getMemberLabel(row.user_id))
+                          .join(", ")}
+                        {attendeeRows.length > 6 ? "…" : ""}
+                      </div>
+                    ) : (
+                      <div className="inline-help">No one has joined yet.</div>
+                    )}
+                  </article>
+                );
+              })}
+            </div>
+          ) : (
+            <EmptyState
+              title="No virtual meetings scheduled"
+              description={isAdmin ? "Schedule your first meeting above." : "Check back soon."}
+            />
+          )}
+        </Panel>
+      </div>
+    );
+  }
+
   function renderMembersSection() {
     return (
       <div className="section-stack">
@@ -4681,6 +5331,8 @@ export function AppShell() {
             ? renderResourcesSection()
             : activeSection === "leadership"
               ? renderLeadershipSection()
+              : activeSection === "meetings"
+                ? renderMeetingsSection()
               : activeSection === "messages"
                 ? renderMessagesSection()
                 : activeSection === "members"

@@ -2,6 +2,7 @@ import { startTransition, useEffect, useRef, useState } from "react";
 import { useAuth } from "../context/AuthContext";
 import { supabase } from "../lib/supabase";
 import { BrandLogo } from "./BrandLogo";
+import { DiscipleshipSection } from "./DiscipleshipSection";
 
 const sections = [
   { id: "events", label: "Dashboard", shortLabel: "Home", icon: "home" },
@@ -9,6 +10,12 @@ const sections = [
   { id: "prayer", label: "Prayer", shortLabel: "Prayer", icon: "prayer" },
   { id: "tasks", label: "Tasks", shortLabel: "Tasks", icon: "check-square" },
   { id: "resources", label: "Resources", shortLabel: "Files", icon: "book-open" },
+  {
+    id: "discipleship",
+    label: "Discipleship",
+    shortLabel: "Discipleship",
+    icon: "discipleship"
+  },
   { id: "leadership", label: "Leadership", shortLabel: "Leaders", icon: "calendar" },
   { id: "meetings", label: "Virtual Meetings", shortLabel: "Meet", icon: "video" },
   { id: "messages", label: "Messages", shortLabel: "Chats", icon: "chat" },
@@ -348,6 +355,17 @@ function NavIcon({ name }) {
           <path d="M19.5 6.5A2.5 2.5 0 0 0 17 4h-4.5a3 3 0 0 0-3 3v13a3 3 0 0 1 3-3H17a2.5 2.5 0 0 1 2.5 2.5V6.5Z" />
         </svg>
       );
+    case "discipleship":
+      return (
+        <svg {...commonProps}>
+          <path d="M12 3v18" />
+          <path d="M7 8h10" />
+          <path d="M8 13h8" />
+          <path d="M9.5 18h5" />
+          <path d="M5 5.5 7 4l2 1.5" />
+          <path d="M19 5.5 17 4l-2 1.5" />
+        </svg>
+      );
     case "calendar":
       return (
         <svg {...commonProps}>
@@ -588,6 +606,15 @@ export function AppShell() {
   const [virtualMeetings, setVirtualMeetings] = useState([]);
   const [virtualMeetingAttendance, setVirtualMeetingAttendance] = useState([]);
   const [reactions, setReactions] = useState([]);
+  const [discipleshipClasses, setDiscipleshipClasses] = useState([]);
+  const [discipleshipSessions, setDiscipleshipSessions] = useState([]);
+  const [discipleshipEnrollments, setDiscipleshipEnrollments] = useState([]);
+  const [discipleshipLessons, setDiscipleshipLessons] = useState([]);
+  const [discipleshipLessonCompletions, setDiscipleshipLessonCompletions] = useState([]);
+  const [discipleshipMemberNotes, setDiscipleshipMemberNotes] = useState([]);
+  const [discipleshipSessionAttendance, setDiscipleshipSessionAttendance] = useState([]);
+  const [discipleshipDiscussions, setDiscipleshipDiscussions] = useState([]);
+  const [selectedDiscipleshipClassId, setSelectedDiscipleshipClassId] = useState("");
   const [icebreaker, setIcebreaker] = useState(null);
   const [selectedEventId, setSelectedEventId] = useState("");
   const [eventForm, setEventForm] = useState(emptyEventForm);
@@ -643,7 +670,10 @@ export function AppShell() {
     announcements: new Set(),
     prayer_reminders: new Set(),
     virtual_meetings: new Set(),
-    reactions: new Set()
+    reactions: new Set(),
+    discipleship_classes: new Set(),
+    discipleship_lessons: new Set(),
+    discipleship_discussions: new Set()
   });
   const hasSeededRealtimeIdsRef = useRef(false);
 
@@ -778,7 +808,44 @@ export function AppShell() {
       : "No event scheduled yet. Ask an admin to create one.",
     myLeadershipTomorrow
       ? `You are leading ${myLeadershipTomorrow.assignment_type === "bible_study" ? "Bible study" : "prayer"} tomorrow.`
-      : "No leadership assignment for tomorrow."
+      : "No leadership assignment for tomorrow.",
+    (() => {
+      const approvedCount = discipleshipEnrollments.filter(
+        (row) => row.user_id === user.id && row.status === "approved"
+      ).length;
+      const pendingAssignments = discipleshipLessons.filter((lesson) => {
+        if (lesson.lesson_type !== "assignment") {
+          return false;
+        }
+
+        const enrolled = discipleshipEnrollments.some(
+          (row) =>
+            row.class_id === lesson.class_id &&
+            row.user_id === user.id &&
+            row.status === "approved"
+        );
+
+        if (!enrolled) {
+          return false;
+        }
+
+        return !discipleshipLessonCompletions.some(
+          (row) => row.lesson_id === lesson.id && row.user_id === user.id
+        );
+      }).length;
+
+      if (!approvedCount && !discipleshipClasses.filter((item) => item.status !== "draft").length) {
+        return "Discipleship classes will appear here when published.";
+      }
+
+      if (!approvedCount) {
+        return "Browse Discipleship to join a class and view guidelines.";
+      }
+
+      return pendingAssignments
+        ? `Discipleship: ${pendingAssignments} assignment${pendingAssignments === 1 ? "" : "s"} still pending.`
+        : "Discipleship: you are up to date on assignments.";
+    })()
   ];
   const recentActivity = [
     ...events.map((eventRecord) => ({
@@ -820,6 +887,19 @@ export function AppShell() {
       kind: "Prayer",
       createdAt: prayer.created_at,
       action: () => setActiveSection("prayer")
+    })),
+    ...discipleshipClasses.map((classItem) => ({
+      id: `discipleship-${classItem.id}`,
+      title: classItem.title || "Discipleship class",
+      meta: classItem.starts_at
+        ? formatDateTime(classItem.starts_at)
+        : "Schedule coming soon",
+      kind: "Discipleship",
+      createdAt: classItem.created_at,
+      action: () => {
+        setSelectedDiscipleshipClassId(classItem.id);
+        setActiveSection("discipleship");
+      }
     }))
   ]
     .sort((left, right) => new Date(right.createdAt) - new Date(left.createdAt))
@@ -847,6 +927,25 @@ export function AppShell() {
       caption: isAdmin
         ? "A quick view of unfinished work across the workspace."
         : "A quick view of the work currently assigned to you."
+    },
+    {
+      label: "Discipleship",
+      value: (() => {
+        const enrolled = discipleshipEnrollments.filter(
+          (row) => row.user_id === user.id && row.status === "approved"
+        ).length;
+
+        if (enrolled) {
+          return `${enrolled} class${enrolled === 1 ? "" : "es"} enrolled`;
+        }
+
+        const openClasses = discipleshipClasses.filter(
+          (item) => item.status !== "draft"
+        ).length;
+
+        return openClasses ? `${openClasses} class${openClasses === 1 ? "" : "es"} open` : "Not enrolled";
+      })(),
+      caption: "Guidelines, assignments, and class project on the Discipleship page."
     }
   ];
   const shouldShowFocusBar = ["events", "planning", "tasks"].includes(activeSection);
@@ -1008,6 +1107,33 @@ export function AppShell() {
         title: "New virtual meeting scheduled",
         body: `${record.title || "Virtual meeting"} • ${formatDateTime(record.starts_at)}`,
         tone: "info"
+      });
+      return;
+    }
+
+    if (table === "discipleship_classes") {
+      announceActivity({
+        title: "New discipleship class",
+        body: record.title || "A new class is available",
+        tone: "info"
+      });
+      return;
+    }
+
+    if (table === "discipleship_lessons") {
+      announceActivity({
+        title: "New lesson uploaded",
+        body: record.title || "New learning material",
+        tone: "accent"
+      });
+      return;
+    }
+
+    if (table === "discipleship_discussions") {
+      announceActivity({
+        title: "New class discussion",
+        body: truncateText(record.content, 96),
+        tone: "success"
       });
       return;
     }
@@ -1199,7 +1325,10 @@ export function AppShell() {
       announcements: new Set(),
       prayer_reminders: new Set(),
       virtual_meetings: new Set(),
-      reactions: new Set()
+      reactions: new Set(),
+      discipleship_classes: new Set(),
+      discipleship_lessons: new Set(),
+      discipleship_discussions: new Set()
     };
     setToastNotifications([]);
   }, [user?.id]);
@@ -1252,7 +1381,27 @@ export function AppShell() {
         .from("virtual_meeting_attendance")
         .select("*")
         .order("joined_at", { ascending: false }),
-      supabase.from("reactions").select("*").order("created_at", { ascending: false })
+      supabase.from("reactions").select("*").order("created_at", { ascending: false }),
+      supabase
+        .from("discipleship_classes")
+        .select("*")
+        .order("starts_at", { ascending: true }),
+      supabase
+        .from("discipleship_class_sessions")
+        .select("*")
+        .order("starts_at", { ascending: true }),
+      supabase.from("discipleship_enrollments").select("*"),
+      supabase
+        .from("discipleship_lessons")
+        .select("*")
+        .order("sort_order", { ascending: true }),
+      supabase.from("discipleship_lesson_completions").select("*"),
+      supabase.from("discipleship_member_notes").select("*"),
+      supabase.from("discipleship_session_attendance").select("*"),
+      supabase
+        .from("discipleship_discussions")
+        .select("*")
+        .order("created_at", { ascending: true })
     ]);
 
     const failingResult = results.find((result) => result.error);
@@ -1281,6 +1430,14 @@ export function AppShell() {
       setVirtualMeetings(results[14].data ?? []);
       setVirtualMeetingAttendance(results[15].data ?? []);
       setReactions(results[16].data ?? []);
+      setDiscipleshipClasses(results[17].data ?? []);
+      setDiscipleshipSessions(results[18].data ?? []);
+      setDiscipleshipEnrollments(results[19].data ?? []);
+      setDiscipleshipLessons(results[20].data ?? []);
+      setDiscipleshipLessonCompletions(results[21].data ?? []);
+      setDiscipleshipMemberNotes(results[22].data ?? []);
+      setDiscipleshipSessionAttendance(results[23].data ?? []);
+      setDiscipleshipDiscussions(results[24].data ?? []);
     });
 
     if (!hasSeededRealtimeIdsRef.current) {
@@ -1299,7 +1456,16 @@ export function AppShell() {
         event_check_ins: new Set((results[11].data ?? []).map((checkIn) => checkIn.id)),
         announcements: new Set((results[12].data ?? []).map((announcement) => announcement.id)),
         prayer_reminders: new Set((results[13].data ?? []).map((reminder) => reminder.id)),
-        virtual_meetings: new Set((results[14].data ?? []).map((meeting) => meeting.id))
+        virtual_meetings: new Set((results[14].data ?? []).map((meeting) => meeting.id)),
+        discipleship_classes: new Set(
+          (results[17].data ?? []).map((classItem) => classItem.id)
+        ),
+        discipleship_lessons: new Set(
+          (results[20].data ?? []).map((lesson) => lesson.id)
+        ),
+        discipleship_discussions: new Set(
+          (results[24].data ?? []).map((post) => post.id)
+        )
       };
       knownRealtimeIdsRef.current.reactions = new Set(
         (results[16].data ?? []).map((reaction) => reaction.id)
@@ -1427,7 +1593,15 @@ export function AppShell() {
       "reactions",
       "event_check_ins",
       "announcements",
-      "prayer_reminders"
+      "prayer_reminders",
+      "discipleship_classes",
+      "discipleship_class_sessions",
+      "discipleship_enrollments",
+      "discipleship_lessons",
+      "discipleship_lesson_completions",
+      "discipleship_member_notes",
+      "discipleship_session_attendance",
+      "discipleship_discussions"
     ];
     const notifiableTables = [
       "events",
@@ -1439,7 +1613,10 @@ export function AppShell() {
       "leadership_assignments",
       "virtual_meetings",
       "event_check_ins",
-      "announcements"
+      "announcements",
+      "discipleship_classes",
+      "discipleship_lessons",
+      "discipleship_discussions"
     ];
 
     tables.forEach((table) => {
@@ -2361,6 +2538,9 @@ export function AppShell() {
       setActiveSection("resources");
     } else if (targetTable === "leadership_assignments") {
       setActiveSection("leadership");
+    } else if (targetTable === "discipleship_classes" && targetId) {
+      setSelectedDiscipleshipClassId(targetId);
+      setActiveSection("discipleship");
     } else if (targetTable === "announcements") {
       setActiveSection("events");
     } else if (targetTable === "event_check_ins" && targetId) {
@@ -2648,6 +2828,104 @@ export function AppShell() {
             )}
           </Panel>
         </div>
+
+        <Panel
+          title="Discipleship"
+          subtitle="Discipleship 1 guidelines, weekly assignments, and the mandatory class project."
+          action={
+            <button
+              type="button"
+              className="primary-button"
+              onClick={() => setActiveSection("discipleship")}
+            >
+              Open Discipleship
+            </button>
+          }
+        >
+          {(() => {
+            const myClassIds = new Set(
+              discipleshipEnrollments
+                .filter((row) => row.user_id === user.id && row.status === "approved")
+                .map((row) => row.class_id)
+            );
+            const pendingAssignments = discipleshipLessons.filter(
+              (lesson) =>
+                lesson.lesson_type === "assignment" &&
+                myClassIds.has(lesson.class_id) &&
+                !discipleshipLessonCompletions.some(
+                  (row) => row.lesson_id === lesson.id && row.user_id === user.id
+                )
+            ).length;
+            const projectLessons = discipleshipLessons.filter(
+              (lesson) => lesson.lesson_type === "project" && myClassIds.has(lesson.class_id)
+            );
+            const projectComplete = projectLessons.some((lesson) =>
+              discipleshipLessonCompletions.some(
+                (row) => row.lesson_id === lesson.id && row.user_id === user.id
+              )
+            );
+            const nextSession = [...discipleshipSessions]
+              .filter(
+                (session) =>
+                  myClassIds.has(session.class_id) &&
+                  new Date(session.starts_at) > new Date(liveNow)
+              )
+              .sort((left, right) => new Date(left.starts_at) - new Date(right.starts_at))[0];
+
+            return (
+              <div className="insight-grid">
+                <article className="insight-card">
+                  <span>Enrollment</span>
+                  <strong>
+                    {myClassIds.size
+                      ? `${myClassIds.size} active class${myClassIds.size === 1 ? "" : "es"}`
+                      : "Not enrolled yet"}
+                  </strong>
+                  <p>
+                    {myClassIds.size
+                      ? "Review guidelines and stay current on assignments."
+                      : "Open Discipleship to join Discipleship 1 or another class."}
+                  </p>
+                </article>
+                <article className="insight-card">
+                  <span>Assignments</span>
+                  <strong>
+                    {myClassIds.size
+                      ? pendingAssignments
+                        ? `${pendingAssignments} pending`
+                        : "All caught up"
+                      : "—"}
+                  </strong>
+                  <p>Weekly tasks with timely submission and integrity.</p>
+                </article>
+                <article className="insight-card">
+                  <span>Class project</span>
+                  <strong>
+                    {!myClassIds.size
+                      ? "—"
+                      : !projectLessons.length
+                        ? "Not published"
+                        : projectComplete
+                          ? "Complete"
+                          : "Required"}
+                  </strong>
+                  <p>Mandatory for graduation from Discipleship 1.</p>
+                </article>
+                <article className="insight-card">
+                  <span>Next session</span>
+                  <strong>
+                    {nextSession ? truncateText(nextSession.title, 28) : "No session scheduled"}
+                  </strong>
+                  <p>
+                    {nextSession
+                      ? formatDateTime(nextSession.starts_at)
+                      : "Sessions appear when leaders schedule them."}
+                  </p>
+                </article>
+              </div>
+            );
+          })()}
+        </Panel>
 
         <div className="content-grid">
           <Panel
@@ -5329,6 +5607,27 @@ export function AppShell() {
           ? renderTaskSection()
           : activeSection === "resources"
             ? renderResourcesSection()
+            : activeSection === "discipleship"
+              ? (
+                <DiscipleshipSection
+                  user={user}
+                  isAdmin={isAdmin}
+                  profiles={profiles}
+                  classes={discipleshipClasses}
+                  sessions={discipleshipSessions}
+                  enrollments={discipleshipEnrollments}
+                  lessons={discipleshipLessons}
+                  lessonCompletions={discipleshipLessonCompletions}
+                  memberNotes={discipleshipMemberNotes}
+                  sessionAttendance={discipleshipSessionAttendance}
+                  discussions={discipleshipDiscussions}
+                  runAction={runAction}
+                  submitting={submitting}
+                  liveNow={liveNow}
+                  selectedClassId={selectedDiscipleshipClassId}
+                  onSelectClassId={setSelectedDiscipleshipClassId}
+                />
+              )
             : activeSection === "leadership"
               ? renderLeadershipSection()
               : activeSection === "meetings"

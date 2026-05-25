@@ -90,6 +90,81 @@ begin
   ) then
     alter type public.notification_type add value 'virtual_meeting_starting';
   end if;
+
+  if not exists (
+    select 1
+    from pg_enum
+    where enumtypid = 'public.notification_type'::regtype
+      and enumlabel = 'discipleship_class_created'
+  ) then
+    alter type public.notification_type add value 'discipleship_class_created';
+  end if;
+
+  if not exists (
+    select 1
+    from pg_enum
+    where enumtypid = 'public.notification_type'::regtype
+      and enumlabel = 'discipleship_class_reminder'
+  ) then
+    alter type public.notification_type add value 'discipleship_class_reminder';
+  end if;
+
+  if not exists (
+    select 1
+    from pg_enum
+    where enumtypid = 'public.notification_type'::regtype
+      and enumlabel = 'discipleship_class_starting'
+  ) then
+    alter type public.notification_type add value 'discipleship_class_starting';
+  end if;
+
+  if not exists (
+    select 1
+    from pg_enum
+    where enumtypid = 'public.notification_type'::regtype
+      and enumlabel = 'discipleship_lesson_added'
+  ) then
+    alter type public.notification_type add value 'discipleship_lesson_added';
+  end if;
+
+  if not exists (
+    select 1
+    from pg_enum
+    where enumtypid = 'public.notification_type'::regtype
+      and enumlabel = 'discipleship_enrollment_approved'
+  ) then
+    alter type public.notification_type add value 'discipleship_enrollment_approved';
+  end if;
+end $$;
+
+do $$
+begin
+  if not exists (select 1 from pg_type where typname = 'discipleship_class_status') then
+    create type public.discipleship_class_status as enum ('draft', 'upcoming', 'ongoing', 'completed');
+  end if;
+
+  if not exists (select 1 from pg_type where typname = 'discipleship_enrollment_status') then
+    create type public.discipleship_enrollment_status as enum ('pending', 'approved', 'rejected');
+  end if;
+
+  if not exists (select 1 from pg_type where typname = 'discipleship_lesson_type') then
+    create type public.discipleship_lesson_type as enum (
+      'note', 'pdf', 'link', 'video', 'assignment', 'discussion', 'project'
+    );
+  end if;
+
+  if not exists (
+    select 1
+    from pg_enum
+    where enumtypid = 'public.discipleship_lesson_type'::regtype
+      and enumlabel = 'project'
+  ) then
+    alter type public.discipleship_lesson_type add value 'project';
+  end if;
+
+  if not exists (select 1 from pg_type where typname = 'discipleship_attendance_status') then
+    create type public.discipleship_attendance_status as enum ('present', 'absent', 'late');
+  end if;
 end $$;
 
 create table if not exists public.profiles (
@@ -267,6 +342,103 @@ create table if not exists public.virtual_meeting_attendance (
   primary key (meeting_id, user_id)
 );
 
+create table if not exists public.discipleship_classes (
+  id uuid primary key default gen_random_uuid(),
+  title text not null check (char_length(trim(title)) between 1 and 200),
+  description text not null default '',
+  leader_id uuid references public.profiles (id) on delete set null,
+  banner_url text,
+  starts_at timestamptz,
+  ends_at timestamptz,
+  meet_url text,
+  status public.discipleship_class_status not null default 'upcoming',
+  requires_approval boolean not null default false,
+  created_by uuid references public.profiles (id) on delete set null,
+  created_at timestamptz not null default timezone('utc', now()),
+  updated_at timestamptz not null default timezone('utc', now()),
+  check (ends_at is null or starts_at is null or ends_at > starts_at)
+);
+
+create table if not exists public.discipleship_class_sessions (
+  id uuid primary key default gen_random_uuid(),
+  class_id uuid not null references public.discipleship_classes (id) on delete cascade,
+  title text not null check (char_length(trim(title)) between 1 and 200),
+  starts_at timestamptz not null,
+  ends_at timestamptz,
+  meet_url text,
+  sort_order integer not null default 0,
+  created_at timestamptz not null default timezone('utc', now()),
+  updated_at timestamptz not null default timezone('utc', now()),
+  check (ends_at is null or ends_at > starts_at)
+);
+
+create table if not exists public.discipleship_enrollments (
+  class_id uuid not null references public.discipleship_classes (id) on delete cascade,
+  user_id uuid not null references public.profiles (id) on delete cascade,
+  status public.discipleship_enrollment_status not null default 'approved',
+  enrolled_at timestamptz not null default timezone('utc', now()),
+  approved_by uuid references public.profiles (id) on delete set null,
+  approved_at timestamptz,
+  primary key (class_id, user_id)
+);
+
+create table if not exists public.discipleship_lessons (
+  id uuid primary key default gen_random_uuid(),
+  class_id uuid not null references public.discipleship_classes (id) on delete cascade,
+  title text not null check (char_length(trim(title)) between 1 and 200),
+  description text not null default '',
+  module_label text not null default '',
+  sort_order integer not null default 0,
+  lesson_type public.discipleship_lesson_type not null default 'note',
+  note_content text not null default '',
+  external_url text,
+  video_url text,
+  file_path text,
+  file_name text,
+  assignment_prompt text not null default '',
+  discussion_topic text not null default '',
+  created_by uuid references public.profiles (id) on delete set null,
+  created_at timestamptz not null default timezone('utc', now()),
+  updated_at timestamptz not null default timezone('utc', now())
+);
+
+create table if not exists public.discipleship_lesson_completions (
+  lesson_id uuid not null references public.discipleship_lessons (id) on delete cascade,
+  user_id uuid not null references public.profiles (id) on delete cascade,
+  completed_at timestamptz not null default timezone('utc', now()),
+  primary key (lesson_id, user_id)
+);
+
+create table if not exists public.discipleship_member_notes (
+  id uuid primary key default gen_random_uuid(),
+  lesson_id uuid not null references public.discipleship_lessons (id) on delete cascade,
+  user_id uuid not null references public.profiles (id) on delete cascade,
+  content text not null default '' check (char_length(trim(content)) between 0 and 5000),
+  created_at timestamptz not null default timezone('utc', now()),
+  updated_at timestamptz not null default timezone('utc', now()),
+  unique (lesson_id, user_id)
+);
+
+create table if not exists public.discipleship_session_attendance (
+  session_id uuid not null references public.discipleship_class_sessions (id) on delete cascade,
+  user_id uuid not null references public.profiles (id) on delete cascade,
+  status public.discipleship_attendance_status not null default 'present',
+  checked_in_at timestamptz not null default timezone('utc', now()),
+  marked_by uuid references public.profiles (id) on delete set null,
+  primary key (session_id, user_id)
+);
+
+create table if not exists public.discipleship_discussions (
+  id uuid primary key default gen_random_uuid(),
+  class_id uuid not null references public.discipleship_classes (id) on delete cascade,
+  lesson_id uuid references public.discipleship_lessons (id) on delete cascade,
+  user_id uuid not null references public.profiles (id) on delete cascade,
+  content text not null check (char_length(trim(content)) between 1 and 2000),
+  reply_to_id uuid references public.discipleship_discussions (id) on delete cascade,
+  created_at timestamptz not null default timezone('utc', now()),
+  updated_at timestamptz not null default timezone('utc', now())
+);
+
 create table if not exists public.reactions (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references public.profiles (id) on delete cascade,
@@ -319,6 +491,19 @@ create index if not exists idx_virtual_meeting_attendance_meeting_id on public.v
 create index if not exists idx_virtual_meeting_attendance_user_id on public.virtual_meeting_attendance (user_id);
 create index if not exists idx_reactions_entity on public.reactions (entity_table, entity_id);
 create index if not exists idx_reactions_user_id on public.reactions (user_id);
+create index if not exists idx_discipleship_classes_starts_at on public.discipleship_classes (starts_at);
+create index if not exists idx_discipleship_classes_status on public.discipleship_classes (status);
+create index if not exists idx_discipleship_classes_leader_id on public.discipleship_classes (leader_id);
+create index if not exists idx_discipleship_class_sessions_class_id on public.discipleship_class_sessions (class_id);
+create index if not exists idx_discipleship_class_sessions_starts_at on public.discipleship_class_sessions (starts_at);
+create index if not exists idx_discipleship_enrollments_user_id on public.discipleship_enrollments (user_id);
+create index if not exists idx_discipleship_enrollments_class_id on public.discipleship_enrollments (class_id);
+create index if not exists idx_discipleship_lessons_class_id on public.discipleship_lessons (class_id);
+create index if not exists idx_discipleship_lesson_completions_user_id on public.discipleship_lesson_completions (user_id);
+create index if not exists idx_discipleship_member_notes_lesson_id on public.discipleship_member_notes (lesson_id);
+create index if not exists idx_discipleship_session_attendance_session_id on public.discipleship_session_attendance (session_id);
+create index if not exists idx_discipleship_discussions_class_id on public.discipleship_discussions (class_id);
+create index if not exists idx_discipleship_discussions_lesson_id on public.discipleship_discussions (lesson_id);
 
 create or replace function public.set_updated_at()
 returns trigger
@@ -1047,6 +1232,79 @@ begin
 
   get diagnostics newly_inserted = row_count;
   created_count := created_count + newly_inserted;
+
+  insert into public.notifications (
+    user_id,
+    notification_type,
+    title,
+    body,
+    entity_table,
+    entity_id
+  )
+  select
+    auth.uid(),
+    'discipleship_class_reminder'::public.notification_type,
+    'Discipleship session reminder',
+    coalesce(session_item.title, 'Class session') || ' starts at '
+      || to_char(session_item.starts_at, 'DD Mon YYYY HH24:MI'),
+    'discipleship_classes',
+    session_item.class_id
+  from public.discipleship_class_sessions session_item
+  join public.discipleship_enrollments enrollment
+    on enrollment.class_id = session_item.class_id
+  where enrollment.user_id = auth.uid()
+    and enrollment.status = 'approved'
+    and session_item.starts_at > timezone('utc', now())
+    and session_item.starts_at <= timezone('utc', now()) + interval '2 hours'
+    and not exists (
+      select 1
+      from public.notifications notification
+      where notification.user_id = auth.uid()
+        and notification.notification_type = 'discipleship_class_reminder'
+        and notification.entity_table = 'discipleship_classes'
+        and notification.entity_id = session_item.class_id
+        and notification.body like '%' || session_item.title || '%'
+        and notification.created_at > timezone('utc', now()) - interval '4 hours'
+    );
+
+  get diagnostics newly_inserted = row_count;
+  created_count := created_count + newly_inserted;
+
+  insert into public.notifications (
+    user_id,
+    notification_type,
+    title,
+    body,
+    entity_table,
+    entity_id
+  )
+  select
+    auth.uid(),
+    'discipleship_class_starting'::public.notification_type,
+    'Discipleship session is live',
+    coalesce(session_item.title, 'Class session') || ' is starting now.',
+    'discipleship_classes',
+    session_item.class_id
+  from public.discipleship_class_sessions session_item
+  join public.discipleship_enrollments enrollment
+    on enrollment.class_id = session_item.class_id
+  where enrollment.user_id = auth.uid()
+    and enrollment.status = 'approved'
+    and session_item.starts_at <= timezone('utc', now())
+    and session_item.starts_at > timezone('utc', now()) - interval '15 minutes'
+    and not exists (
+      select 1
+      from public.notifications notification
+      where notification.user_id = auth.uid()
+        and notification.notification_type = 'discipleship_class_starting'
+        and notification.entity_table = 'discipleship_classes'
+        and notification.entity_id = session_item.class_id
+        and notification.created_at > timezone('utc', now()) - interval '2 hours'
+    );
+
+  get diagnostics newly_inserted = row_count;
+  created_count := created_count + newly_inserted;
+
   return created_count;
 end;
 $$;
@@ -1793,6 +2051,622 @@ for delete
 to authenticated
 using (bucket_id = 'resources' and public.is_admin());
 
+create or replace function public.can_manage_discipleship_class(p_class_id uuid)
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select public.is_admin()
+    or exists (
+      select 1
+      from public.discipleship_classes class_item
+      where class_item.id = p_class_id
+        and class_item.leader_id = auth.uid()
+    );
+$$;
+
+create or replace function public.is_enrolled_in_discipleship_class(p_class_id uuid)
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select exists (
+    select 1
+    from public.discipleship_enrollments enrollment
+    where enrollment.class_id = p_class_id
+      and enrollment.user_id = auth.uid()
+      and enrollment.status = 'approved'
+  );
+$$;
+
+create or replace function public.can_access_discipleship_class_content(p_class_id uuid)
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select public.can_manage_discipleship_class(p_class_id)
+    or public.is_enrolled_in_discipleship_class(p_class_id);
+$$;
+
+create or replace function public.handle_discipleship_class_notification()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if new.status = 'draft' then
+    return new;
+  end if;
+
+  insert into public.notifications (
+    user_id,
+    notification_type,
+    title,
+    body,
+    entity_table,
+    entity_id
+  )
+  select
+    profiles.id,
+    'discipleship_class_created'::public.notification_type,
+    'New discipleship class available',
+    coalesce(new.title, 'Discipleship class')
+      || coalesce(' • ' || to_char(new.starts_at, 'DD Mon YYYY HH24:MI'), ''),
+    'discipleship_classes',
+    new.id
+  from public.profiles
+  where profiles.is_active = true
+    and profiles.id is distinct from new.created_by;
+
+  return new;
+end;
+$$;
+
+create or replace function public.handle_discipleship_lesson_notification()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  insert into public.notifications (
+    user_id,
+    notification_type,
+    title,
+    body,
+    entity_table,
+    entity_id
+  )
+  select
+    enrollment.user_id,
+    'discipleship_lesson_added'::public.notification_type,
+    'New lesson material uploaded',
+    coalesce(new.title, 'New lesson'),
+    'discipleship_classes',
+    new.class_id
+  from public.discipleship_enrollments enrollment
+  where enrollment.class_id = new.class_id
+    and enrollment.status = 'approved'
+    and enrollment.user_id is distinct from new.created_by;
+
+  return new;
+end;
+$$;
+
+create or replace function public.handle_discipleship_enrollment_approved_notification()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if new.status <> 'approved' or old.status = 'approved' then
+    return new;
+  end if;
+
+  insert into public.notifications (
+    user_id,
+    notification_type,
+    title,
+    body,
+    entity_table,
+    entity_id
+  )
+  select
+    new.user_id,
+    'discipleship_enrollment_approved'::public.notification_type,
+    'Enrollment approved',
+    coalesce(class_item.title, 'Your discipleship class'),
+    'discipleship_classes',
+    new.class_id
+  from public.discipleship_classes class_item
+  where class_item.id = new.class_id;
+
+  return new;
+end;
+$$;
+
+drop trigger if exists set_discipleship_classes_updated_at on public.discipleship_classes;
+create trigger set_discipleship_classes_updated_at
+before update on public.discipleship_classes
+for each row
+execute function public.set_updated_at();
+
+drop trigger if exists set_discipleship_class_sessions_updated_at on public.discipleship_class_sessions;
+create trigger set_discipleship_class_sessions_updated_at
+before update on public.discipleship_class_sessions
+for each row
+execute function public.set_updated_at();
+
+drop trigger if exists set_discipleship_lessons_updated_at on public.discipleship_lessons;
+create trigger set_discipleship_lessons_updated_at
+before update on public.discipleship_lessons
+for each row
+execute function public.set_updated_at();
+
+drop trigger if exists set_discipleship_member_notes_updated_at on public.discipleship_member_notes;
+create trigger set_discipleship_member_notes_updated_at
+before update on public.discipleship_member_notes
+for each row
+execute function public.set_updated_at();
+
+drop trigger if exists set_discipleship_discussions_updated_at on public.discipleship_discussions;
+create trigger set_discipleship_discussions_updated_at
+before update on public.discipleship_discussions
+for each row
+execute function public.set_updated_at();
+
+drop trigger if exists on_discipleship_class_created_notify on public.discipleship_classes;
+create trigger on_discipleship_class_created_notify
+after insert on public.discipleship_classes
+for each row
+execute function public.handle_discipleship_class_notification();
+
+drop trigger if exists on_discipleship_lesson_created_notify on public.discipleship_lessons;
+create trigger on_discipleship_lesson_created_notify
+after insert on public.discipleship_lessons
+for each row
+execute function public.handle_discipleship_lesson_notification();
+
+drop trigger if exists on_discipleship_enrollment_approved_notify on public.discipleship_enrollments;
+create trigger on_discipleship_enrollment_approved_notify
+after update on public.discipleship_enrollments
+for each row
+execute function public.handle_discipleship_enrollment_approved_notification();
+
+alter table public.discipleship_classes enable row level security;
+alter table public.discipleship_class_sessions enable row level security;
+alter table public.discipleship_enrollments enable row level security;
+alter table public.discipleship_lessons enable row level security;
+alter table public.discipleship_lesson_completions enable row level security;
+alter table public.discipleship_member_notes enable row level security;
+alter table public.discipleship_session_attendance enable row level security;
+alter table public.discipleship_discussions enable row level security;
+
+drop policy if exists "discipleship_classes_select" on public.discipleship_classes;
+create policy "discipleship_classes_select"
+on public.discipleship_classes
+for select
+to authenticated
+using (
+  public.is_active_user()
+  and (
+    status <> 'draft'
+    or public.is_admin()
+    or leader_id = auth.uid()
+  )
+);
+
+drop policy if exists "discipleship_classes_admin_insert" on public.discipleship_classes;
+create policy "discipleship_classes_admin_insert"
+on public.discipleship_classes
+for insert
+to authenticated
+with check (public.is_admin());
+
+drop policy if exists "discipleship_classes_manage_update" on public.discipleship_classes;
+create policy "discipleship_classes_manage_update"
+on public.discipleship_classes
+for update
+to authenticated
+using (public.can_manage_discipleship_class(id))
+with check (public.can_manage_discipleship_class(id));
+
+drop policy if exists "discipleship_classes_admin_delete" on public.discipleship_classes;
+create policy "discipleship_classes_admin_delete"
+on public.discipleship_classes
+for delete
+to authenticated
+using (public.is_admin());
+
+drop policy if exists "discipleship_class_sessions_select" on public.discipleship_class_sessions;
+create policy "discipleship_class_sessions_select"
+on public.discipleship_class_sessions
+for select
+to authenticated
+using (
+  public.is_active_user()
+  and public.can_access_discipleship_class_content(class_id)
+);
+
+drop policy if exists "discipleship_class_sessions_manage_insert" on public.discipleship_class_sessions;
+create policy "discipleship_class_sessions_manage_insert"
+on public.discipleship_class_sessions
+for insert
+to authenticated
+with check (public.can_manage_discipleship_class(class_id));
+
+drop policy if exists "discipleship_class_sessions_manage_update" on public.discipleship_class_sessions;
+create policy "discipleship_class_sessions_manage_update"
+on public.discipleship_class_sessions
+for update
+to authenticated
+using (public.can_manage_discipleship_class(class_id))
+with check (public.can_manage_discipleship_class(class_id));
+
+drop policy if exists "discipleship_class_sessions_manage_delete" on public.discipleship_class_sessions;
+create policy "discipleship_class_sessions_manage_delete"
+on public.discipleship_class_sessions
+for delete
+to authenticated
+using (public.can_manage_discipleship_class(class_id));
+
+drop policy if exists "discipleship_enrollments_select" on public.discipleship_enrollments;
+create policy "discipleship_enrollments_select"
+on public.discipleship_enrollments
+for select
+to authenticated
+using (
+  public.is_active_user()
+  and (
+    user_id = auth.uid()
+    or public.can_manage_discipleship_class(class_id)
+  )
+);
+
+drop policy if exists "discipleship_enrollments_insert_self" on public.discipleship_enrollments;
+create policy "discipleship_enrollments_insert_self"
+on public.discipleship_enrollments
+for insert
+to authenticated
+with check (
+  public.is_active_user()
+  and user_id = auth.uid()
+  and status in ('pending', 'approved')
+);
+
+drop policy if exists "discipleship_enrollments_manage_update" on public.discipleship_enrollments;
+create policy "discipleship_enrollments_manage_update"
+on public.discipleship_enrollments
+for update
+to authenticated
+using (public.can_manage_discipleship_class(class_id) or user_id = auth.uid())
+with check (public.can_manage_discipleship_class(class_id) or user_id = auth.uid());
+
+drop policy if exists "discipleship_enrollments_delete" on public.discipleship_enrollments;
+create policy "discipleship_enrollments_delete"
+on public.discipleship_enrollments
+for delete
+to authenticated
+using (public.can_manage_discipleship_class(class_id) or user_id = auth.uid());
+
+drop policy if exists "discipleship_lessons_select" on public.discipleship_lessons;
+create policy "discipleship_lessons_select"
+on public.discipleship_lessons
+for select
+to authenticated
+using (
+  public.is_active_user()
+  and public.can_access_discipleship_class_content(class_id)
+);
+
+drop policy if exists "discipleship_lessons_manage_insert" on public.discipleship_lessons;
+create policy "discipleship_lessons_manage_insert"
+on public.discipleship_lessons
+for insert
+to authenticated
+with check (public.can_manage_discipleship_class(class_id));
+
+drop policy if exists "discipleship_lessons_manage_update" on public.discipleship_lessons;
+create policy "discipleship_lessons_manage_update"
+on public.discipleship_lessons
+for update
+to authenticated
+using (public.can_manage_discipleship_class(class_id))
+with check (public.can_manage_discipleship_class(class_id));
+
+drop policy if exists "discipleship_lessons_manage_delete" on public.discipleship_lessons;
+create policy "discipleship_lessons_manage_delete"
+on public.discipleship_lessons
+for delete
+to authenticated
+using (public.can_manage_discipleship_class(class_id));
+
+drop policy if exists "discipleship_lesson_completions_select" on public.discipleship_lesson_completions;
+create policy "discipleship_lesson_completions_select"
+on public.discipleship_lesson_completions
+for select
+to authenticated
+using (
+  public.is_active_user()
+  and (
+    user_id = auth.uid()
+    or exists (
+      select 1
+      from public.discipleship_lessons lesson
+      where lesson.id = lesson_id
+        and public.can_manage_discipleship_class(lesson.class_id)
+    )
+  )
+);
+
+drop policy if exists "discipleship_lesson_completions_insert_self" on public.discipleship_lesson_completions;
+create policy "discipleship_lesson_completions_insert_self"
+on public.discipleship_lesson_completions
+for insert
+to authenticated
+with check (
+  public.is_active_user()
+  and user_id = auth.uid()
+  and exists (
+    select 1
+    from public.discipleship_lessons lesson
+    where lesson.id = lesson_id
+      and public.can_access_discipleship_class_content(lesson.class_id)
+  )
+);
+
+drop policy if exists "discipleship_lesson_completions_delete_self" on public.discipleship_lesson_completions;
+create policy "discipleship_lesson_completions_delete_self"
+on public.discipleship_lesson_completions
+for delete
+to authenticated
+using (user_id = auth.uid() or public.is_admin());
+
+drop policy if exists "discipleship_member_notes_select" on public.discipleship_member_notes;
+create policy "discipleship_member_notes_select"
+on public.discipleship_member_notes
+for select
+to authenticated
+using (
+  public.is_active_user()
+  and (
+    user_id = auth.uid()
+    or exists (
+      select 1
+      from public.discipleship_lessons lesson
+      where lesson.id = lesson_id
+        and public.can_manage_discipleship_class(lesson.class_id)
+    )
+  )
+);
+
+drop policy if exists "discipleship_member_notes_upsert_self" on public.discipleship_member_notes;
+create policy "discipleship_member_notes_insert_self"
+on public.discipleship_member_notes
+for insert
+to authenticated
+with check (
+  public.is_active_user()
+  and user_id = auth.uid()
+  and exists (
+    select 1
+    from public.discipleship_lessons lesson
+    where lesson.id = lesson_id
+      and public.can_access_discipleship_class_content(lesson.class_id)
+  )
+);
+
+drop policy if exists "discipleship_member_notes_update_self" on public.discipleship_member_notes;
+create policy "discipleship_member_notes_update_self"
+on public.discipleship_member_notes
+for update
+to authenticated
+using (user_id = auth.uid())
+with check (user_id = auth.uid());
+
+drop policy if exists "discipleship_member_notes_delete_self" on public.discipleship_member_notes;
+create policy "discipleship_member_notes_delete_self"
+on public.discipleship_member_notes
+for delete
+to authenticated
+using (user_id = auth.uid() or public.is_admin());
+
+drop policy if exists "discipleship_session_attendance_select" on public.discipleship_session_attendance;
+create policy "discipleship_session_attendance_select"
+on public.discipleship_session_attendance
+for select
+to authenticated
+using (
+  public.is_active_user()
+  and (
+    user_id = auth.uid()
+    or exists (
+      select 1
+      from public.discipleship_class_sessions session_item
+      where session_item.id = session_id
+        and public.can_manage_discipleship_class(session_item.class_id)
+    )
+  )
+);
+
+drop policy if exists "discipleship_session_attendance_manage" on public.discipleship_session_attendance;
+create policy "discipleship_session_attendance_insert"
+on public.discipleship_session_attendance
+for insert
+to authenticated
+with check (
+  public.is_active_user()
+  and (
+    exists (
+      select 1
+      from public.discipleship_class_sessions session_item
+      where session_item.id = session_id
+        and public.can_manage_discipleship_class(session_item.class_id)
+    )
+    or (
+      user_id = auth.uid()
+      and exists (
+        select 1
+        from public.discipleship_class_sessions session_item
+        join public.discipleship_enrollments enrollment
+          on enrollment.class_id = session_item.class_id
+        where session_item.id = session_id
+          and enrollment.user_id = auth.uid()
+          and enrollment.status = 'approved'
+      )
+    )
+  )
+);
+
+drop policy if exists "discipleship_session_attendance_update" on public.discipleship_session_attendance;
+create policy "discipleship_session_attendance_update"
+on public.discipleship_session_attendance
+for update
+to authenticated
+using (
+  exists (
+    select 1
+    from public.discipleship_class_sessions session_item
+    where session_item.id = session_id
+      and public.can_manage_discipleship_class(session_item.class_id)
+  )
+  or user_id = auth.uid()
+)
+with check (
+  exists (
+    select 1
+    from public.discipleship_class_sessions session_item
+    where session_item.id = session_id
+      and public.can_manage_discipleship_class(session_item.class_id)
+  )
+  or user_id = auth.uid()
+);
+
+drop policy if exists "discipleship_session_attendance_delete" on public.discipleship_session_attendance;
+create policy "discipleship_session_attendance_delete"
+on public.discipleship_session_attendance
+for delete
+to authenticated
+using (
+  exists (
+    select 1
+    from public.discipleship_class_sessions session_item
+    where session_item.id = session_id
+      and public.can_manage_discipleship_class(session_item.class_id)
+  )
+  or user_id = auth.uid()
+);
+
+drop policy if exists "discipleship_discussions_select" on public.discipleship_discussions;
+create policy "discipleship_discussions_select"
+on public.discipleship_discussions
+for select
+to authenticated
+using (
+  public.is_active_user()
+  and public.can_access_discipleship_class_content(class_id)
+);
+
+drop policy if exists "discipleship_discussions_insert" on public.discipleship_discussions;
+create policy "discipleship_discussions_insert"
+on public.discipleship_discussions
+for insert
+to authenticated
+with check (
+  public.is_active_user()
+  and user_id = auth.uid()
+  and public.can_access_discipleship_class_content(class_id)
+);
+
+drop policy if exists "discipleship_discussions_update" on public.discipleship_discussions;
+create policy "discipleship_discussions_update"
+on public.discipleship_discussions
+for update
+to authenticated
+using (user_id = auth.uid() or public.can_manage_discipleship_class(class_id))
+with check (user_id = auth.uid() or public.can_manage_discipleship_class(class_id));
+
+drop policy if exists "discipleship_discussions_delete" on public.discipleship_discussions;
+create policy "discipleship_discussions_delete"
+on public.discipleship_discussions
+for delete
+to authenticated
+using (user_id = auth.uid() or public.can_manage_discipleship_class(class_id));
+
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values (
+  'discipleship-materials',
+  'discipleship-materials',
+  true,
+  15728640,
+  array['application/pdf', 'image/png', 'image/jpeg', 'image/webp']
+)
+on conflict (id) do update
+set public = excluded.public,
+    file_size_limit = excluded.file_size_limit,
+    allowed_mime_types = excluded.allowed_mime_types;
+
+drop policy if exists "discipleship_materials_select_all" on storage.objects;
+create policy "discipleship_materials_select_all"
+on storage.objects
+for select
+to authenticated
+using (bucket_id = 'discipleship-materials');
+
+drop policy if exists "discipleship_materials_insert" on storage.objects;
+create policy "discipleship_materials_insert"
+on storage.objects
+for insert
+to authenticated
+with check (
+  bucket_id = 'discipleship-materials'
+  and (
+    public.is_admin()
+    or public.can_manage_discipleship_class(((storage.foldername(name))[1])::uuid)
+  )
+);
+
+drop policy if exists "discipleship_materials_update" on storage.objects;
+create policy "discipleship_materials_update"
+on storage.objects
+for update
+to authenticated
+using (
+  bucket_id = 'discipleship-materials'
+  and (
+    public.is_admin()
+    or public.can_manage_discipleship_class(((storage.foldername(name))[1])::uuid)
+  )
+)
+with check (
+  bucket_id = 'discipleship-materials'
+  and (
+    public.is_admin()
+    or public.can_manage_discipleship_class(((storage.foldername(name))[1])::uuid)
+  )
+);
+
+drop policy if exists "discipleship_materials_delete" on storage.objects;
+create policy "discipleship_materials_delete"
+on storage.objects
+for delete
+to authenticated
+using (
+  bucket_id = 'discipleship-materials'
+  and (
+    public.is_admin()
+    or public.can_manage_discipleship_class(((storage.foldername(name))[1])::uuid)
+  )
+);
+
 select public.backfill_profiles_from_auth();
 select public.ensure_admin_exists();
 
@@ -1966,5 +2840,85 @@ begin
       and tablename = 'reactions'
   ) then
     alter publication supabase_realtime add table public.reactions;
+  end if;
+
+  if not exists (
+    select 1
+    from pg_publication_tables
+    where pubname = 'supabase_realtime'
+      and schemaname = 'public'
+      and tablename = 'discipleship_classes'
+  ) then
+    alter publication supabase_realtime add table public.discipleship_classes;
+  end if;
+
+  if not exists (
+    select 1
+    from pg_publication_tables
+    where pubname = 'supabase_realtime'
+      and schemaname = 'public'
+      and tablename = 'discipleship_class_sessions'
+  ) then
+    alter publication supabase_realtime add table public.discipleship_class_sessions;
+  end if;
+
+  if not exists (
+    select 1
+    from pg_publication_tables
+    where pubname = 'supabase_realtime'
+      and schemaname = 'public'
+      and tablename = 'discipleship_enrollments'
+  ) then
+    alter publication supabase_realtime add table public.discipleship_enrollments;
+  end if;
+
+  if not exists (
+    select 1
+    from pg_publication_tables
+    where pubname = 'supabase_realtime'
+      and schemaname = 'public'
+      and tablename = 'discipleship_lessons'
+  ) then
+    alter publication supabase_realtime add table public.discipleship_lessons;
+  end if;
+
+  if not exists (
+    select 1
+    from pg_publication_tables
+    where pubname = 'supabase_realtime'
+      and schemaname = 'public'
+      and tablename = 'discipleship_lesson_completions'
+  ) then
+    alter publication supabase_realtime add table public.discipleship_lesson_completions;
+  end if;
+
+  if not exists (
+    select 1
+    from pg_publication_tables
+    where pubname = 'supabase_realtime'
+      and schemaname = 'public'
+      and tablename = 'discipleship_member_notes'
+  ) then
+    alter publication supabase_realtime add table public.discipleship_member_notes;
+  end if;
+
+  if not exists (
+    select 1
+    from pg_publication_tables
+    where pubname = 'supabase_realtime'
+      and schemaname = 'public'
+      and tablename = 'discipleship_session_attendance'
+  ) then
+    alter publication supabase_realtime add table public.discipleship_session_attendance;
+  end if;
+
+  if not exists (
+    select 1
+    from pg_publication_tables
+    where pubname = 'supabase_realtime'
+      and schemaname = 'public'
+      and tablename = 'discipleship_discussions'
+  ) then
+    alter publication supabase_realtime add table public.discipleship_discussions;
   end if;
 end $$;

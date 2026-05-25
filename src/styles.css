@@ -2714,3 +2714,337 @@ textarea {
     font-size: 0.87rem;
   }
 }
+
+.discipleship-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 0.25rem;
+}
+
+.discipleship-tab {
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text-muted);
+  border-radius: 999px;
+  padding: 0.45rem 0.9rem;
+  font-size: 0.82rem;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+
+.discipleship-tab.active {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+  color: var(--accent-strong);
+  font-weight: 600;
+}
+
+.discipleship-class-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 1rem;
+}
+
+.discipleship-class-card {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+}
+
+.discipleship-banner {
+  height: 120px;
+  background-size: cover;
+  background-position: center;
+  background-color: var(--accent-soft);
+}
+
+.discipleship-banner.large {
+  height: 180px;
+  border-radius: var(--radius-md);
+  margin-bottom: 1rem;
+}
+
+.discipleship-banner-placeholder {
+  display: grid;
+  place-items: center;
+  color: var(--accent-strong);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  font-size: 0.78rem;
+}
+
+.discipleship-card-body {
+  padding: 1rem;
+  display: grid;
+  gap: 0.75rem;
+}
+
+.progress-block {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.progress-label-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.82rem;
+  color: var(--text-muted);
+}
+
+.progress-track {
+  height: 8px;
+  border-radius: 999px;
+  background: var(--surface-muted);
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--accent), var(--accent-strong));
+  transition: width 0.25s ease;
+}
+
+.discussion-thread {
+  display: grid;
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+
+.discussion-post {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 0.85rem 1rem;
+  background: var(--surface-muted);
+}
+
+.discussion-post p {
+  margin: 0.35rem 0;
+}
+
+.attendance-session-block {
+  margin-bottom: 1.25rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.attendance-session-block:last-child {
+  border-bottom: none;
+  margin-bottom: 0;
+  padding-bottom: 0;
+}
+
+.discipleship-page-header {
+  padding: 0.25rem 0 0.5rem;
+}
+
+.discipleship-page-header h1 {
+  margin: 0.2rem 0 0.5rem;
+  font-size: clamp(1.75rem, 4vw, 2.35rem);
+  letter-spacing: -0.02em;
+}
+
+.discipleship-page-lead {
+  margin: 0;
+  max-width: 52rem;
+  color: var(--text-muted);
+  line-height: 1.55;
+}
+
+.discipleship-guidelines {
+  display: grid;
+  gap: 1.25rem;
+}
+
+.discipleship-guidelines-hero {
+  padding: 1.25rem 1.35rem;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border);
+  background: linear-gradient(
+    135deg,
+    var(--accent-soft) 0%,
+    var(--surface) 55%,
+    var(--surface-muted) 100%
+  );
+}
+
+.discipleship-guidelines-eyebrow {
+  margin: 0;
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent-strong);
+}
+
+.discipleship-guidelines-hero h2 {
+  margin: 0.45rem 0 0.75rem;
+  font-size: clamp(1.25rem, 2.5vw, 1.65rem);
+  line-height: 1.25;
+}
+
+.discipleship-guidelines-lead {
+  margin: 0;
+  color: var(--text-muted);
+  line-height: 1.6;
+  max-width: 56rem;
+}
+
+.discipleship-guidelines-grid {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+}
+
+.discipleship-guideline-card {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 1rem 1.1rem;
+  background: var(--surface);
+  display: grid;
+  gap: 0.75rem;
+  box-shadow: var(--shadow-sm);
+}
+
+.discipleship-guideline-card-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+}
+
+.discipleship-guideline-number {
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 0.65rem;
+  background: var(--accent-soft);
+  color: var(--accent-strong);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.discipleship-guideline-card h3 {
+  margin: 0.15rem 0 0;
+  font-size: 1rem;
+  line-height: 1.35;
+}
+
+.discipleship-guideline-intro {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  line-height: 1.55;
+}
+
+.discipleship-guideline-list,
+.discipleship-guideline-checklist {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 0.65rem;
+}
+
+.discipleship-guideline-list li {
+  display: grid;
+  gap: 0.2rem;
+  padding-left: 0.85rem;
+  border-left: 2px solid var(--accent-soft);
+}
+
+.discipleship-guideline-list strong {
+  font-size: 0.82rem;
+  color: var(--accent-strong);
+}
+
+.discipleship-guideline-list span {
+  color: var(--text-muted);
+  font-size: 0.88rem;
+  line-height: 1.5;
+}
+
+.discipleship-guideline-checklist li {
+  position: relative;
+  padding-left: 1.35rem;
+  color: var(--text-muted);
+  font-size: 0.88rem;
+  line-height: 1.5;
+}
+
+.discipleship-guideline-checklist li::before {
+  content: "✓";
+  position: absolute;
+  left: 0;
+  color: var(--accent-strong);
+  font-weight: 700;
+}
+
+.discipleship-guidelines-footer {
+  padding: 1rem 1.15rem;
+  border-radius: var(--radius-md);
+  background: var(--surface-muted);
+  border: 1px solid var(--border);
+}
+
+.discipleship-guidelines-footer p {
+  margin: 0 0 0.75rem;
+  color: var(--text-muted);
+  line-height: 1.55;
+}
+
+.discipleship-guidelines-signoff {
+  display: grid;
+  gap: 0.15rem;
+  margin: 0 !important;
+}
+
+.discipleship-guidelines-signoff strong {
+  color: var(--text);
+}
+
+.discipleship-guidelines-signoff em {
+  font-style: normal;
+  color: var(--accent-strong);
+  font-size: 0.88rem;
+}
+
+.discipleship-work-grid {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+}
+
+.discipleship-work-list {
+  display: grid;
+  gap: 0.85rem;
+}
+
+.discipleship-work-card {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 1rem;
+  background: var(--surface-muted);
+  display: grid;
+  gap: 0.5rem;
+}
+
+.discipleship-work-card-head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.discipleship-work-card h3 {
+  margin: 0;
+  font-size: 1.05rem;
+}

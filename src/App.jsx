@@ -3,6 +3,7 @@ import { AppShell } from "./components/AppShell";
 import { AuthScreen } from "./components/AuthScreen";
 import { LoadingScreen } from "./components/LoadingScreen";
 import { SetupScreen } from "./components/SetupScreen";
+import { InstallAppPrompt } from "./components/InstallAppPrompt";
 import { isSupabaseConfigured } from "./lib/supabase";
 
 function AppContent() {
@@ -23,6 +24,7 @@ export default function App() {
   return (
     <AuthProvider>
       <AppContent />
+      <InstallAppPrompt />
     </AuthProvider>
   );
 }

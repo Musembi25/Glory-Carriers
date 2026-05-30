@@ -1,6 +1,34 @@
-import { useMemo, useState } from "react";
+﻿import { useEffect, useMemo, useState } from "react";
 import { supabase } from "../lib/supabase";
+import {
+  computeUserAssignmentStats,
+  getDisplayStatus,
+  getDueBadge,
+  getLessonInstructions,
+  getStatusAccentClass,
+  getStatusPillClass,
+  isWorkLesson,
+  STATUS_LABELS
+} from "../lib/discipleshipAssignments";
+import { DiscipleshipAssignments } from "./DiscipleshipAssignments";
 import { DiscipleshipGuidelines } from "./DiscipleshipGuidelines";
+import { DiscipleshipPortalLayout } from "./discipleship/DiscipleshipPortalLayout";
+import { PortalAttendanceView } from "./discipleship/PortalAttendanceView";
+import { PortalLessonsModules } from "./discipleship/PortalLessonsModules";
+import { PortalOverview } from "./discipleship/PortalOverview";
+import { PortalProgressView } from "./discipleship/PortalProgressView";
+import { PortalSessionsView } from "./discipleship/PortalSessionsView";
+import { PortalSubmissions } from "./discipleship/PortalSubmissions";
+import { PortalClassDashboard } from "./discipleship/PortalClassDashboard";
+import { PortalAchievements } from "./discipleship/PortalAchievements";
+import { portalIcons } from "./discipleship/PortalIcons";
+import {
+  PortalStudyGroups,
+  PortalResources,
+  PortalUsefulLinks,
+  PortalProfile
+} from "./discipleship/PortalNavPages";
+import { getInitials } from "./discipleship/DiscipleshipPortalLayout";
 
 const emptyClassForm = {
   title: "",
@@ -77,9 +105,9 @@ function truncateText(text, max = 120) {
   return text.length > max ? `${text.slice(0, max)}…` : text;
 }
 
-function Panel({ title, subtitle, children, action }) {
+function Panel({ title, subtitle, children, action, className = "" }) {
   return (
-    <section className="panel">
+    <section className={`panel${className ? ` ${className}` : ""}`}>
       <div className="panel-header">
         <div>
           <h2>{title}</h2>
@@ -165,17 +193,36 @@ export function DiscipleshipSection({
   enrollments,
   lessons,
   lessonCompletions,
+  assignmentSubmissions,
+  submissionHistory,
   memberNotes,
   sessionAttendance,
   discussions,
+  reactions = [],
   runAction,
   submitting,
   liveNow,
   onSelectClassId,
-  selectedClassId
+  selectedClassId,
+  focusDetailTab,
+  onFocusDetailTabConsumed,
+  theme = "light",
+  onThemeToggle,
+  notificationCount = 0,
+  onOpenNotifications,
+  userAvatarUrl = ""
 }) {
   const [catalogTab, setCatalogTab] = useState("available");
-  const [classDetailTab, setClassDetailTab] = useState("overview");
+  const [portalPage, setPortalPage] = useState("overview");
+  const [notesSearch, setNotesSearch] = useState("");
+  const [portalSearch, setPortalSearch] = useState("");
+
+  useEffect(() => {
+    if (focusDetailTab) {
+      setPortalPage(focusDetailTab);
+      onFocusDetailTabConsumed?.();
+    }
+  }, [focusDetailTab, onFocusDetailTabConsumed]);
   const [classForm, setClassForm] = useState(emptyClassForm);
   const [editingClassId, setEditingClassId] = useState("");
   const [sessionForm, setSessionForm] = useState(emptySessionForm);
@@ -191,6 +238,132 @@ export function DiscipleshipSection({
 
   const activeMembers = profiles.filter((member) => member.is_active);
   const now = liveNow instanceof Date ? liveNow : new Date(liveNow);
+  const currentProfile = profiles.find((item) => item.id === user.id);
+  const userName =
+    currentProfile?.full_name || user.email?.split("@")[0] || "Disciple";
+
+  const isPortalTeacher = useMemo(
+    () => isAdmin || classes.some((classItem) => classItem.leader_id === user.id),
+    [classes, isAdmin, user.id]
+  );
+
+  function wrapPortal(children) {
+    const activeClass = selectedClass;
+    const classProgress = activeClass ? computeClassProgress(activeClass.id).overall : 0;
+    const portalRoles = activeClass
+      ? {
+          teacher: canManageClass(activeClass),
+          student: isApprovedEnrolled(activeClass.id)
+        }
+      : { teacher: isPortalTeacher, student: isPortalStudent };
+
+    return (
+      <DiscipleshipPortalLayout
+        userName={userName}
+        roles={portalRoles}
+        portalPage={activePortalPage}
+        onNavigate={setPortalPage}
+        selectedClassId={layoutClassId}
+        classes={classes.filter((item) => item.status !== "draft" || isAdmin)}
+        onSelectClassId={(classId) => {
+          onSelectClassId(classId);
+          if (classId) {
+            setPortalPage("overview");
+          }
+        }}
+        courseTitle={activeClass?.title ?? ""}
+        courseProgress={classProgress}
+        searchQuery={portalSearch}
+        onSearchChange={setPortalSearch}
+        notificationCount={notificationCount}
+        onNotificationsClick={onOpenNotifications}
+        onOpenSettings={() => setPortalPage("links")}
+        onOpenHelp={() => setPortalPage("links")}
+        theme={theme}
+        onThemeToggle={onThemeToggle}
+        userAvatarUrl={userAvatarUrl || currentProfile?.avatar_url}
+      >
+        {children}
+      </DiscipleshipPortalLayout>
+    );
+  }
+
+  const classRequiredPages = [
+    "lessons",
+    "assignments",
+    "sessions",
+    "attendance",
+    "discussion",
+    "notes",
+    "study-groups"
+  ];
+
+  function renderSelectClassPrompt() {
+    return (
+      <div className="dp-select-class-prompt">
+        <h3>Select a course</h3>
+        <p>Choose your active class from the sidebar course card to access this section.</p>
+        <button type="button" className="dp-btn-primary" onClick={() => setPortalPage("classes")}>
+          Browse classes
+        </button>
+      </div>
+    );
+  }
+
+  function renderPortalNavExtras({ inClassView = false, page = portalPage }) {
+    const activeClass = selectedClass;
+    const portalRoles = activeClass
+      ? {
+          teacher: canManageClass(activeClass),
+          student: isApprovedEnrolled(activeClass.id)
+        }
+      : { teacher: isPortalTeacher, student: isPortalStudent };
+    const roleLabel =
+      portalRoles.teacher && portalRoles.student
+        ? "Teacher & Student"
+        : portalRoles.teacher
+          ? "Teacher"
+          : portalRoles.student
+            ? "Student"
+            : "Learner";
+    const progress = activeClass ? computeClassProgress(activeClass.id).overall : 0;
+
+    const classForExtras = selectedClass;
+    const enrollmentsForExtras = inClassView
+      ? classEnrollments
+      : selectedClass
+        ? enrollments.filter((row) => row.class_id === selectedClass.id)
+        : [];
+
+    return (
+      <>
+        {page === "profile" ? (
+          <PortalProfile
+            userName={userName}
+            roleLabel={roleLabel}
+            courseTitle={classForExtras?.title}
+            courseProgress={progress}
+            userAvatarUrl={userAvatarUrl || currentProfile?.avatar_url}
+            getInitials={getInitials}
+          />
+        ) : null}
+
+        {page === "study-groups" && !selectedClass ? renderSelectClassPrompt() : null}
+
+        {page === "study-groups" && classForExtras ? (
+          <PortalStudyGroups
+            selectedClass={classForExtras}
+            getMemberLabel={getMemberLabel}
+            classEnrollments={enrollmentsForExtras}
+          />
+        ) : null}
+
+        {page === "resources" ? <PortalResources selectedClass={classForExtras} /> : null}
+
+        {page === "links" ? <PortalUsefulLinks /> : null}
+      </>
+    );
+  }
 
   function getMemberLabel(memberId) {
     const member = profiles.find((item) => item.id === memberId);
@@ -212,6 +385,23 @@ export function DiscipleshipSection({
   }
 
   const selectedClass = classes.find((item) => item.id === selectedClassId) ?? null;
+  const layoutClassId = selectedClass?.id ?? "";
+  const hasInvalidClassSelection = Boolean(selectedClassId && !selectedClass);
+  const activePortalPage = hasInvalidClassSelection ? "overview" : portalPage;
+
+  useEffect(() => {
+    if (!selectedClassId) {
+      return;
+    }
+
+    if (!classes.some((item) => item.id === selectedClassId)) {
+      onSelectClassId("");
+      setPortalPage((current) =>
+        classRequiredPages.includes(current) ? "overview" : current
+      );
+    }
+  }, [selectedClassId, classes, onSelectClassId]);
+
   const selectedEnrollment = selectedClass ? getEnrollment(selectedClass.id) : null;
   const canAccessContent =
     selectedClass && (canManageClass(selectedClass) || isApprovedEnrolled(selectedClass.id));
@@ -242,6 +432,14 @@ export function DiscipleshipSection({
           return new Date(left.created_at) - new Date(right.created_at);
         }),
     [lessons, selectedClassId]
+  );
+
+  const learningLessons = useMemo(
+    () =>
+      classLessons.filter(
+        (lesson) => !["assignment", "project"].includes(lesson.lesson_type)
+      ),
+    [classLessons]
   );
 
   const classDiscussions = useMemo(
@@ -315,6 +513,66 @@ export function DiscipleshipSection({
     return ids;
   }, [myApprovedClassIds, classes, isAdmin, user.id]);
 
+  const isPortalStudent = myApprovedClassIds.size > 0;
+
+  const portalHeroStats = useMemo(() => {
+    const workLessons = lessons.filter(
+      (lesson) => isWorkLesson(lesson) && myApprovedClassIds.has(lesson.class_id)
+    );
+    const assignmentStats = computeUserAssignmentStats({
+      workLessons,
+      submissions: assignmentSubmissions,
+      userId: user.id,
+      classIds: myApprovedClassIds,
+      now
+    });
+    const currentClass = selectedClassId
+      ? classes.find((item) => item.id === selectedClassId)
+      : myEnrolledClasses[0] ?? classes.find((item) => myApprovedClassIds.has(item.id));
+    const progress = currentClass ? computeClassProgress(currentClass.id) : { overall: 0 };
+    const nextSession = [...sessions]
+      .filter((session) => myApprovedClassIds.has(session.class_id))
+      .filter((session) => new Date(session.starts_at) > now)
+      .sort((left, right) => new Date(left.starts_at) - new Date(right.starts_at))[0];
+
+    return [
+      {
+        label: "Current class",
+        value: currentClass?.title ? truncateText(currentClass.title, 22) : "Not enrolled",
+        hint: currentClass ? "Your active program" : "Browse classes to join",
+        tone: "default"
+      },
+      {
+        label: "Completion",
+        value: `${progress.overall}%`,
+        hint: "Lessons & attendance",
+        tone: "success"
+      },
+      {
+        label: "Next session",
+        value: nextSession ? truncateText(nextSession.title, 18) : "None scheduled",
+        hint: nextSession ? formatDateTime(nextSession.starts_at) : "Check back soon",
+        tone: "default"
+      },
+      {
+        label: "Pending work",
+        value: String(assignmentStats.pending.length),
+        hint: "Assignments due",
+        tone: assignmentStats.pending.length ? "warning" : "default"
+      }
+    ];
+  }, [
+    lessons,
+    assignmentSubmissions,
+    classes,
+    sessions,
+    myApprovedClassIds,
+    myEnrolledClasses,
+    selectedClassId,
+    user.id,
+    now
+  ]);
+
   const assignmentLessons = useMemo(
     () =>
       lessons
@@ -340,50 +598,50 @@ export function DiscipleshipSection({
     return classes.find((item) => item.id === classId)?.title ?? "Discipleship class";
   }
 
+  function getSubmissionForLesson(lessonId) {
+    return assignmentSubmissions.find(
+      (row) => row.lesson_id === lessonId && row.user_id === user.id
+    );
+  }
+
   function renderWorkItemCard(lesson, kind) {
-    const complete = myCompletedLessonIds.has(lesson.id);
+    const submission = getSubmissionForLesson(lesson.id);
+    const status = getDisplayStatus(submission);
+    const dueBadge = getDueBadge(lesson, now);
     const classTitle = getClassTitle(lesson.class_id);
 
     return (
-      <article key={lesson.id} className="discipleship-work-card">
-        <div className="discipleship-work-card-head">
-          <span className={kind === "project" ? "pill warning" : "pill info"}>
-            {kind === "project" ? "Class project" : "Assignment"}
-          </span>
-          <span className={complete ? "pill success" : "pill"}>
-            {complete ? "Submitted" : "Pending"}
-          </span>
-        </div>
-        <h3>{lesson.title}</h3>
-        <p className="muted-text">{classTitle}</p>
-        {lesson.module_label ? <p className="inline-help">{lesson.module_label}</p> : null}
-        <p className="task-details">
-          {truncateText(
-            lesson.assignment_prompt || lesson.description || lesson.note_content,
-            180
-          )}
-        </p>
-        <div className="inline-actions">
-          <button
-            type="button"
-            className="secondary-button"
-            onClick={() => {
-              onSelectClassId(lesson.class_id);
-              setClassDetailTab("lessons");
-            }}
-          >
-            Open in class
-          </button>
-          {myApprovedClassIds.has(lesson.class_id) ? (
+      <article
+        key={lesson.id}
+        className={`discipleship-work-card ${getStatusAccentClass(status)}`}
+      >
+        <div className="discipleship-work-card-accent" aria-hidden="true" />
+        <div className="discipleship-work-card-inner">
+          <div className="discipleship-work-card-head">
+            <span className={kind === "project" ? "pill warning" : "pill info"}>
+              {kind === "project" ? "Class project" : "Assignment"}
+            </span>
+            <span className={getStatusPillClass(status)}>{STATUS_LABELS[status]}</span>
+          </div>
+          <h3>{lesson.title}</h3>
+          <p className="discipleship-work-class">{classTitle}</p>
+          <div className="discipleship-work-meta">
+            {lesson.module_label ? <span className="assignment-module-tag">{lesson.module_label}</span> : null}
+            <span className={dueBadge.className}>{dueBadge.label}</span>
+          </div>
+          <p className="discipleship-work-preview">{truncateText(getLessonInstructions(lesson), 140)}</p>
+          <div className="discipleship-work-footer">
             <button
               type="button"
-              className={complete ? "ghost-button" : "primary-button"}
-              onClick={() => toggleLessonComplete(lesson.id)}
-              disabled={submitting}
+              className="primary-button"
+              onClick={() => {
+                onSelectClassId(lesson.class_id);
+                setPortalPage("assignments");
+              }}
             >
-              {complete ? "Mark pending" : "Mark complete"}
+              Open assignment
             </button>
-          ) : null}
+          </div>
         </div>
       </article>
     );
@@ -461,27 +719,46 @@ export function DiscipleshipSection({
     }, status === "approved" ? "Enrollment approved." : "Enrollment updated.");
   }
 
+  function validateClassSchedule(startsAt, endsAt) {
+    if (endsAt && !startsAt) {
+      throw new Error("Add a start date and time before setting an end date.");
+    }
+
+    if (startsAt && endsAt && new Date(endsAt) <= new Date(startsAt)) {
+      throw new Error("End date/time must be after the start date/time.");
+    }
+  }
+
   async function handleClassSubmit(event) {
     event.preventDefault();
 
+    const classId = editingClassId || selectedClassId;
+    const existingClass = classId ? classes.find((item) => item.id === classId) : null;
+    const startsAtInput =
+      classForm.starts_at ||
+      (existingClass?.starts_at ? toLocalDateTimeInput(existingClass.starts_at) : "");
+    const endsAtInput =
+      classForm.ends_at ||
+      (existingClass?.ends_at ? toLocalDateTimeInput(existingClass.ends_at) : "");
+
+    validateClassSchedule(startsAtInput, endsAtInput);
+
     const payload = {
-      title: classForm.title.trim(),
-      description: classForm.description.trim(),
-      leader_id: classForm.leader_id || null,
-      starts_at: toIsoString(classForm.starts_at),
-      ends_at: toIsoString(classForm.ends_at),
-      meet_url: classForm.meet_url.trim() || null,
-      banner_url: classForm.banner_url.trim() || null,
-      status: classForm.status,
-      requires_approval: classForm.requires_approval
+      title: (classForm.title || existingClass?.title || "").trim(),
+      description: (classForm.description ?? existingClass?.description ?? "").trim(),
+      leader_id: classForm.leader_id || existingClass?.leader_id || null,
+      starts_at: toIsoString(startsAtInput),
+      ends_at: toIsoString(endsAtInput),
+      meet_url: (classForm.meet_url || existingClass?.meet_url || "").trim() || null,
+      banner_url: (classForm.banner_url || existingClass?.banner_url || "").trim() || null,
+      status: classForm.status || existingClass?.status || "upcoming",
+      requires_approval: classForm.requires_approval ?? existingClass?.requires_approval ?? false
     };
 
     await runAction(async () => {
       if (!payload.title) {
         throw new Error("Class title is required.");
       }
-
-      const classId = editingClassId || selectedClassId;
 
       if (classId) {
         const { error } = await supabase
@@ -505,9 +782,6 @@ export function DiscipleshipSection({
       setClassForm(emptyClassForm);
       setEditingClassId("");
       setShowManagePanel(false);
-      if (!editingClassId && selectedClassId) {
-        setEditingClassId(selectedClassId);
-      }
     }, editingClassId || selectedClassId ? "Class updated." : "Class created.");
   }
 
@@ -525,6 +799,7 @@ export function DiscipleshipSection({
 
       if (selectedClassId === classId) {
         onSelectClassId("");
+        setPortalPage("overview");
       }
     }, "Class deleted.");
   }
@@ -543,7 +818,7 @@ export function DiscipleshipSection({
       requires_approval: Boolean(classItem.requires_approval)
     });
     onSelectClassId(classItem.id);
-    setClassDetailTab("overview");
+    setPortalPage("overview");
     if (isAdmin) {
       setShowManagePanel(true);
     }
@@ -568,6 +843,10 @@ export function DiscipleshipSection({
     await runAction(async () => {
       if (!payload.title || !payload.starts_at) {
         throw new Error("Session title and start time are required.");
+      }
+
+      if (sessionForm.ends_at && new Date(sessionForm.ends_at) <= new Date(sessionForm.starts_at)) {
+        throw new Error("Session end time must be after the start time.");
       }
 
       if (editingSessionId) {
@@ -756,6 +1035,58 @@ export function DiscipleshipSection({
     }, "Question posted.");
   }
 
+  const discussionReactionOptions = [
+    { type: "love", iconKey: "heart", label: "Love" },
+    { type: "like", iconKey: "thumbsUp", label: "Like" },
+    { type: "pray", iconKey: "pray", label: "Pray" }
+  ];
+
+  function getDiscussionReactionStats(postId) {
+    const rows = reactions.filter(
+      (row) => row.entity_table === "discipleship_discussions" && row.entity_id === postId
+    );
+
+    return discussionReactionOptions.map(({ type, iconKey, label }) => ({
+      type,
+      iconKey,
+      label,
+      count: rows.filter((row) => row.reaction === type).length,
+      selected: rows.some((row) => row.reaction === type && row.user_id === user.id)
+    }));
+  }
+
+  async function toggleDiscussionReaction(postId, reaction) {
+    const existing = reactions.find(
+      (row) =>
+        row.entity_table === "discipleship_discussions" &&
+        row.entity_id === postId &&
+        row.reaction === reaction &&
+        row.user_id === user.id
+    );
+
+    await runAction(async () => {
+      if (existing) {
+        const { error } = await supabase.from("reactions").delete().eq("id", existing.id);
+        if (error) {
+          throw error;
+        }
+      } else {
+        const { error } = await supabase.from("reactions").insert([
+          {
+            user_id: user.id,
+            entity_table: "discipleship_discussions",
+            entity_id: postId,
+            reaction
+          }
+        ]);
+
+        if (error) {
+          throw error;
+        }
+      }
+    });
+  }
+
   async function markAttendance(sessionId, memberId, status) {
     await runAction(async () => {
       const { error } = await supabase.from("discipleship_session_attendance").upsert(
@@ -881,13 +1212,13 @@ export function DiscipleshipSection({
           <div className="inline-actions">
             <button
               type="button"
-              className="primary-button"
+              className="dp-btn-primary"
               onClick={() => {
                 onSelectClassId(classItem.id);
-                setClassDetailTab("overview");
+                setPortalPage(enrollment?.status === "approved" ? "lessons" : "overview");
               }}
             >
-              {enrollment ? "Open class" : "View details"}
+              {enrollment?.status === "approved" ? "Continue learning" : "View details"}
             </button>
 
             {!enrollment && classItem.status !== "draft" && timeline !== "completed" ? (
@@ -935,12 +1266,8 @@ export function DiscipleshipSection({
     const progress = computeClassProgress(selectedClass.id);
     const manageMode = canManageClass(selectedClass);
 
-    return (
-      <div className="section-stack">
-        <button type="button" className="ghost-button" onClick={() => onSelectClassId("")}>
-          ← Back to classes
-        </button>
-
+    return wrapPortal(
+      <>
         {liveSession ? (
           <div className="live-now-banner">
             <div>
@@ -961,65 +1288,101 @@ export function DiscipleshipSection({
           </div>
         ) : null}
 
-        <Panel
-          title={selectedClass.title}
-          subtitle={`Led by ${selectedClass.leader_id ? getMemberLabel(selectedClass.leader_id) : "TBD"} • ${formatDateTime(selectedClass.starts_at)}`}
-        >
-          {selectedClass.banner_url ? (
-            <div
-              className="discipleship-banner large"
-              style={{ backgroundImage: `url(${selectedClass.banner_url})` }}
-            />
-          ) : null}
-          <p>{selectedClass.description || "No description yet."}</p>
-
-          {canAccessContent ? (
-            <>
-              <ProgressBar value={progress.lessonPercent} label="Lessons completed" />
-              <ProgressBar value={progress.attendancePercent} label="Attendance" />
-              <ProgressBar value={progress.overall} label="Overall progress" />
-            </>
-          ) : (
-            <div className="inline-help">
-              Enroll to access lessons, notes, and discussions.
-              {selectedEnrollment?.status === "pending"
-                ? " Your request is awaiting leader approval."
-                : null}
-            </div>
-          )}
-
-          {!canAccessContent && !selectedEnrollment ? (
-            <div className="form-actions">
-              <button
-                type="button"
-                className="primary-button"
-                onClick={() => enrollInClass(selectedClass)}
-                disabled={submitting}
-              >
-                {selectedClass.requires_approval ? "Request to join" : "Join class"}
-              </button>
-            </div>
-          ) : null}
-        </Panel>
-
-        <div className="discipleship-tabs" role="tablist" aria-label="Class sections">
-          {["overview", "lessons", "sessions", "attendance", "discussion", "notes"].map((tab) => (
-            <button
-              key={tab}
-              type="button"
-              role="tab"
-              aria-selected={classDetailTab === tab}
-              className={classDetailTab === tab ? "discipleship-tab active" : "discipleship-tab"}
-              onClick={() => setClassDetailTab(tab)}
-              disabled={!canAccessContent && tab !== "overview"}
-            >
-              {tab.charAt(0).toUpperCase() + tab.slice(1)}
+        {portalPage === "classes" ? (
+          <div className="dp-page">
+            <button type="button" className="dp-btn-secondary" onClick={() => onSelectClassId("")}>
+              ← All classes
             </button>
-          ))}
-        </div>
+            <div className="dp-course-grid">{catalogClasses.map(renderClassCard)}</div>
+          </div>
+        ) : null}
 
-        {classDetailTab === "overview" && manageMode ? (
-          <Panel title="Manage class" subtitle="Update schedule, leader, and enrollment settings.">
+        {portalPage === "submissions" ? (
+          <PortalSubmissions
+            user={user}
+            lessons={lessons}
+            classes={classes}
+            assignmentSubmissions={assignmentSubmissions}
+            submissionHistory={submissionHistory}
+            myApprovedClassIds={myApprovedClassIds}
+            accessibleClassIds={accessibleClassIds}
+            runAction={runAction}
+            submitting={submitting}
+            liveNow={now}
+            getClassTitle={getClassTitle}
+          />
+        ) : null}
+
+        {portalPage === "progress" ? (
+          <PortalProgressView
+            classes={classes}
+            lessons={lessons}
+            lessonCompletions={lessonCompletions}
+            assignmentSubmissions={assignmentSubmissions}
+            sessionAttendance={sessionAttendance}
+            sessions={sessions}
+            enrollments={enrollments}
+            userId={user.id}
+            myApprovedClassIds={myApprovedClassIds}
+            now={now}
+          />
+        ) : null}
+
+        {portalPage === "achievements" ? (
+          <PortalAchievements
+            lessonCompletions={lessonCompletions}
+            assignmentSubmissions={assignmentSubmissions}
+            sessionAttendance={sessionAttendance}
+            userId={user.id}
+            myApprovedClassIds={myApprovedClassIds}
+            progressSummary={[
+              { label: "Classes enrolled", value: String(myApprovedClassIds.size) },
+              {
+                label: "Lessons done",
+                value: String(
+                  lessonCompletions.filter((row) => row.user_id === user.id).length
+                )
+              },
+              {
+                label: "Work approved",
+                value: String(
+                  assignmentSubmissions.filter(
+                    (row) => row.user_id === user.id && row.status === "approved"
+                  ).length
+                )
+              }
+            ]}
+          />
+        ) : null}
+
+        {renderPortalNavExtras({ inClassView: true, page: portalPage })}
+
+        {portalPage === "overview" ? (
+          <>
+            <PortalClassDashboard
+              selectedClass={selectedClass}
+              progress={progress}
+              learningLessons={learningLessons}
+              myCompletedLessonIds={myCompletedLessonIds}
+              classSessions={classSessions}
+              lessons={lessons}
+              assignmentSubmissions={assignmentSubmissions}
+              userId={user.id}
+              now={now}
+              getMemberLabel={getMemberLabel}
+              formatDateTime={formatDateTime}
+              canAccessContent={canAccessContent}
+              selectedEnrollment={selectedEnrollment}
+              onResumeLesson={(lesson) => {
+                setPortalPage("lessons");
+                openLessonMaterial(lesson);
+              }}
+              onNavigate={setPortalPage}
+              onEnroll={() => enrollInClass(selectedClass)}
+              submitting={submitting}
+            />
+            {manageMode ? (
+              <Panel title="Manage class" subtitle="Update schedule, leader, and enrollment settings.">
             <form className="form-grid" onSubmit={handleClassSubmit}>
               <input type="hidden" value={editingClassId || selectedClass.id} readOnly />
               <label className="field">
@@ -1071,6 +1434,25 @@ export function DiscipleshipSection({
                   }
                   onChange={(event) =>
                     setClassForm((current) => ({ ...current, starts_at: event.target.value }))
+                  }
+                />
+              </label>
+              <label className="field">
+                <span>Ends at (optional)</span>
+                <input
+                  type="datetime-local"
+                  value={
+                    classForm.ends_at ||
+                    (selectedClass.ends_at ? toLocalDateTimeInput(selectedClass.ends_at) : "")
+                  }
+                  min={
+                    classForm.starts_at ||
+                    (selectedClass.starts_at
+                      ? toLocalDateTimeInput(selectedClass.starts_at)
+                      : undefined)
+                  }
+                  onChange={(event) =>
+                    setClassForm((current) => ({ ...current, ends_at: event.target.value }))
                   }
                 />
               </label>
@@ -1138,12 +1520,41 @@ export function DiscipleshipSection({
             ) : (
               <EmptyState title="No enrollments yet" description="Members will appear here when they join." />
             )}
-          </Panel>
+              </Panel>
+            ) : null}
+          </>
         ) : null}
 
-        {classDetailTab === "lessons" && canAccessContent ? (
-          <>
-            {manageMode ? (
+        {portalPage === "assignments" && !canAccessContent ? renderSelectClassPrompt() : null}
+
+        {portalPage === "assignments" && canAccessContent ? (
+          <DiscipleshipAssignments
+            user={user}
+            profiles={profiles}
+            selectedClass={selectedClass}
+            lessons={lessons}
+            submissions={assignmentSubmissions}
+            submissionHistory={submissionHistory}
+            enrollments={enrollments}
+            runAction={runAction}
+            submitting={submitting}
+            manageMode={manageMode}
+            isApprovedEnrolled={isApprovedEnrolled(selectedClass.id)}
+            liveNow={now}
+          />
+        ) : null}
+
+        {portalPage === "lessons" && !canAccessContent ? renderSelectClassPrompt() : null}
+
+        {portalPage === "lessons" && canAccessContent ? (
+          <PortalLessonsModules
+            classLessons={learningLessons}
+            myCompletedLessonIds={myCompletedLessonIds}
+            onOpenMaterial={openLessonMaterial}
+            onToggleComplete={toggleLessonComplete}
+            submitting={submitting}
+            manageForm={
+              manageMode ? (
               <Panel title="Add lesson" subtitle="Organize content by weekly modules or sessions.">
                 <form className="form-grid" onSubmit={handleLessonSubmit}>
                   <label className="field">
@@ -1283,192 +1694,132 @@ export function DiscipleshipSection({
                   </div>
                 </form>
               </Panel>
-            ) : null}
-
-            <Panel title="Lessons" subtitle="Track completion as you grow through each module.">
-              {classLessons.length ? (
-                <div className="card-list">
-                  {classLessons.map((lesson) => {
-                    const complete = myCompletedLessonIds.has(lesson.id);
-
-                    return (
-                      <article key={lesson.id} className="task-card">
-                        <div className="task-header">
-                          <div>
-                            <h3>{lesson.title}</h3>
-                            <p>{lesson.module_label || "General module"}</p>
-                          </div>
-                          <span className={complete ? "pill success" : "pill"}>
-                            {complete ? "Completed" : lesson.lesson_type}
-                          </span>
-                        </div>
-                        <p className="task-details">{truncateText(lesson.description, 160)}</p>
-                        {lesson.lesson_type === "note" && lesson.note_content ? (
-                          <p className="inline-help">{truncateText(lesson.note_content, 200)}</p>
-                        ) : null}
-                        <div className="inline-actions">
-                          <button
-                            type="button"
-                            className="secondary-button"
-                            onClick={() => openLessonMaterial(lesson)}
-                          >
-                            Open material
-                          </button>
-                          <button
-                            type="button"
-                            className={complete ? "ghost-button" : "primary-button"}
-                            onClick={() => toggleLessonComplete(lesson.id)}
-                            disabled={submitting}
-                          >
-                            {complete ? "Mark incomplete" : "Mark complete"}
-                          </button>
-                          {manageMode ? (
-                            <button
-                              type="button"
-                              className="ghost-button"
-                              onClick={() => {
-                                setEditingLessonId(lesson.id);
-                                setLessonForm({
-                                  title: lesson.title,
-                                  description: lesson.description,
-                                  module_label: lesson.module_label,
-                                  sort_order: String(lesson.sort_order),
-                                  lesson_type: lesson.lesson_type,
-                                  note_content: lesson.note_content,
-                                  external_url: lesson.external_url ?? "",
-                                  video_url: lesson.video_url ?? "",
-                                  assignment_prompt: lesson.assignment_prompt,
-                                  discussion_topic: lesson.discussion_topic
-                                });
-                              }}
-                            >
-                              Edit
-                            </button>
-                          ) : null}
-                        </div>
-                      </article>
-                    );
-                  })}
-                </div>
-              ) : (
-                <EmptyState title="No lessons yet" description="Leaders can add the first lesson above." />
-              )}
-            </Panel>
-          </>
+              ) : null
+            }
+          />
         ) : null}
 
-        {classDetailTab === "sessions" && canAccessContent ? (
-          <>
-            {manageMode ? (
-              <Panel title="Schedule session" subtitle="Add in-person or virtual class sessions.">
-                <form className="form-grid" onSubmit={handleSessionSubmit}>
-                  <label className="field">
-                    <span>Session title</span>
-                    <input
-                      type="text"
-                      value={sessionForm.title}
-                      onChange={(event) =>
-                        setSessionForm((current) => ({ ...current, title: event.target.value }))
-                      }
-                      required
-                    />
-                  </label>
-                  <label className="field">
-                    <span>Starts at</span>
-                    <input
-                      type="datetime-local"
-                      value={sessionForm.starts_at}
-                      onChange={(event) =>
-                        setSessionForm((current) => ({
-                          ...current,
-                          starts_at: event.target.value
-                        }))
-                      }
-                      required
-                    />
-                  </label>
-                  <label className="field">
-                    <span>Google Meet link (optional)</span>
-                    <input
-                      type="url"
-                      value={sessionForm.meet_url}
-                      onChange={(event) =>
-                        setSessionForm((current) => ({ ...current, meet_url: event.target.value }))
-                      }
-                    />
-                  </label>
-                  <div className="form-actions">
-                    <button type="submit" className="primary-button" disabled={submitting}>
-                      {editingSessionId ? "Save session" : "Add session"}
-                    </button>
-                  </div>
-                </form>
-              </Panel>
-            ) : null}
+        {portalPage === "sessions" && !canAccessContent ? renderSelectClassPrompt() : null}
 
-            <Panel title="Class sessions" subtitle="Join live when a session is in progress.">
-              {classSessions.length ? (
-                <div className="card-list">
+        {portalPage === "sessions" && canAccessContent ? (
+          <>
+            <PortalSessionsView
+              sessions={classSessions}
+              selectedClass={selectedClass}
+              getMemberLabel={getMemberLabel}
+              formatDateTime={formatDateTime}
+              isSessionLive={isSessionLive}
+              now={now}
+              onJoin={joinLiveClass}
+              manageForm={
+                manageMode ? (
+                  <section className="dp-panel">
+                    <div className="dp-panel-head">
+                      <h2>Schedule session</h2>
+                      <p>Add in-person or virtual class sessions.</p>
+                    </div>
+                    <form className="form-grid" onSubmit={handleSessionSubmit}>
+                      <label className="field">
+                        <span>Session title</span>
+                        <input
+                          type="text"
+                          value={sessionForm.title}
+                          onChange={(event) =>
+                            setSessionForm((current) => ({ ...current, title: event.target.value }))
+                          }
+                          required
+                        />
+                      </label>
+                      <label className="field">
+                        <span>Starts at</span>
+                        <input
+                          type="datetime-local"
+                          value={sessionForm.starts_at}
+                          onChange={(event) =>
+                            setSessionForm((current) => ({
+                              ...current,
+                              starts_at: event.target.value
+                            }))
+                          }
+                          required
+                        />
+                      </label>
+                      <label className="field">
+                        <span>Google Meet link (optional)</span>
+                        <input
+                          type="url"
+                          value={sessionForm.meet_url}
+                          onChange={(event) =>
+                            setSessionForm((current) => ({
+                              ...current,
+                              meet_url: event.target.value
+                            }))
+                          }
+                        />
+                      </label>
+                      <div className="form-actions">
+                        <button type="submit" className="dp-btn-primary" disabled={submitting}>
+                          {editingSessionId ? "Save session" : "Add session"}
+                        </button>
+                      </div>
+                    </form>
+                  </section>
+                ) : null
+              }
+            />
+
+            {!manageMode && classSessions.length ? (
+              <section className="dp-panel">
+                <div className="dp-panel-head">
+                  <h2>Session check-in</h2>
+                  <p>Mark your attendance when you join a session.</p>
+                </div>
+                <ul className="dp-lesson-list">
                   {classSessions.map((session) => {
-                    const live = isSessionLive(session, selectedClass, now);
                     const myRow = sessionAttendance.find(
                       (row) => row.session_id === session.id && row.user_id === user.id
                     );
 
                     return (
-                      <article key={session.id} className="task-card">
-                        <div className="task-header">
+                      <li key={session.id} className="dp-lesson-row">
+                        <div className="dp-lesson-info">
                           <div>
-                            <h3>{session.title}</h3>
+                            <strong>{session.title}</strong>
                             <p>{formatDateTime(session.starts_at)}</p>
                           </div>
-                          <span className={live ? "pill success" : "pill warning"}>
-                            {live ? "Live" : "Scheduled"}
-                          </span>
                         </div>
-                        <div className="inline-actions">
-                          {live ? (
-                            <button
-                              type="button"
-                              className="primary-button"
-                              onClick={() =>
-                                joinLiveClass(session.meet_url || selectedClass.meet_url)
-                              }
-                            >
-                              Join class
-                            </button>
-                          ) : null}
-                          <button
-                            type="button"
-                            className="secondary-button"
-                            onClick={() => selfCheckIn(session)}
-                            disabled={submitting || Boolean(myRow)}
-                          >
-                            {myRow ? `Checked in (${myRow.status})` : "Check in"}
-                          </button>
-                          {manageMode ? (
-                            <button
-                              type="button"
-                              className="ghost-button danger"
-                              onClick={() => deleteSession(session.id)}
-                            >
-                              Delete
-                            </button>
-                          ) : null}
-                        </div>
-                      </article>
+                        <button
+                          type="button"
+                          className="dp-btn-secondary"
+                          onClick={() => selfCheckIn(session)}
+                          disabled={submitting || Boolean(myRow)}
+                        >
+                          {myRow ? `Checked in (${myRow.status})` : "Check in"}
+                        </button>
+                      </li>
                     );
                   })}
-                </div>
-              ) : (
-                <EmptyState title="No sessions scheduled" description="Sessions will appear here once added." />
-              )}
-            </Panel>
+                </ul>
+              </section>
+            ) : null}
           </>
         ) : null}
 
-        {classDetailTab === "attendance" && canAccessContent && manageMode ? (
-          <Panel title="Attendance tracking" subtitle="Mark present, absent, or late for enrolled members.">
+        {portalPage === "attendance" && !canAccessContent ? renderSelectClassPrompt() : null}
+
+        {portalPage === "attendance" && canAccessContent ? (
+          <PortalAttendanceView
+            progress={progress}
+            sessions={classSessions}
+            sessionAttendance={sessionAttendance}
+            userId={user.id}
+            manageContent={
+              manageMode ? (
+          <section className="dp-panel">
+            <div className="dp-panel-head">
+              <h2>Attendance tracking</h2>
+              <p>Mark present, absent, or late for enrolled members.</p>
+            </div>
             {classSessions.length ? (
               classSessions.map((session) => (
                 <div key={session.id} className="attendance-session-block">
@@ -1511,13 +1862,23 @@ export function DiscipleshipSection({
                 </div>
               ))
             ) : (
-              <EmptyState title="No sessions" description="Add sessions to track attendance." />
+              <p className="dp-empty-copy">Add sessions to track attendance.</p>
             )}
-          </Panel>
+          </section>
+              ) : null
+            }
+          />
         ) : null}
 
-        {classDetailTab === "discussion" && canAccessContent ? (
-          <Panel title="Class discussion" subtitle="Ask questions and encourage interaction during the course.">
+        {portalPage === "discussion" && !canAccessContent ? renderSelectClassPrompt() : null}
+
+        {portalPage === "discussion" && canAccessContent ? (
+          <div className="dp-page">
+          <section className="dp-panel">
+            <div className="dp-panel-head">
+              <h2>Class discussion</h2>
+              <p>Ask questions and encourage one another during the course.</p>
+            </div>
             <form className="stack-form" onSubmit={postDiscussion}>
               <label className="field">
                 <span>Your question or comment</span>
@@ -1530,7 +1891,7 @@ export function DiscipleshipSection({
                 />
               </label>
               <div className="form-actions">
-                <button type="submit" className="primary-button" disabled={submitting}>
+                <button type="submit" className="dp-btn-primary" disabled={submitting}>
                   Post
                 </button>
               </div>
@@ -1539,33 +1900,76 @@ export function DiscipleshipSection({
             {classDiscussions.length ? (
               <div className="discussion-thread">
                 {classDiscussions.map((post) => (
-                  <article key={post.id} className="discussion-post">
+                  <article key={post.id} className="discussion-post dp-note-card">
                     <strong>{getMemberLabel(post.user_id)}</strong>
                     <p>{post.content}</p>
                     <span className="inline-help">{formatDateTime(post.created_at)}</span>
+                    <div className="dp-reaction-row" role="group" aria-label="Reactions">
+                      {getDiscussionReactionStats(post.id).map((item) => (
+                        <button
+                          key={item.type}
+                          type="button"
+                          className={`dp-reaction-btn${item.selected ? " active" : ""}`}
+                          onClick={() => toggleDiscussionReaction(post.id, item.type)}
+                          disabled={submitting}
+                          aria-label={`${item.label}${item.count ? `, ${item.count}` : ""}`}
+                        >
+                          <span className="dp-reaction-icon">{portalIcons[item.iconKey]}</span>
+                          {item.count > 0 ? <span>{item.count}</span> : null}
+                        </button>
+                      ))}
+                    </div>
                   </article>
                 ))}
               </div>
             ) : (
-              <EmptyState title="No discussion yet" description="Be the first to start the conversation." />
+              <p className="dp-empty-copy">Be the first to start the conversation.</p>
             )}
-          </Panel>
+          </section>
+          </div>
         ) : null}
 
-        {classDetailTab === "notes" && canAccessContent ? (
-          <Panel title="Personal reflections" subtitle="Save private notes and reflections per lesson.">
+        {portalPage === "notes" && !canAccessContent ? renderSelectClassPrompt() : null}
+
+        {portalPage === "notes" && canAccessContent ? (
+          <div className="dp-page">
+          <section className="dp-panel">
+            <div className="dp-panel-head">
+              <h2>Personal notebook</h2>
+              <p>Private reflections per lesson — saved when you tap Save.</p>
+            </div>
+            <div className="dp-notes-toolbar">
+              <input
+                type="search"
+                value={notesSearch}
+                onChange={(event) => setNotesSearch(event.target.value)}
+                placeholder="Search notes by lesson title…"
+                aria-label="Search notes"
+              />
+            </div>
             {classLessons.length ? (
               <div className="card-list">
-                {classLessons.map((lesson) => {
+                {classLessons
+                  .filter((lesson) => {
+                    if (!notesSearch.trim()) {
+                      return true;
+                    }
+
+                    return lesson.title
+                      .toLowerCase()
+                      .includes(notesSearch.trim().toLowerCase());
+                  })
+                  .map((lesson) => {
                   const saved = memberNotes.find(
                     (row) => row.lesson_id === lesson.id && row.user_id === user.id
                   );
 
                   return (
-                    <article key={lesson.id} className="task-card">
+                    <article key={lesson.id} className="dp-note-card">
                       <h3>{lesson.title}</h3>
+                      <p className="inline-help">{lesson.module_label || "General"}</p>
                       <textarea
-                        rows={3}
+                        rows={4}
                         value={noteDrafts[lesson.id] ?? saved?.content ?? ""}
                         placeholder="Write your reflection…"
                         onChange={(event) => {
@@ -1578,7 +1982,7 @@ export function DiscipleshipSection({
                       />
                       <button
                         type="button"
-                        className="secondary-button"
+                        className="dp-btn-secondary"
                         onClick={() => {
                           setSelectedLessonId(lesson.id);
                           saveMemberNote(
@@ -1588,111 +1992,107 @@ export function DiscipleshipSection({
                         }}
                         disabled={submitting}
                       >
-                        Save reflection
+                        Save note
                       </button>
                     </article>
                   );
                 })}
               </div>
             ) : (
-              <EmptyState title="No lessons" description="Reflections are saved per lesson." />
+              <p className="dp-empty-copy">Reflections are saved per lesson.</p>
             )}
-          </Panel>
+          </section>
+          </div>
         ) : null}
-      </div>
+      </>
     );
   }
 
-  return (
-    <div className="section-stack">
-      <header className="discipleship-page-header">
-        <p className="eyebrow">Soldout Ministry</p>
-        <h1>Discipleship</h1>
-        <p className="discipleship-page-lead">
-          Structured spiritual growth through classes, weekly assignments, the class project,
-          and accountable fellowship.
-        </p>
-      </header>
+  return wrapPortal(
+    <>
+      {activePortalPage === "overview" ? (
+        <PortalOverview
+          classes={classes}
+          lessons={lessons}
+          lessonCompletions={lessonCompletions}
+          assignmentSubmissions={assignmentSubmissions}
+          sessions={sessions}
+          sessionAttendance={sessionAttendance}
+          userId={user.id}
+          myApprovedClassIds={myApprovedClassIds}
+          now={now}
+          guidelines={<DiscipleshipGuidelines />}
+          onOpenClass={(classId) => {
+            onSelectClassId(classId);
+            setPortalPage("overview");
+          }}
+          onNavigate={setPortalPage}
+        />
+      ) : null}
 
-      <Panel
-        title="Guidelines & expectations"
-        subtitle="Essential standards for Discipleship 1 — please read carefully before each session."
-      >
-        <DiscipleshipGuidelines />
-      </Panel>
-
-      <div className="discipleship-work-grid">
-        <Panel
-          title="Assignments"
-          subtitle="Weekly tasks that deepen your walk with God. Submit by your teacher’s deadline."
-        >
-          {assignmentLessons.length ? (
-            <div className="discipleship-work-list">
-              {assignmentLessons.map((lesson) => renderWorkItemCard(lesson, "assignment"))}
-            </div>
-          ) : (
-            <EmptyState
-              title="No assignments yet"
-              description={
-                myApprovedClassIds.size
-                  ? "Your teacher will publish weekly assignments here."
-                  : "Join a class to see assignments assigned to you."
-              }
-            />
-          )}
-        </Panel>
-
-        <Panel
-          title="Class project"
-          subtitle="Mandatory for graduation from Discipleship 1. Complete with integrity and commitment."
-        >
-          {projectLessons.length ? (
-            <div className="discipleship-work-list">
-              {projectLessons.map((lesson) => renderWorkItemCard(lesson, "project"))}
-            </div>
-          ) : (
-            <EmptyState
-              title="Class project not published yet"
-              description="The coordination team will share the official project brief when ready."
-            />
-          )}
-        </Panel>
-      </div>
-
-      <Panel
-        title="Discipleship overview"
-        subtitle="Your classes, progress, and enrollment at a glance."
-      >
-        <div className="member-overview-grid">
-          <div className="stat-card blue">
-            <span>Available</span>
-            <strong>
-              {
-                classes.filter(
-                  (item) =>
-                    item.status !== "draft" &&
-                    getClassTimelineStatus(item, now) !== "completed"
+      {activePortalPage === "achievements" ? (
+        <PortalAchievements
+          lessonCompletions={lessonCompletions}
+          assignmentSubmissions={assignmentSubmissions}
+          sessionAttendance={sessionAttendance}
+          userId={user.id}
+          myApprovedClassIds={myApprovedClassIds}
+          progressSummary={[
+            { label: "Classes enrolled", value: String(myApprovedClassIds.size) },
+            {
+              label: "Lessons done",
+              value: String(lessonCompletions.filter((row) => row.user_id === user.id).length)
+            },
+            {
+              label: "Work approved",
+              value: String(
+                assignmentSubmissions.filter(
+                  (row) => row.user_id === user.id && row.status === "approved"
                 ).length
-              }
-            </strong>
-            <p>Open for enrollment</p>
-          </div>
-          <div className="stat-card orange">
-            <span>My classes</span>
-            <strong>{myEnrolledClasses.length}</strong>
-            <p>Enrolled programs</p>
-          </div>
-          <div className="stat-card">
-            <span>Ongoing</span>
-            <strong>
-              {classes.filter((item) => getClassTimelineStatus(item, now) === "ongoing").length}
-            </strong>
-            <p>Currently in progress</p>
-          </div>
-        </div>
-      </Panel>
+              )
+            }
+          ]}
+        />
+      ) : null}
 
-      {isAdmin ? (
+      {renderPortalNavExtras({ page: activePortalPage })}
+
+      {activePortalPage === "submissions" ? (
+        <PortalSubmissions
+          user={user}
+          lessons={lessons}
+          classes={classes}
+          assignmentSubmissions={assignmentSubmissions}
+          submissionHistory={submissionHistory}
+          myApprovedClassIds={myApprovedClassIds}
+          accessibleClassIds={accessibleClassIds}
+          runAction={runAction}
+          submitting={submitting}
+          liveNow={now}
+          getClassTitle={getClassTitle}
+        />
+      ) : null}
+
+      {activePortalPage === "progress" ? (
+        <PortalProgressView
+          classes={classes}
+          lessons={lessons}
+          lessonCompletions={lessonCompletions}
+          assignmentSubmissions={assignmentSubmissions}
+          sessionAttendance={sessionAttendance}
+          sessions={sessions}
+          enrollments={enrollments}
+          userId={user.id}
+          myApprovedClassIds={myApprovedClassIds}
+          now={now}
+        />
+      ) : null}
+
+      {classRequiredPages.includes(activePortalPage) && !selectedClass
+        ? renderSelectClassPrompt()
+        : null}
+
+      {isAdmin && activePortalPage === "classes" ? (
         <Panel
           title={showManagePanel ? "Create or edit class" : "Class management"}
           subtitle="Admins can create classes, assign leaders, and configure enrollment."
@@ -1762,15 +2162,20 @@ export function DiscipleshipSection({
                 />
               </label>
               <label className="field">
-                <span>Ends at</span>
+                <span>Ends at (optional)</span>
                 <input
                   type="datetime-local"
                   value={classForm.ends_at}
+                  min={classForm.starts_at || undefined}
                   onChange={(event) =>
                     setClassForm((current) => ({ ...current, ends_at: event.target.value }))
                   }
                 />
               </label>
+              <p className="inline-help full-width">
+                If you set an end time, it must be later than the start time. Leave end empty for
+                open-ended classes.
+              </p>
               <label className="field">
                 <span>Banner image URL (optional)</span>
                 <input
@@ -1841,6 +2246,8 @@ export function DiscipleshipSection({
         </Panel>
       ) : null}
 
+      {activePortalPage === "classes" ? (
+        <div className="dp-page">
       <div className="discipleship-tabs" role="tablist" aria-label="Class catalog">
         {[
           { id: "available", label: "Available" },
@@ -1889,6 +2296,8 @@ export function DiscipleshipSection({
           />
         )}
       </Panel>
-    </div>
+        </div>
+      ) : null}
+    </>
   );
 }

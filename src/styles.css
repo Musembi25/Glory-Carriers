@@ -1,3 +1,8 @@
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
 :root {
   color-scheme: light;
   font-family: Inter, Roboto, "Segoe UI", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
@@ -2715,29 +2720,48 @@ textarea {
   }
 }
 
+.discipleship-tabs-shell {
+  padding: 0.35rem;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border);
+  background: var(--surface-muted);
+  margin-bottom: 0.5rem;
+}
+
 .discipleship-tabs {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.5rem;
-  margin-bottom: 0.25rem;
+  gap: 0.35rem;
 }
 
 .discipleship-tab {
-  border: 1px solid var(--border);
-  background: var(--surface);
+  border: 1px solid transparent;
+  background: transparent;
   color: var(--text-muted);
-  border-radius: 999px;
-  padding: 0.45rem 0.9rem;
-  font-size: 0.82rem;
+  border-radius: calc(var(--radius-md) - 0.15rem);
+  padding: 0.5rem 0.95rem;
+  font-size: 0.84rem;
+  font-weight: 500;
   cursor: pointer;
-  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.discipleship-tab:hover:not(:disabled) {
+  color: var(--text);
+  background: color-mix(in srgb, var(--surface-strong) 70%, transparent);
 }
 
 .discipleship-tab.active {
-  background: var(--accent-soft);
-  border-color: var(--accent);
-  color: var(--accent-strong);
+  background: var(--surface-strong);
+  border-color: var(--border);
+  color: var(--text);
   font-weight: 600;
+  box-shadow: var(--shadow-sm);
+}
+
+.discipleship-tab:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
 }
 
 .discipleship-class-grid {
@@ -3018,22 +3042,65 @@ textarea {
 
 .discipleship-work-grid {
   display: grid;
-  gap: 1rem;
+  gap: 1.15rem;
   grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+}
+
+.discipleship-work-panel .panel-header {
+  padding-bottom: 0.35rem;
 }
 
 .discipleship-work-list {
   display: grid;
-  gap: 0.85rem;
+  gap: 0.9rem;
 }
 
 .discipleship-work-card {
+  position: relative;
   border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  padding: 1rem;
-  background: var(--surface-muted);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  background: var(--surface-strong);
+  box-shadow: var(--shadow-sm);
+  transition: transform 0.18s ease, box-shadow 0.18s ease;
+}
+
+.discipleship-work-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+
+.discipleship-work-card-accent {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 4px;
+  background: var(--primary);
+}
+
+.discipleship-work-card.status-accent.success .discipleship-work-card-accent {
+  background: var(--success);
+}
+
+.discipleship-work-card.status-accent.warning .discipleship-work-card-accent {
+  background: var(--warning);
+}
+
+.discipleship-work-card.status-accent.danger .discipleship-work-card-accent {
+  background: var(--danger);
+}
+
+.discipleship-work-card.status-accent.info .discipleship-work-card-accent {
+  background: var(--primary);
+}
+
+.discipleship-work-card.status-accent.muted .discipleship-work-card-accent {
+  background: var(--text-muted);
+}
+
+.discipleship-work-card-inner {
+  padding: 1rem 1.05rem 1rem 1.15rem;
   display: grid;
-  gap: 0.5rem;
+  gap: 0.55rem;
 }
 
 .discipleship-work-card-head {
@@ -3046,5 +3113,721 @@ textarea {
 
 .discipleship-work-card h3 {
   margin: 0;
-  font-size: 1.05rem;
+  font-size: 1.08rem;
+  letter-spacing: -0.01em;
+}
+
+.discipleship-work-class {
+  margin: 0;
+  font-size: 0.84rem;
+  color: var(--text-muted);
+}
+
+.discipleship-work-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  align-items: center;
+}
+
+.discipleship-work-preview {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  line-height: 1.55;
+}
+
+.discipleship-work-footer {
+  padding-top: 0.35rem;
+}
+
+.assignment-module {
+  display: grid;
+  gap: 1.35rem;
+}
+
+.assignment-hero {
+  display: grid;
+  gap: 1.15rem;
+  padding: 1.35rem 1.4rem;
+  border-radius: var(--radius-xl);
+  border: 1px solid var(--border);
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--primary) 10%, var(--surface-strong)) 0%,
+    var(--surface-strong) 45%,
+    color-mix(in srgb, var(--accent) 8%, var(--surface-muted)) 100%
+  );
+  box-shadow: var(--shadow-sm);
+}
+
+.assignment-hero-eyebrow {
+  margin: 0;
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--primary);
+}
+
+.assignment-hero-title {
+  margin: 0.35rem 0 0.5rem;
+  font-size: clamp(1.35rem, 2.5vw, 1.75rem);
+  letter-spacing: -0.02em;
+}
+
+.assignment-hero-lead {
+  margin: 0;
+  max-width: 42rem;
+  color: var(--text-muted);
+  line-height: 1.6;
+}
+
+.assignment-stat-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 0.75rem;
+}
+
+.assignment-stat-tile {
+  padding: 0.85rem 0.95rem;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--surface-strong) 88%, transparent);
+}
+
+.assignment-stat-tile.tone-warning {
+  border-color: color-mix(in srgb, var(--warning) 35%, var(--border));
+  background: var(--warning-soft);
+}
+
+.assignment-stat-tile.tone-success {
+  border-color: color-mix(in srgb, var(--success) 35%, var(--border));
+  background: var(--success-soft);
+}
+
+.assignment-stat-tile.tone-info {
+  border-color: color-mix(in srgb, var(--primary) 30%, var(--border));
+  background: var(--primary-soft);
+}
+
+.assignment-stat-label {
+  display: block;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.assignment-stat-value {
+  display: block;
+  margin-top: 0.25rem;
+  font-size: 1.65rem;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+}
+
+.assignment-stat-hint {
+  margin: 0.35rem 0 0;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.progress-block-lg .progress-track {
+  height: 10px;
+}
+
+.assignment-composer-form {
+  gap: 1rem;
+}
+
+.assignment-composer-section {
+  padding: 1rem 1.05rem;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  background: var(--surface-muted);
+}
+
+.assignment-composer-heading {
+  margin: 0 0 0.85rem;
+  font-size: 0.92rem;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.assignment-composer-fields {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 0.85rem;
+}
+
+.assignment-composer-actions {
+  margin-top: 0.25rem;
+}
+
+.assignment-file-field input[type="file"] {
+  padding: 0.65rem;
+  border-radius: var(--radius-sm);
+  border: 1px dashed var(--border);
+  background: var(--surface-strong);
+  width: 100%;
+}
+
+.assignment-card-list {
+  display: grid;
+  gap: 1rem;
+}
+
+.assignment-card {
+  position: relative;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  background: var(--surface-strong);
+  box-shadow: var(--shadow-sm);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+.assignment-card:hover {
+  box-shadow: var(--shadow-md);
+}
+
+.assignment-card.expanded {
+  border-color: color-mix(in srgb, var(--primary) 35%, var(--border));
+  box-shadow: var(--shadow-md);
+}
+
+.assignment-card-accent {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 4px;
+  background: var(--text-muted);
+}
+
+.assignment-card.status-accent.success .assignment-card-accent {
+  background: var(--success);
+}
+
+.assignment-card.status-accent.warning .assignment-card-accent {
+  background: var(--warning);
+}
+
+.assignment-card.status-accent.danger .assignment-card-accent {
+  background: var(--danger);
+}
+
+.assignment-card.status-accent.info .assignment-card-accent {
+  background: var(--primary);
+}
+
+.assignment-card.status-accent.muted .assignment-card-accent {
+  background: var(--text-muted);
+}
+
+.assignment-card-inner {
+  padding: 1.05rem 1.15rem 1.1rem 1.2rem;
+  display: grid;
+  gap: 0.75rem;
+}
+
+.assignment-card-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: flex-start;
+}
+
+.assignment-card-title-block h3 {
+  margin: 0.4rem 0 0;
+  font-size: 1.12rem;
+  letter-spacing: -0.01em;
+}
+
+.assignment-card-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  align-items: center;
+}
+
+.assignment-module-tag {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+  background: var(--surface-muted);
+  border: 1px solid var(--border);
+}
+
+.assignment-card-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  justify-content: flex-end;
+}
+
+.assignment-card-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+  font-size: 0.82rem;
+  color: var(--text-muted);
+}
+
+.assignment-card-meta span {
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+  background: var(--surface-muted);
+  border: 1px solid var(--border);
+}
+
+.assignment-card-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.assignment-card-body {
+  padding-top: 1rem;
+  border-top: 1px solid var(--border);
+  display: grid;
+  gap: 1rem;
+}
+
+.assignment-instructions-box {
+  padding: 1rem 1.05rem;
+  border-radius: var(--radius-md);
+  background: var(--surface-muted);
+  border: 1px solid var(--border);
+}
+
+.assignment-instructions-box p {
+  margin: 0.35rem 0 0;
+  line-height: 1.6;
+  color: var(--text);
+}
+
+.assignment-section-label {
+  margin: 0;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.assignment-panel-section {
+  display: grid;
+  gap: 0.85rem;
+}
+
+.assignment-due-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.22rem 0.6rem;
+  border-radius: 999px;
+  font-size: 0.74rem;
+  font-weight: 600;
+  background: var(--surface-muted);
+  color: var(--text);
+  border: 1px solid var(--border);
+}
+
+.assignment-due-badge.soon {
+  background: var(--warning-soft);
+  color: var(--warning);
+  border-color: color-mix(in srgb, var(--warning) 30%, var(--border));
+}
+
+.assignment-due-badge.overdue {
+  background: var(--danger-soft);
+  color: var(--danger);
+  border-color: color-mix(in srgb, var(--danger) 30%, var(--border));
+}
+
+.assignment-due-badge.open {
+  background: var(--accent-soft);
+  color: var(--accent-strong);
+  border-color: color-mix(in srgb, var(--accent) 30%, var(--border));
+}
+
+.assignment-dropzone {
+  border: 2px dashed color-mix(in srgb, var(--primary) 35%, var(--border));
+  border-radius: var(--radius-lg);
+  padding: 1.35rem 1rem;
+  text-align: center;
+  cursor: pointer;
+  background: color-mix(in srgb, var(--primary) 5%, var(--surface-strong));
+  transition: border-color 0.2s ease, background 0.2s ease, transform 0.15s ease;
+}
+
+.assignment-dropzone.drag-over,
+.assignment-dropzone:hover:not(.disabled) {
+  border-color: var(--primary);
+  background: color-mix(in srgb, var(--primary) 10%, var(--surface-strong));
+  transform: translateY(-1px);
+}
+
+.assignment-dropzone.disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.assignment-file-input {
+  display: none;
+}
+
+.assignment-dropzone-icon {
+  width: 3rem;
+  height: 3rem;
+  margin: 0 auto 0.65rem;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  background: var(--primary-soft);
+  color: var(--primary);
+}
+
+.assignment-dropzone-icon svg {
+  width: 1.35rem;
+  height: 1.35rem;
+}
+
+.assignment-dropzone-title {
+  margin: 0;
+  font-weight: 600;
+}
+
+.assignment-selected-file {
+  margin: 0.5rem 0 0;
+  font-size: 0.85rem;
+  color: var(--primary);
+  font-weight: 600;
+}
+
+.assignment-submit-block,
+.assignment-roster {
+  display: grid;
+  gap: 0.85rem;
+}
+
+.assignment-status-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.assignment-feedback-received {
+  padding: 0.95rem 1.05rem;
+  border-radius: var(--radius-md);
+  background: var(--success-soft);
+  border: 1px solid color-mix(in srgb, var(--success) 28%, var(--border));
+}
+
+.assignment-encouragement {
+  font-style: italic;
+  color: var(--accent-strong);
+}
+
+.assignment-revision-note {
+  padding: 0.85rem 1rem;
+  border-radius: var(--radius-md);
+  background: var(--danger-soft);
+  border: 1px solid color-mix(in srgb, var(--danger) 25%, var(--border));
+}
+
+.assignment-resource-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.assignment-resource-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.45rem 0.75rem;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--surface-strong);
+  color: var(--text);
+  font-size: 0.86rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.assignment-resource-chip:hover {
+  border-color: var(--primary);
+  background: var(--primary-soft);
+}
+
+.assignment-history-details summary {
+  cursor: pointer;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.assignment-history-list {
+  margin: 0.5rem 0 0;
+  padding-left: 1.15rem;
+  color: var(--text-muted);
+  font-size: 0.88rem;
+}
+
+.assignment-roster-header {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 0.5rem;
+  align-items: baseline;
+}
+
+.assignment-roster-count {
+  font-size: 0.84rem;
+  color: var(--text-muted);
+}
+
+.assignment-roster-list {
+  display: grid;
+  gap: 0.85rem;
+}
+
+.assignment-roster-card {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 0.95rem 1rem;
+  background: var(--surface-muted);
+}
+
+.assignment-roster-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.65rem;
+  align-items: center;
+  margin-bottom: 0.55rem;
+}
+
+.assignment-roster-member {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.assignment-member-avatar {
+  width: 2.1rem;
+  height: 2.1rem;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--primary-strong);
+  background: var(--primary-soft);
+  border: 1px solid color-mix(in srgb, var(--primary) 25%, var(--border));
+}
+
+.assignment-review-form {
+  display: grid;
+  gap: 0.7rem;
+  margin-top: 0.75rem;
+  padding-top: 0.85rem;
+  border-top: 1px dashed var(--border);
+}
+
+.assignment-empty-state {
+  display: grid;
+  justify-items: center;
+  gap: 0.5rem;
+  padding: 1.5rem 1rem;
+}
+
+.assignment-empty-icon {
+  width: 3.25rem;
+  height: 3.25rem;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  background: var(--primary-soft);
+  color: var(--primary);
+}
+
+.assignment-empty-icon svg {
+  width: 1.6rem;
+  height: 1.6rem;
+}
+
+.assignment-summary-panel .assignment-summary-hero {
+  margin-bottom: 1rem;
+  padding: 1rem 1.05rem;
+  border-radius: var(--radius-md);
+  background: var(--surface-muted);
+  border: 1px solid var(--border);
+}
+
+.assignment-dashboard-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 0.85rem;
+}
+
+.assignment-dashboard-card {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 0.95rem 1rem;
+  background: var(--surface-strong);
+  box-shadow: var(--shadow-sm);
+}
+
+.assignment-dashboard-card.tone-warning {
+  border-color: color-mix(in srgb, var(--warning) 30%, var(--border));
+}
+
+.assignment-dashboard-card.tone-info {
+  border-color: color-mix(in srgb, var(--primary) 28%, var(--border));
+}
+
+.assignment-dashboard-card.tone-success {
+  border-color: color-mix(in srgb, var(--success) 30%, var(--border));
+}
+
+.assignment-dashboard-card span {
+  display: block;
+  font-size: 0.76rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+.assignment-dashboard-card strong {
+  display: block;
+  font-size: 1.55rem;
+  margin: 0.25rem 0 0.5rem;
+  letter-spacing: -0.02em;
+}
+
+.assignment-dashboard-card ul {
+  margin: 0;
+  padding-left: 1rem;
+  font-size: 0.88rem;
+  color: var(--text-muted);
+  line-height: 1.45;
+}
+
+.form-grid .field.full-width,
+.form-grid .form-actions.full-width,
+.assignment-composer-section.full-width {
+  grid-column: 1 / -1;
+}
+
+.pill.danger {
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+
+@media (max-width: 768px) {
+  .assignment-hero {
+    padding: 1.1rem;
+  }
+
+  .assignment-stat-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .discipleship-work-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .assignment-card-head {
+    flex-direction: column;
+  }
+
+  .assignment-card-badges {
+    justify-content: flex-start;
+  }
+
+  .assignment-card-actions .primary-button,
+  .assignment-card-actions .secondary-button,
+  .assignment-card-actions .ghost-button {
+    width: 100%;
+  }
+
+  .assignment-dropzone {
+    padding: 1rem 0.75rem;
+  }
+
+  .discipleship-tabs {
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    padding-bottom: 0.15rem;
+    scrollbar-width: thin;
+  }
+
+  .discipleship-tab {
+    flex: 0 0 auto;
+  }
+}
+
+/* PWA install prompt */
+.install-app-prompt {
+  position: fixed;
+  left: 50%;
+  bottom: calc(1rem + env(safe-area-inset-bottom));
+  transform: translateX(-50%);
+  z-index: 120;
+  width: min(28rem, calc(100vw - 2rem));
+  pointer-events: none;
+}
+
+.install-app-prompt-inner {
+  pointer-events: auto;
+  display: grid;
+  gap: 0.85rem;
+  padding: 1rem 1.1rem;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--surface-strong) 94%, transparent);
+  backdrop-filter: blur(14px);
+  box-shadow: 0 18px 48px rgba(15, 23, 42, 0.18);
+}
+
+.install-app-prompt-copy strong {
+  display: block;
+  font-size: var(--fs-2);
+  margin-bottom: 0.25rem;
+}
+
+.install-app-prompt-copy p {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: var(--fs-1);
+  line-height: 1.45;
+}
+
+.install-app-prompt-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+@media (display-mode: standalone) {
+  .install-app-prompt {
+    display: none;
+  }
+}
+
+@media (min-width: 900px) {
+  .install-app-prompt {
+    bottom: 1.25rem;
+    right: 1.25rem;
+    left: auto;
+    transform: none;
+  }
 }

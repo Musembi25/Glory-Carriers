@@ -1,5 +1,6 @@
 import { startTransition, useEffect, useRef, useState } from "react";
 import { useAuth } from "../context/AuthContext";
+import { computeUserAssignmentStats, getDisplayStatus, isWorkLesson } from "../lib/discipleshipAssignments";
 import { supabase } from "../lib/supabase";
 import { BrandLogo } from "./BrandLogo";
 import { DiscipleshipSection } from "./DiscipleshipSection";
@@ -125,6 +126,22 @@ function formatDateTime(value) {
     minute: "2-digit",
     hourCycle: "h23"
   }).format(new Date(value));
+}
+
+function ProgressBar({ value, label }) {
+  const safeValue = Math.min(100, Math.max(0, value));
+
+  return (
+    <div className="progress-block">
+      <div className="progress-label-row">
+        <span>{label}</span>
+        <strong>{safeValue}%</strong>
+      </div>
+      <div className="progress-track" aria-hidden="true">
+        <div className="progress-fill" style={{ width: `${safeValue}%` }} />
+      </div>
+    </div>
+  );
 }
 
 function formatDate(value) {
@@ -421,9 +438,9 @@ function NavIcon({ name }) {
   }
 }
 
-function Panel({ title, subtitle, children, action }) {
+function Panel({ title, subtitle, children, action, className = "" }) {
   return (
-    <section className="panel">
+    <section className={`panel${className ? ` ${className}` : ""}`}>
       <div className="panel-header">
         <div>
           <h2>{title}</h2>
@@ -611,7 +628,10 @@ export function AppShell() {
   const [discipleshipEnrollments, setDiscipleshipEnrollments] = useState([]);
   const [discipleshipLessons, setDiscipleshipLessons] = useState([]);
   const [discipleshipLessonCompletions, setDiscipleshipLessonCompletions] = useState([]);
+  const [discipleshipAssignmentSubmissions, setDiscipleshipAssignmentSubmissions] = useState([]);
+  const [discipleshipSubmissionHistory, setDiscipleshipSubmissionHistory] = useState([]);
   const [discipleshipMemberNotes, setDiscipleshipMemberNotes] = useState([]);
+  const [discipleshipTabFocus, setDiscipleshipTabFocus] = useState("");
   const [discipleshipSessionAttendance, setDiscipleshipSessionAttendance] = useState([]);
   const [discipleshipDiscussions, setDiscipleshipDiscussions] = useState([]);
   const [selectedDiscipleshipClassId, setSelectedDiscipleshipClassId] = useState("");
@@ -813,25 +833,22 @@ export function AppShell() {
       const approvedCount = discipleshipEnrollments.filter(
         (row) => row.user_id === user.id && row.status === "approved"
       ).length;
+      const myClassIds = new Set(
+        discipleshipEnrollments
+          .filter((row) => row.user_id === user.id && row.status === "approved")
+          .map((row) => row.class_id)
+      );
       const pendingAssignments = discipleshipLessons.filter((lesson) => {
-        if (lesson.lesson_type !== "assignment") {
+        if (!isWorkLesson(lesson) || !myClassIds.has(lesson.class_id)) {
           return false;
         }
 
-        const enrolled = discipleshipEnrollments.some(
-          (row) =>
-            row.class_id === lesson.class_id &&
-            row.user_id === user.id &&
-            row.status === "approved"
-        );
-
-        if (!enrolled) {
-          return false;
-        }
-
-        return !discipleshipLessonCompletions.some(
+        const submission = discipleshipAssignmentSubmissions.find(
           (row) => row.lesson_id === lesson.id && row.user_id === user.id
         );
+        const status = getDisplayStatus(submission);
+
+        return status === "not_submitted" || status === "revision_requested";
       }).length;
 
       if (!approvedCount && !discipleshipClasses.filter((item) => item.status !== "draft").length) {
@@ -1121,10 +1138,21 @@ export function AppShell() {
     }
 
     if (table === "discipleship_lessons") {
+      const isAssignment =
+        record.lesson_type === "assignment" || record.lesson_type === "project";
       announceActivity({
-        title: "New lesson uploaded",
-        body: record.title || "New learning material",
+        title: isAssignment ? "New assignment posted" : "New lesson uploaded",
+        body: record.title || (isAssignment ? "New coursework" : "New learning material"),
         tone: "accent"
+      });
+      return;
+    }
+
+    if (table === "discipleship_assignment_submissions") {
+      announceActivity({
+        title: "Assignment submission update",
+        body: "A student submitted or updated coursework.",
+        tone: "info"
       });
       return;
     }
@@ -1396,6 +1424,11 @@ export function AppShell() {
         .select("*")
         .order("sort_order", { ascending: true }),
       supabase.from("discipleship_lesson_completions").select("*"),
+      supabase.from("discipleship_assignment_submissions").select("*"),
+      supabase
+        .from("discipleship_submission_history")
+        .select("*")
+        .order("created_at", { ascending: false }),
       supabase.from("discipleship_member_notes").select("*"),
       supabase.from("discipleship_session_attendance").select("*"),
       supabase
@@ -1435,9 +1468,11 @@ export function AppShell() {
       setDiscipleshipEnrollments(results[19].data ?? []);
       setDiscipleshipLessons(results[20].data ?? []);
       setDiscipleshipLessonCompletions(results[21].data ?? []);
-      setDiscipleshipMemberNotes(results[22].data ?? []);
-      setDiscipleshipSessionAttendance(results[23].data ?? []);
-      setDiscipleshipDiscussions(results[24].data ?? []);
+      setDiscipleshipAssignmentSubmissions(results[22].data ?? []);
+      setDiscipleshipSubmissionHistory(results[23].data ?? []);
+      setDiscipleshipMemberNotes(results[24].data ?? []);
+      setDiscipleshipSessionAttendance(results[25].data ?? []);
+      setDiscipleshipDiscussions(results[26].data ?? []);
     });
 
     if (!hasSeededRealtimeIdsRef.current) {
@@ -1463,8 +1498,11 @@ export function AppShell() {
         discipleship_lessons: new Set(
           (results[20].data ?? []).map((lesson) => lesson.id)
         ),
+        discipleship_assignment_submissions: new Set(
+          (results[22].data ?? []).map((submission) => submission.id)
+        ),
         discipleship_discussions: new Set(
-          (results[24].data ?? []).map((post) => post.id)
+          (results[26].data ?? []).map((post) => post.id)
         )
       };
       knownRealtimeIdsRef.current.reactions = new Set(
@@ -1599,6 +1637,8 @@ export function AppShell() {
       "discipleship_enrollments",
       "discipleship_lessons",
       "discipleship_lesson_completions",
+      "discipleship_assignment_submissions",
+      "discipleship_submission_history",
       "discipleship_member_notes",
       "discipleship_session_attendance",
       "discipleship_discussions"
@@ -2540,6 +2580,18 @@ export function AppShell() {
       setActiveSection("leadership");
     } else if (targetTable === "discipleship_classes" && targetId) {
       setSelectedDiscipleshipClassId(targetId);
+      const assignmentNotificationTypes = new Set([
+        "discipleship_assignment_posted",
+        "discipleship_assignment_due",
+        "discipleship_assignment_feedback",
+        "discipleship_assignment_approved",
+        "discipleship_assignment_revision"
+      ]);
+
+      if (assignmentNotificationTypes.has(notification.notification_type)) {
+        setDiscipleshipTabFocus("assignments");
+      }
+
       setActiveSection("discipleship");
     } else if (targetTable === "announcements") {
       setActiveSection("events");
@@ -2848,22 +2900,27 @@ export function AppShell() {
                 .filter((row) => row.user_id === user.id && row.status === "approved")
                 .map((row) => row.class_id)
             );
-            const pendingAssignments = discipleshipLessons.filter(
-              (lesson) =>
-                lesson.lesson_type === "assignment" &&
-                myClassIds.has(lesson.class_id) &&
-                !discipleshipLessonCompletions.some(
-                  (row) => row.lesson_id === lesson.id && row.user_id === user.id
-                )
-            ).length;
-            const projectLessons = discipleshipLessons.filter(
-              (lesson) => lesson.lesson_type === "project" && myClassIds.has(lesson.class_id)
+            const workLessons = discipleshipLessons.filter(
+              (lesson) => isWorkLesson(lesson) && myClassIds.has(lesson.class_id)
             );
-            const projectComplete = projectLessons.some((lesson) =>
-              discipleshipLessonCompletions.some(
+            const assignmentStats = computeUserAssignmentStats({
+              workLessons,
+              submissions: discipleshipAssignmentSubmissions,
+              userId: user.id,
+              classIds: myClassIds,
+              now: new Date(liveNow)
+            });
+            const pendingAssignments = assignmentStats.pending.length;
+            const projectLessons = workLessons.filter(
+              (lesson) => lesson.lesson_type === "project"
+            );
+            const projectComplete = projectLessons.some((lesson) => {
+              const submission = discipleshipAssignmentSubmissions.find(
                 (row) => row.lesson_id === lesson.id && row.user_id === user.id
-              )
-            );
+              );
+              const status = getDisplayStatus(submission);
+              return status === "completed" || status === "reviewed";
+            });
             const nextSession = [...discipleshipSessions]
               .filter(
                 (session) =>
@@ -2896,7 +2953,11 @@ export function AppShell() {
                         : "All caught up"
                       : "—"}
                   </strong>
-                  <p>Weekly tasks with timely submission and integrity.</p>
+                  <p>
+                    {myClassIds.size
+                      ? `${assignmentStats.progress.percent}% complete • ${assignmentStats.upcomingDeadlines.length} upcoming deadline${assignmentStats.upcomingDeadlines.length === 1 ? "" : "s"}`
+                      : "Weekly tasks with timely submission and integrity."}
+                  </p>
                 </article>
                 <article className="insight-card">
                   <span>Class project</span>
@@ -2926,6 +2987,99 @@ export function AppShell() {
             );
           })()}
         </Panel>
+
+        {(() => {
+          const myClassIds = new Set(
+            discipleshipEnrollments
+              .filter((row) => row.user_id === user.id && row.status === "approved")
+              .map((row) => row.class_id)
+          );
+
+          if (!myClassIds.size) {
+            return null;
+          }
+
+          const workLessons = discipleshipLessons.filter(
+            (lesson) => isWorkLesson(lesson) && myClassIds.has(lesson.class_id)
+          );
+          const assignmentStats = computeUserAssignmentStats({
+            workLessons,
+            submissions: discipleshipAssignmentSubmissions,
+            userId: user.id,
+            classIds: myClassIds,
+            now: new Date(liveNow)
+          });
+
+          return (
+            <Panel
+              className="assignment-summary-panel"
+              title="Assignment summary"
+              subtitle="Pending work, upcoming deadlines, and recently graded submissions."
+              action={
+                <button
+                  type="button"
+                  className="secondary-button"
+                  onClick={() => setActiveSection("discipleship")}
+                >
+                  View all
+                </button>
+              }
+            >
+              <div className="assignment-summary-hero">
+                <ProgressBar
+                  value={assignmentStats.progress.percent}
+                  label={`${assignmentStats.progress.completed} of ${assignmentStats.progress.total} assignments reviewed or completed`}
+                />
+              </div>
+              <div className="assignment-dashboard-grid">
+                <article className="assignment-dashboard-card tone-warning">
+                  <span>Pending</span>
+                  <strong>{assignmentStats.pending.length}</strong>
+                  {assignmentStats.pending.length ? (
+                    <ul>
+                      {assignmentStats.pending.slice(0, 3).map((lesson) => (
+                        <li key={lesson.id}>{lesson.title}</li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="inline-help">You are caught up on submissions.</p>
+                  )}
+                </article>
+                <article className="assignment-dashboard-card tone-info">
+                  <span>Upcoming deadlines</span>
+                  <strong>{assignmentStats.upcomingDeadlines.length}</strong>
+                  {assignmentStats.upcomingDeadlines.length ? (
+                    <ul>
+                      {assignmentStats.upcomingDeadlines.slice(0, 3).map((lesson) => (
+                        <li key={lesson.id}>
+                          {lesson.title} • {formatDateTime(lesson.due_at)}
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="inline-help">No due dates in the next while.</p>
+                  )}
+                </article>
+                <article className="assignment-dashboard-card tone-success">
+                  <span>Recently graded</span>
+                  <strong>{assignmentStats.recentlyGraded.length}</strong>
+                  {assignmentStats.recentlyGraded.length ? (
+                    <ul>
+                      {assignmentStats.recentlyGraded.slice(0, 3).map(({ lesson, submission }) => (
+                        <li key={lesson.id}>
+                          {lesson.title}
+                          {submission.score != null ? ` • ${submission.score}` : ""}
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="inline-help">Feedback will appear here after review.</p>
+                  )}
+                </article>
+              </div>
+            </Panel>
+          );
+        })()}
 
         <div className="content-grid">
           <Panel
@@ -5618,14 +5772,26 @@ export function AppShell() {
                   enrollments={discipleshipEnrollments}
                   lessons={discipleshipLessons}
                   lessonCompletions={discipleshipLessonCompletions}
+                  assignmentSubmissions={discipleshipAssignmentSubmissions}
+                  submissionHistory={discipleshipSubmissionHistory}
                   memberNotes={discipleshipMemberNotes}
                   sessionAttendance={discipleshipSessionAttendance}
                   discussions={discipleshipDiscussions}
+                  reactions={reactions}
                   runAction={runAction}
                   submitting={submitting}
                   liveNow={liveNow}
                   selectedClassId={selectedDiscipleshipClassId}
                   onSelectClassId={setSelectedDiscipleshipClassId}
+                  focusDetailTab={discipleshipTabFocus}
+                  onFocusDetailTabConsumed={() => setDiscipleshipTabFocus("")}
+                  theme={theme}
+                  onThemeToggle={() =>
+                    setTheme((current) => (current === "light" ? "dark" : "light"))
+                  }
+                  notificationCount={unreadNotifications.length}
+                  onOpenNotifications={() => setShowNotificationTray(true)}
+                  userAvatarUrl={currentMember?.avatar_url ?? ""}
                 />
               )
             : activeSection === "leadership"

@@ -90,6 +90,25 @@ With that flow, the first signed-up account becomes the admin and you do not nee
 - Rerunning [supabase/schema.sql](/home/shadrack-musembi/Glory Carriers/supabase/schema.sql) now also backfills missing `public.profiles` rows from `auth.users`, so admins can see all created accounts in Members.
 - For an immediate manual fix, run [supabase/repair-admin.sql](/home/shadrack-musembi/Glory Carriers/supabase/repair-admin.sql) or update the matching row in `public.profiles` to `role = 'admin'`.
 
+## Install as an app (PWA)
+
+Glory Carriers can be installed on **iPhone/iPad**, **Android**, and **desktop** (Windows, macOS, Linux) like a native app. Typography stays the same across platforms (Inter/Manrope from Google Fonts); the app does not switch to different system fonts when installed.
+
+**Requirements:** deploy over **HTTPS** (or use `localhost` while developing). Run `npm run build` then `npm run preview` to test install locally.
+
+| Platform | How to install |
+| -------- | -------------- |
+| **iPhone / iPad** | Safari → **Share** → **Add to Home Screen** |
+| **Android** | Chrome menu → **Install app** / **Add to Home screen** |
+| **Windows / Mac (Chrome, Edge, Brave)** | Use **Install app** in the in-app banner, or the install icon in the address bar |
+| **Mac (Safari)** | **File → Add to Dock** |
+
+Regenerate home-screen icons after changing `logo.png`:
+
+```bash
+npm run generate:icons
+```
+
 ## Project structure
 
 - [src/App.jsx](/home/shadrack-musembi/Glory Carriers/src/App.jsx)

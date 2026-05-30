@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "npm run generate:icons && vite build",
+    "build": "vite build",
     "generate:icons": "powershell -ExecutionPolicy Bypass -File scripts/generate-pwa-icons.ps1",
     "preview": "vite preview"
   },

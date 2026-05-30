@@ -90,6 +90,24 @@ With that flow, the first signed-up account becomes the admin and you do not nee
 - Rerunning [supabase/schema.sql](/home/shadrack-musembi/Glory Carriers/supabase/schema.sql) now also backfills missing `public.profiles` rows from `auth.users`, so admins can see all created accounts in Members.
 - For an immediate manual fix, run [supabase/repair-admin.sql](/home/shadrack-musembi/Glory Carriers/supabase/repair-admin.sql) or update the matching row in `public.profiles` to `role = 'admin'`.
 
+## Live site (GitHub Pages)
+
+**Pushing to GitHub does not change a live website by itself.** You need hosting that rebuilds from `main`.
+
+This repo includes a GitHub Actions workflow (`.github/workflows/deploy-pages.yml`) that publishes the app after each push to `main`.
+
+1. On GitHub: open **Settings → Pages → Build and deployment → Source** and choose **GitHub Actions**.
+2. In **Settings → Secrets and variables → Actions**, add:
+   - `VITE_SUPABASE_URL`
+   - `VITE_SUPABASE_ANON_KEY`
+3. Push to `main` (or run the workflow manually under **Actions**).
+
+Your site will be at: **https://musembi25.github.io/Glory-Carriers/**
+
+If you still see the old app: hard-refresh the browser (`Ctrl+Shift+R`) or clear the installed PWA and open the link again.
+
+**Local changes:** run `npm run dev` and refresh. If `git commit` says *nothing to commit*, everything is already saved—there is nothing new to push.
+
 ## Install as an app (PWA)
 
 Glory Carriers can be installed on **iPhone/iPad**, **Android**, and **desktop** (Windows, macOS, Linux) like a native app. Typography stays the same across platforms (Inter/Manrope from Google Fonts); the app does not switch to different system fonts when installed.

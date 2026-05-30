@@ -2,7 +2,11 @@ import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import { VitePWA } from "vite-plugin-pwa";
 
+const isGitHubPages =
+  process.env.GITHUB_PAGES === "true" || process.env.GITHUB_ACTIONS === "true";
+
 export default defineConfig({
+  base: isGitHubPages ? "/Glory-Carriers/" : "/",
   plugins: [
     react(),
     VitePWA({

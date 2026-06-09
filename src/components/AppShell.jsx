@@ -2,6 +2,10 @@ import { startTransition, useEffect, useRef, useState } from "react";
 import { useAuth } from "../context/AuthContext";
 import { computeUserAssignmentStats, getDisplayStatus, isWorkLesson } from "../lib/discipleshipAssignments";
 import { supabase } from "../lib/supabase";
+import {
+  AnnouncementReactions,
+  getAnnouncementReactionTotals
+} from "./announcements/AnnouncementReactions.jsx";
 import { BrandLogo } from "./BrandLogo";
 import { DiscipleshipSection } from "./DiscipleshipSection";
 
@@ -789,6 +793,10 @@ export function AppShell() {
 
     return new Date(right.created_at) - new Date(left.created_at);
   });
+  const announcementEngagement = getAnnouncementReactionTotals(
+    reactions,
+    announcements.map((announcement) => announcement.id)
+  );
   const sortedLeadershipAssignments = [...leadershipAssignments].sort(
     (left, right) => new Date(left.assignment_date) - new Date(right.assignment_date)
   );
@@ -3101,36 +3109,55 @@ export function AppShell() {
           >
             {sortedAnnouncements.length ? (
               <div className="card-list">
-                {sortedAnnouncements.slice(0, 6).map((announcement) => (
-                  <article key={announcement.id} className="idea-card">
-                    <div className="idea-header">
-                      <div>
-                        <h3>{announcement.title}</h3>
-                        <p>{formatDateTime(announcement.created_at)}</p>
+                {sortedAnnouncements.slice(0, 6).map((announcement) => {
+                  const author =
+                    profiles.find((profile) => profile.id === announcement.created_by) ?? null;
+
+                  return (
+                    <article key={announcement.id} className="idea-card announcement-card">
+                      <div className="idea-header">
+                        <div className="announcement-meta">
+                          <h3>{announcement.title}</h3>
+                          {author ? (
+                            <p className="announcement-author">
+                              {author.full_name || author.email || "Admin"}
+                            </p>
+                          ) : null}
+                          <p>{formatDateTime(announcement.created_at)}</p>
+                        </div>
+                        {announcement.pinned ? <span className="pill info">Pinned</span> : null}
                       </div>
-                      {announcement.pinned ? <span className="pill info">Pinned</span> : null}
-                    </div>
-                    <p className="idea-text">{announcement.body}</p>
-                    {isAdmin ? (
-                      <div className="inline-actions">
-                        <button
-                          type="button"
-                          className="ghost-button"
-                          onClick={() => beginAnnouncementEdit(announcement)}
-                        >
-                          Edit
-                        </button>
-                        <button
-                          type="button"
-                          className="ghost-button danger"
-                          onClick={() => deleteAnnouncement(announcement.id)}
-                        >
-                          Delete
-                        </button>
-                      </div>
-                    ) : null}
-                  </article>
-                ))}
+                      <p className="idea-text">{announcement.body}</p>
+                      <AnnouncementReactions
+                        announcementId={announcement.id}
+                        reactions={reactions}
+                        profiles={profiles}
+                        userId={user?.id}
+                        disabled={submitting}
+                        onToggle={toggleAnnouncementReaction}
+                        onMessageShortcut={() => setActiveSection("messages")}
+                      />
+                      {isAdmin ? (
+                        <div className="inline-actions">
+                          <button
+                            type="button"
+                            className="ghost-button"
+                            onClick={() => beginAnnouncementEdit(announcement)}
+                          >
+                            Edit
+                          </button>
+                          <button
+                            type="button"
+                            className="ghost-button danger"
+                            onClick={() => deleteAnnouncement(announcement.id)}
+                          >
+                            Delete
+                          </button>
+                        </div>
+                      ) : null}
+                    </article>
+                  );
+                })}
               </div>
             ) : (
               <EmptyState
@@ -3161,6 +3188,14 @@ export function AppShell() {
                 <span>Participation level</span>
                 <strong>{participationRate}% active</strong>
                 <p>{activeParticipantIds.size} members interacted in current workspace activity.</p>
+              </article>
+              <article className="insight-card">
+                <span>Announcement reactions</span>
+                <strong>{announcementEngagement.total}</strong>
+                <p>
+                  {announcementEngagement.uniqueReactors} members reacted across{" "}
+                  {announcements.length} announcements.
+                </p>
               </article>
             </div>
           </Panel>
@@ -4923,6 +4958,123 @@ export function AppShell() {
       setErrorMessage(error.message);
     } finally {
       setSubmitting(false);
+    }
+  }
+
+  function isOptimisticReactionId(id) {
+    return String(id).startsWith("optimistic-");
+  }
+
+  async function deleteAnnouncementReactionRow({ announcementId, reaction, row }) {
+    if (isOptimisticReactionId(row?.id)) {
+      return supabase
+        .from("reactions")
+        .delete()
+        .eq("entity_table", "announcements")
+        .eq("entity_id", announcementId)
+        .eq("user_id", user.id)
+        .eq("reaction", reaction);
+    }
+
+    return supabase.from("reactions").delete().eq("id", row.id);
+  }
+
+  async function toggleAnnouncementReaction({ announcementId, reaction }) {
+    if (!supabase || !user?.id) {
+      return false;
+    }
+
+    const userRows = reactions.filter(
+      (row) =>
+        row.entity_table === "announcements" &&
+        row.entity_id === announcementId &&
+        row.user_id === user.id
+    );
+    const existingSame = userRows.find((row) => row.reaction === reaction);
+    const previousReactions = reactions;
+    const optimisticId = `optimistic-${announcementId}-${reaction}`;
+
+    let nextReactions = reactions;
+
+    if (existingSame) {
+      nextReactions = reactions.filter((row) => row.id !== existingSame.id);
+    } else {
+      nextReactions = [
+        {
+          id: optimisticId,
+          user_id: user.id,
+          entity_table: "announcements",
+          entity_id: announcementId,
+          reaction,
+          created_at: new Date().toISOString()
+        },
+        ...reactions.filter(
+          (row) =>
+            !(
+              row.entity_table === "announcements" &&
+              row.entity_id === announcementId &&
+              row.user_id === user.id
+            )
+        )
+      ];
+    }
+
+    setReactions(nextReactions);
+
+    try {
+      if (existingSame) {
+        const { error } = await deleteAnnouncementReactionRow({
+          announcementId,
+          reaction,
+          row: existingSame
+        });
+
+        if (error) {
+          throw error;
+        }
+      } else {
+        if (userRows.length) {
+          const { error: deleteError } = await supabase
+            .from("reactions")
+            .delete()
+            .eq("entity_table", "announcements")
+            .eq("entity_id", announcementId)
+            .eq("user_id", user.id);
+
+          if (deleteError) {
+            throw deleteError;
+          }
+        }
+
+        const { data: insertedRow, error } = await supabase
+          .from("reactions")
+          .insert([
+            {
+              user_id: user.id,
+              entity_table: "announcements",
+              entity_id: announcementId,
+              reaction
+            }
+          ])
+          .select()
+          .single();
+
+        if (error) {
+          throw error;
+        }
+
+        if (insertedRow) {
+          setReactions((current) =>
+            current.map((row) => (row.id === optimisticId ? insertedRow : row))
+          );
+        }
+      }
+
+      return true;
+    } catch (error) {
+      setReactions(previousReactions);
+      setErrorMessage(error.message);
+      return false;
     }
   }
 

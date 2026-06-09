@@ -184,6 +184,54 @@ end $$;
 
 do $$
 begin
+  if not exists (
+    select 1
+    from pg_enum
+    where enumtypid = 'public.reaction_type'::regtype
+      and enumlabel = 'great'
+  ) then
+    alter type public.reaction_type add value 'great';
+  end if;
+
+  if not exists (
+    select 1
+    from pg_enum
+    where enumtypid = 'public.reaction_type'::regtype
+      and enumlabel = 'excited'
+  ) then
+    alter type public.reaction_type add value 'excited';
+  end if;
+
+  if not exists (
+    select 1
+    from pg_enum
+    where enumtypid = 'public.reaction_type'::regtype
+      and enumlabel = 'amen'
+  ) then
+    alter type public.reaction_type add value 'amen';
+  end if;
+
+  if not exists (
+    select 1
+    from pg_enum
+    where enumtypid = 'public.reaction_type'::regtype
+      and enumlabel = 'celebrating'
+  ) then
+    alter type public.reaction_type add value 'celebrating';
+  end if;
+
+  if not exists (
+    select 1
+    from pg_enum
+    where enumtypid = 'public.reaction_type'::regtype
+      and enumlabel = 'helpful'
+  ) then
+    alter type public.reaction_type add value 'helpful';
+  end if;
+end $$;
+
+do $$
+begin
   if not exists (select 1 from pg_type where typname = 'discipleship_class_status') then
     create type public.discipleship_class_status as enum ('draft', 'upcoming', 'ongoing', 'completed');
   end if;
@@ -2730,6 +2778,7 @@ using (
 );
 
 drop policy if exists "discipleship_member_notes_upsert_self" on public.discipleship_member_notes;
+drop policy if exists "discipleship_member_notes_insert_self" on public.discipleship_member_notes;
 create policy "discipleship_member_notes_insert_self"
 on public.discipleship_member_notes
 for insert
@@ -2779,6 +2828,7 @@ using (
 );
 
 drop policy if exists "discipleship_session_attendance_manage" on public.discipleship_session_attendance;
+drop policy if exists "discipleship_session_attendance_insert" on public.discipleship_session_attendance;
 create policy "discipleship_session_attendance_insert"
 on public.discipleship_session_attendance
 for insert

@@ -1,6 +1,18 @@
 import { startTransition, useEffect, useRef, useState } from "react";
 import { useAuth } from "../context/AuthContext";
 import { computeUserAssignmentStats, getDisplayStatus, isWorkLesson } from "../lib/discipleshipAssignments";
+import { parseNotificationLaunchParams } from "../lib/notificationRouting.js";
+import {
+  dismissPushPermissionPrompt,
+  getBrowserNotificationPermission,
+  isPushSupported,
+  listenForNotificationClicks,
+  recordMeaningfulInteraction,
+  refreshPushSubscriptionActivity,
+  shouldShowPushPermissionPrompt,
+  subscribeToPushNotifications,
+  unsubscribeFromPushNotifications
+} from "../lib/pushNotifications.js";
 import { supabase } from "../lib/supabase";
 import {
   AnnouncementReactions,
@@ -8,6 +20,9 @@ import {
 } from "./announcements/AnnouncementReactions.jsx";
 import { BrandLogo } from "./BrandLogo";
 import { DiscipleshipSection } from "./DiscipleshipSection";
+import { NotificationCenter } from "./NotificationCenter.jsx";
+import { NotificationPreferences } from "./NotificationPreferences.jsx";
+import { PushPermissionPrompt } from "./PushPermissionPrompt.jsx";
 
 const sections = [
   { id: "events", label: "Dashboard", shortLabel: "Home", icon: "home" },
@@ -90,14 +105,6 @@ const emptyPasswordForm = {
   password: "",
   confirmPassword: ""
 };
-
-function getBrowserNotificationPermission() {
-  if (typeof window === "undefined" || !("Notification" in window)) {
-    return "unsupported";
-  }
-
-  return window.Notification.permission;
-}
 
 function getInitials(name) {
   if (!name) {
@@ -673,6 +680,11 @@ export function AppShell() {
   );
   const [toastNotifications, setToastNotifications] = useState([]);
   const [showNotificationTray, setShowNotificationTray] = useState(false);
+  const [showNotificationCenter, setShowNotificationCenter] = useState(false);
+  const [showPushPrompt, setShowPushPrompt] = useState(false);
+  const [notificationPreferences, setNotificationPreferences] = useState(null);
+  const [pushDeviceCount, setPushDeviceCount] = useState(0);
+  const [savingNotificationPreferences, setSavingNotificationPreferences] = useState(false);
   const [selectedResourceFile, setSelectedResourceFile] = useState(null);
   const [resourceFileName, setResourceFileName] = useState("");
   const [checkingIn, setCheckingIn] = useState(false);
@@ -754,7 +766,9 @@ export function AppShell() {
   const activeMembers = profiles.filter((member) => member.is_active);
   const pausedMembersCount = profiles.filter((member) => !member.is_active).length;
   const memberUserCount = profiles.filter((member) => member.role === "user").length;
-  const unreadNotifications = notifications.filter((notification) => !notification.read_at);
+  const unreadNotifications = notifications.filter(
+    (notification) => !notification.read_at && !notification.archived_at
+  );
   const inboxMessages = [...messages]
     .filter(
       (message) =>
@@ -1118,44 +1132,6 @@ export function AppShell() {
 
     knownIds?.add(record.id);
 
-    if (table === "events") {
-      announceActivity({
-        title: "New event added",
-        body: `${record.title || "Upcoming event"} • ${formatDateTime(record.starts_at)}`,
-        tone: "info"
-      });
-      return;
-    }
-
-    if (table === "virtual_meetings") {
-      announceActivity({
-        title: "New virtual meeting scheduled",
-        body: `${record.title || "Virtual meeting"} • ${formatDateTime(record.starts_at)}`,
-        tone: "info"
-      });
-      return;
-    }
-
-    if (table === "discipleship_classes") {
-      announceActivity({
-        title: "New discipleship class",
-        body: record.title || "A new class is available",
-        tone: "info"
-      });
-      return;
-    }
-
-    if (table === "discipleship_lessons") {
-      const isAssignment =
-        record.lesson_type === "assignment" || record.lesson_type === "project";
-      announceActivity({
-        title: isAssignment ? "New assignment posted" : "New lesson uploaded",
-        body: record.title || (isAssignment ? "New coursework" : "New learning material"),
-        tone: "accent"
-      });
-      return;
-    }
-
     if (table === "discipleship_assignment_submissions") {
       announceActivity({
         title: "Assignment submission update",
@@ -1183,36 +1159,6 @@ export function AppShell() {
       return;
     }
 
-    if (table === "tasks") {
-      const taskOwner =
-        record.assignee_id === user.id
-          ? "You"
-          : record.assignee_id
-            ? getMemberLabel(record.assignee_id)
-            : "A member";
-
-      announceActivity({
-        title: "New task added",
-        body: `${record.title || "Untitled task"} • ${taskOwner}`,
-        tone: "warning"
-      });
-      return;
-    }
-
-    if (table === "messages") {
-      const senderLabel = getMemberLabel(record.sender_id);
-      const destinationLabel = record.recipient_id
-        ? `to ${getMemberLabel(record.recipient_id)}`
-        : "to everyone";
-
-      announceActivity({
-        title: `New message from ${senderLabel}`,
-        body: `${destinationLabel} • ${truncateText(record.content)}`,
-        tone: "success"
-      });
-      return;
-    }
-
     if (table === "prayer_points") {
       announceActivity({
         title: "New prayer request",
@@ -1231,15 +1177,6 @@ export function AppShell() {
         title: record.title || "New notification",
         body: truncateText(record.body, 96),
         tone: "info"
-      });
-      return;
-    }
-
-    if (table === "announcements") {
-      announceActivity({
-        title: "New announcement",
-        body: truncateText(record.title || "A new announcement was posted.", 96),
-        tone: "warning"
       });
       return;
     }
@@ -1346,6 +1283,59 @@ export function AppShell() {
       window.removeEventListener("mousedown", handleDocumentClick);
     };
   }, [showNotificationTray]);
+
+  useEffect(() => {
+    if (!user?.id) {
+      return;
+    }
+
+    void loadNotificationPreferences();
+    void refreshPushSubscriptionActivity(user.id);
+  }, [user?.id]);
+
+  useEffect(() => {
+    if (!user?.id) {
+      return;
+    }
+
+    recordMeaningfulInteraction();
+    setShowPushPrompt(shouldShowPushPermissionPrompt());
+  }, [activeSection, user?.id]);
+
+  useEffect(() => {
+    if (!user?.id) {
+      return undefined;
+    }
+
+    return listenForNotificationClicks((payload) => {
+      openNotificationFromPayload(payload);
+    });
+  }, [user?.id]);
+
+  useEffect(() => {
+    if (!user?.id || typeof window === "undefined") {
+      return;
+    }
+
+    const launch = parseNotificationLaunchParams(new URLSearchParams(window.location.search));
+
+    if (!launch) {
+      return;
+    }
+
+    openNotificationFromPayload({
+      section: launch.section,
+      notificationId: launch.notificationId,
+      entityTable: launch.entityTable,
+      entityId: launch.entityId,
+      notificationType: launch.notificationType,
+      discipleshipTab: launch.discipleshipTab
+    });
+
+    const nextUrl = new URL(window.location.href);
+    nextUrl.search = "";
+    window.history.replaceState({}, "", nextUrl.pathname + nextUrl.hash);
+  }, [user?.id]);
 
   useEffect(() => {
     hasSeededRealtimeIdsRef.current = false;
@@ -2257,30 +2247,108 @@ export function AppShell() {
     }, "Message deleted.");
   }
 
+  async function loadNotificationPreferences() {
+    if (!supabase || !user?.id) {
+      return;
+    }
+
+    const { data: preferences, error } = await supabase.rpc("ensure_notification_preferences");
+
+    if (error) {
+      console.error(error);
+      return;
+    }
+
+    setNotificationPreferences(preferences);
+
+    const { count } = await supabase
+      .from("push_subscriptions")
+      .select("*", { count: "exact", head: true })
+      .eq("user_id", user.id);
+
+    setPushDeviceCount(count ?? 0);
+  }
+
+  async function updateNotificationPreference(key, value) {
+    if (!supabase || !user?.id || !notificationPreferences) {
+      return;
+    }
+
+    const nextPreferences = {
+      ...notificationPreferences,
+      [key]: value,
+      timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC"
+    };
+
+    setNotificationPreferences(nextPreferences);
+    setSavingNotificationPreferences(true);
+
+    try {
+      const { error } = await supabase
+        .from("notification_preferences")
+        .update({
+          [key]: value,
+          timezone: nextPreferences.timezone
+        })
+        .eq("user_id", user.id);
+
+      if (error) {
+        throw error;
+      }
+    } catch (error) {
+      setNotificationPreferences(notificationPreferences);
+      setErrorMessage(error.message);
+    } finally {
+      setSavingNotificationPreferences(false);
+    }
+  }
+
   async function enableNotifications() {
-    if (typeof window === "undefined" || !("Notification" in window)) {
-      setErrorMessage("This browser does not support device notifications. In-app alerts will still appear.");
+    if (!isPushSupported()) {
+      setErrorMessage("This browser does not support push notifications. In-app alerts will still appear.");
       return;
     }
 
-    const permission = await window.Notification.requestPermission();
-    setNotificationPermission(permission);
+    try {
+      const result = await subscribeToPushNotifications(user.id);
+      setNotificationPermission(getBrowserNotificationPermission());
 
-    if (permission === "granted") {
-      setStatusMessage("Device notifications enabled.");
-      showDeviceNotification(
-        "Glory Carriers alerts are on",
-        "You will now get popup alerts for new events, tasks, planning ideas, and messages."
-      );
-      return;
+      if (result.ok) {
+        setStatusMessage("Push notifications enabled on this device.");
+        setShowPushPrompt(false);
+        dismissPushPermissionPrompt();
+        await loadNotificationPreferences();
+        return;
+      }
+
+      if (result.reason === "denied") {
+        setErrorMessage("Notifications are blocked. Enable them in your browser settings to receive push alerts.");
+        return;
+      }
+
+      if (result.reason === "missing-vapid-key") {
+        setErrorMessage("Push is not configured yet. Add VITE_VAPID_PUBLIC_KEY to your environment.");
+        return;
+      }
+
+      setStatusMessage("Notification permission request closed. In-app alerts remain active.");
+    } catch (error) {
+      setErrorMessage(error.message);
     }
+  }
 
-    if (permission === "denied") {
-      setErrorMessage("Device notifications are blocked in this browser. You can still use the in-app alerts.");
-      return;
+  async function disablePushNotifications() {
+    try {
+      await unsubscribeFromPushNotifications(user.id);
+      setNotificationPermission(getBrowserNotificationPermission());
+      setPushDeviceCount(0);
+      if (notificationPreferences) {
+        await updateNotificationPreference("push_enabled", false);
+      }
+      setStatusMessage("Push notifications turned off for this device.");
+    } catch (error) {
+      setErrorMessage(error.message);
     }
-
-    setStatusMessage("Notification permission request closed. In-app alerts remain active.");
   }
 
   async function handlePrayerSubmit(event) {
@@ -2555,6 +2623,36 @@ export function AppShell() {
     }, "Notification deleted.");
   }
 
+  async function archiveNotification(notificationId, archived) {
+    await runAction(async () => {
+      const { error } = await supabase
+        .from("notifications")
+        .update({ archived_at: archived ? new Date().toISOString() : null })
+        .eq("id", notificationId);
+
+      if (error) {
+        throw error;
+      }
+    }, archived ? "Notification archived." : "Notification restored.");
+  }
+
+  function openNotificationFromPayload(payload = {}) {
+    if (payload.section) {
+      setActiveSection(payload.section);
+    }
+
+    openNotificationTarget({
+      id: payload.notificationId,
+      entity_table: payload.entityTable,
+      entity_id: payload.entityId,
+      notification_type: payload.notificationType
+    });
+
+    if (payload.discipleshipTab) {
+      setDiscipleshipTabFocus(payload.discipleshipTab);
+    }
+  }
+
   function openNotificationTarget(notification) {
     if (!notification) {
       return;
@@ -2601,6 +2699,17 @@ export function AppShell() {
       }
 
       setActiveSection("discipleship");
+    } else if (targetTable === "virtual_meetings") {
+      setActiveSection("meetings");
+    } else if (targetTable === "discipleship_lessons" && targetId) {
+      const linkedLesson = discipleshipLessons.find((lesson) => lesson.id === targetId);
+      if (linkedLesson?.class_id) {
+        setSelectedDiscipleshipClassId(linkedLesson.class_id);
+      }
+      setDiscipleshipTabFocus(
+        notification.notification_type === "discipleship_lesson_added" ? "lessons" : "assignments"
+      );
+      setActiveSection("discipleship");
     } else if (targetTable === "announcements") {
       setActiveSection("events");
     } else if (targetTable === "event_check_ins" && targetId) {
@@ -2621,6 +2730,7 @@ export function AppShell() {
     }
 
     setShowNotificationTray(false);
+    setShowNotificationCenter(false);
   }
 
   async function saveAnnouncement(event) {
@@ -5825,34 +5935,20 @@ export function AppShell() {
                   </button>
                 </div>
 
-                <div className="setting-tile">
-                  <span>Notifications</span>
-                  <strong>
-                    {notificationPermission === "granted"
-                      ? "Popup alerts enabled"
-                      : notificationPermission === "denied"
-                        ? "Alerts blocked"
-                        : notificationPermission === "unsupported"
-                          ? "Device popups unavailable"
-                          : "Enable popup alerts"}
-                  </strong>
-                  <p>
-                    In-app alerts always work while the app is open. Device popups
-                    work where the browser supports notifications.
-                  </p>
-                  {notificationPermission !== "granted" &&
-                  notificationPermission !== "unsupported" ? (
-                    <button
-                      type="button"
-                      className="secondary-button"
-                      onClick={() => {
-                        void enableNotifications();
-                      }}
-                    >
-                      Turn on notifications
-                    </button>
-                  ) : null}
-                </div>
+                <NotificationPreferences
+                  preferences={notificationPreferences}
+                  pushSupported={isPushSupported()}
+                  pushPermission={notificationPermission}
+                  deviceCount={pushDeviceCount}
+                  onChange={updateNotificationPreference}
+                  onEnablePush={() => {
+                    void enableNotifications();
+                  }}
+                  onDisablePush={() => {
+                    void disablePushNotifications();
+                  }}
+                  saving={savingNotificationPreferences}
+                />
               </div>
 
               <form className="stack-form profile-password-form" onSubmit={changeMyPassword}>
@@ -6033,7 +6129,7 @@ export function AppShell() {
                 <button
                   type="button"
                   className="ghost-button notification-bell"
-                  onClick={() => setShowNotificationTray((current) => !current)}
+                  onClick={() => setShowNotificationCenter(true)}
                 >
                   <span className="sidebar-link-icon" aria-hidden="true">
                     <NavIcon name="bell" />
@@ -6043,107 +6139,17 @@ export function AppShell() {
                     <span className="notification-count">{unreadNotifications.length}</span>
                   ) : null}
                 </button>
-
-                {showNotificationTray ? (
-                  <div className="notification-tray">
-                    <div className="notification-tray-header">
-                      <div>
-                        <strong>Notifications</strong>
-                        <p>{unreadNotifications.length} unread</p>
-                      </div>
-                      {unreadNotifications.length ? (
-                        <button
-                          type="button"
-                          className="text-button"
-                          onClick={() => {
-                            void markAllNotificationsRead();
-                          }}
-                        >
-                          Mark all read
-                        </button>
-                      ) : null}
-                    </div>
-
-                    {notifications.length ? (
-                      <div className="notification-list">
-                        {notifications.slice(0, 8).map((notification) => (
-                          <article
-                            key={notification.id}
-                            className={
-                              notification.read_at
-                                ? "notification-item"
-                                : "notification-item unread"
-                            }
-                            role="button"
-                            tabIndex={0}
-                            onClick={() => openNotificationTarget(notification)}
-                            onKeyDown={(event) => {
-                              if (event.key === "Enter" || event.key === " ") {
-                                event.preventDefault();
-                                openNotificationTarget(notification);
-                              }
-                            }}
-                          >
-                            <div>
-                              <strong>{notification.title}</strong>
-                              <p>{notification.body}</p>
-                              <span>{formatDateTime(notification.created_at)}</span>
-                            </div>
-                            <div className="notification-item-actions">
-                              <button
-                                type="button"
-                                className="ghost-button compact"
-                                onClick={(event) => {
-                                  event.stopPropagation();
-                                  openNotificationTarget(notification);
-                                }}
-                              >
-                                Open
-                              </button>
-                              <button
-                                type="button"
-                                className="ghost-button compact"
-                                onClick={(event) => {
-                                  event.stopPropagation();
-                                  void markNotificationRead(
-                                    notification.id,
-                                    !notification.read_at
-                                  );
-                                }}
-                              >
-                                {notification.read_at ? "Unread" : "Read"}
-                              </button>
-                              <button
-                                type="button"
-                                className="ghost-button compact danger"
-                                onClick={(event) => {
-                                  event.stopPropagation();
-                                  void deleteNotification(notification.id);
-                                }}
-                              >
-                                Delete
-                              </button>
-                            </div>
-                          </article>
-                        ))}
-                      </div>
-                    ) : (
-                      <div className="inline-help">No notifications yet.</div>
-                    )}
-                  </div>
-                ) : null}
               </div>
 
               {notificationPermission !== "granted" &&
-              notificationPermission !== "unsupported" ? (
+              notificationPermission !== "unsupported" &&
+              isPushSupported() ? (
                 <button
                   type="button"
                   className="accent-button"
-                  onClick={() => {
-                    void enableNotifications();
-                  }}
+                  onClick={() => setShowPushPrompt(true)}
                 >
-                  Enable alerts
+                  Enable push
                 </button>
               ) : null}
               <button
@@ -6278,6 +6284,37 @@ export function AppShell() {
           </div>
         ) : null}
       </main>
+
+      <NotificationCenter
+        notifications={notifications}
+        isOpen={showNotificationCenter}
+        onClose={() => setShowNotificationCenter(false)}
+        onOpenNotification={openNotificationTarget}
+        onMarkRead={(notificationId, read) => {
+          void markNotificationRead(notificationId, read);
+        }}
+        onMarkAllRead={() => {
+          void markAllNotificationsRead();
+        }}
+        onDelete={(notificationId) => {
+          void deleteNotification(notificationId);
+        }}
+        onArchive={(notificationId, archived) => {
+          void archiveNotification(notificationId, archived);
+        }}
+        formatDateTime={formatDateTime}
+      />
+
+      <PushPermissionPrompt
+        isOpen={showPushPrompt}
+        onEnable={() => {
+          void enableNotifications();
+        }}
+        onDismiss={() => {
+          setShowPushPrompt(false);
+          dismissPushPermissionPrompt();
+        }}
+      />
 
       <MobileSectionNav
         activeSection={activeSection}

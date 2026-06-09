@@ -3469,3 +3469,143 @@ begin
     alter publication supabase_realtime add table public.discipleship_submission_history;
   end if;
 end $$;
+
+-- Push notifications and user preferences
+do $$
+begin
+  if not exists (select 1 from pg_type where typname = 'push_platform') then
+    create type public.push_platform as enum ('web', 'android', 'ios', 'desktop', 'tablet', 'unknown');
+  end if;
+end $$;
+
+alter table public.notifications
+  add column if not exists archived_at timestamptz;
+
+create index if not exists idx_notifications_archived_at
+  on public.notifications (user_id, archived_at, created_at desc);
+
+create table if not exists public.push_subscriptions (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references public.profiles (id) on delete cascade,
+  endpoint text not null,
+  p256dh text not null,
+  auth text not null,
+  platform public.push_platform not null default 'unknown',
+  user_agent text not null default '',
+  device_label text not null default '',
+  last_active_at timestamptz not null default timezone('utc', now()),
+  created_at timestamptz not null default timezone('utc', now()),
+  updated_at timestamptz not null default timezone('utc', now()),
+  unique (user_id, endpoint)
+);
+
+create index if not exists idx_push_subscriptions_user_id on public.push_subscriptions (user_id);
+create index if not exists idx_push_subscriptions_last_active_at on public.push_subscriptions (last_active_at desc);
+
+create table if not exists public.notification_preferences (
+  user_id uuid primary key references public.profiles (id) on delete cascade,
+  push_enabled boolean not null default true,
+  events_enabled boolean not null default true,
+  meetings_enabled boolean not null default true,
+  assignments_enabled boolean not null default true,
+  messages_enabled boolean not null default true,
+  prayer_enabled boolean not null default true,
+  announcements_enabled boolean not null default true,
+  tasks_enabled boolean not null default true,
+  attendance_enabled boolean not null default true,
+  discipleship_enabled boolean not null default true,
+  quiet_hours_enabled boolean not null default false,
+  quiet_hours_start time,
+  quiet_hours_end time,
+  timezone text not null default 'UTC',
+  created_at timestamptz not null default timezone('utc', now()),
+  updated_at timestamptz not null default timezone('utc', now())
+);
+
+drop trigger if exists set_push_subscriptions_updated_at on public.push_subscriptions;
+create trigger set_push_subscriptions_updated_at
+before update on public.push_subscriptions
+for each row execute function public.set_updated_at();
+
+drop trigger if exists set_notification_preferences_updated_at on public.notification_preferences;
+create trigger set_notification_preferences_updated_at
+before update on public.notification_preferences
+for each row execute function public.set_updated_at();
+
+create or replace function public.ensure_notification_preferences()
+returns public.notification_preferences
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  ensured public.notification_preferences;
+begin
+  insert into public.notification_preferences (user_id)
+  values (auth.uid())
+  on conflict (user_id) do nothing;
+
+  select *
+  into ensured
+  from public.notification_preferences
+  where user_id = auth.uid();
+
+  return ensured;
+end;
+$$;
+
+grant execute on function public.ensure_notification_preferences() to authenticated;
+
+alter table public.push_subscriptions enable row level security;
+alter table public.notification_preferences enable row level security;
+
+drop policy if exists "push_subscriptions_select_own" on public.push_subscriptions;
+create policy "push_subscriptions_select_own"
+on public.push_subscriptions
+for select
+to authenticated
+using (auth.uid() = user_id or public.is_admin());
+
+drop policy if exists "push_subscriptions_insert_own" on public.push_subscriptions;
+create policy "push_subscriptions_insert_own"
+on public.push_subscriptions
+for insert
+to authenticated
+with check (auth.uid() = user_id and public.is_active_user());
+
+drop policy if exists "push_subscriptions_update_own" on public.push_subscriptions;
+create policy "push_subscriptions_update_own"
+on public.push_subscriptions
+for update
+to authenticated
+using (auth.uid() = user_id)
+with check (auth.uid() = user_id);
+
+drop policy if exists "push_subscriptions_delete_own" on public.push_subscriptions;
+create policy "push_subscriptions_delete_own"
+on public.push_subscriptions
+for delete
+to authenticated
+using (auth.uid() = user_id or public.is_admin());
+
+drop policy if exists "notification_preferences_select_own" on public.notification_preferences;
+create policy "notification_preferences_select_own"
+on public.notification_preferences
+for select
+to authenticated
+using (auth.uid() = user_id or public.is_admin());
+
+drop policy if exists "notification_preferences_insert_own" on public.notification_preferences;
+create policy "notification_preferences_insert_own"
+on public.notification_preferences
+for insert
+to authenticated
+with check (auth.uid() = user_id and public.is_active_user());
+
+drop policy if exists "notification_preferences_update_own" on public.notification_preferences;
+create policy "notification_preferences_update_own"
+on public.notification_preferences
+for update
+to authenticated
+using (auth.uid() = user_id)
+with check (auth.uid() = user_id);

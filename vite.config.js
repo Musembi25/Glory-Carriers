@@ -4,12 +4,16 @@ import { VitePWA } from "vite-plugin-pwa";
 
 const isGitHubPages =
   process.env.GITHUB_PAGES === "true" || process.env.GITHUB_ACTIONS === "true";
+const basePath = isGitHubPages ? "/Glory-Carriers/" : "/";
 
 export default defineConfig({
-  base: isGitHubPages ? "/Glory-Carriers/" : "/",
+  base: basePath,
   plugins: [
     react(),
     VitePWA({
+      strategies: "injectManifest",
+      srcDir: "src",
+      filename: "sw.js",
       registerType: "autoUpdate",
       injectRegister: "auto",
       includeAssets: [
@@ -20,39 +24,12 @@ export default defineConfig({
         "icons/icon-512.png",
         "icons/icon-maskable-512.png"
       ],
-      workbox: {
+      injectManifest: {
         globPatterns: ["**/*.{js,css,html,ico,png,svg,woff2,woff}"],
-        navigateFallback: "/index.html",
-        cleanupOutdatedCaches: true,
-        runtimeCaching: [
-          {
-            urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
-            handler: "CacheFirst",
-            options: {
-              cacheName: "glory-carriers-google-fonts-css",
-              expiration: {
-                maxEntries: 12,
-                maxAgeSeconds: 60 * 60 * 24 * 365
-              },
-              cacheableResponse: { statuses: [0, 200] }
-            }
-          },
-          {
-            urlPattern: /^https:\/\/fonts\.gstatic\.com\/.*/i,
-            handler: "CacheFirst",
-            options: {
-              cacheName: "glory-carriers-google-fonts-files",
-              expiration: {
-                maxEntries: 24,
-                maxAgeSeconds: 60 * 60 * 24 * 365
-              },
-              cacheableResponse: { statuses: [0, 200] }
-            }
-          }
-        ]
+        maximumFileSizeToCacheInBytes: 4 * 1024 * 1024
       },
       manifest: {
-        id: "/",
+        id: basePath,
         name: "Glory Carriers",
         short_name: "Glory Carriers",
         description:
@@ -62,33 +39,33 @@ export default defineConfig({
         display: "standalone",
         display_override: ["standalone", "minimal-ui", "browser"],
         orientation: "any",
-        scope: "/",
-        start_url: "/?source=pwa",
+        scope: basePath,
+        start_url: `${basePath}?source=pwa`,
         lang: "en",
         dir: "ltr",
         prefer_related_applications: false,
         categories: ["productivity", "education", "social"],
         icons: [
           {
-            src: "/icons/icon-192.png",
+            src: `${basePath}icons/icon-192.png`,
             sizes: "192x192",
             type: "image/png",
             purpose: "any"
           },
           {
-            src: "/icons/icon-512.png",
+            src: `${basePath}icons/icon-512.png`,
             sizes: "512x512",
             type: "image/png",
             purpose: "any"
           },
           {
-            src: "/icons/icon-maskable-512.png",
+            src: `${basePath}icons/icon-maskable-512.png`,
             sizes: "512x512",
             type: "image/png",
             purpose: "maskable"
           },
           {
-            src: "/apple-touch-icon.png",
+            src: `${basePath}apple-touch-icon.png`,
             sizes: "180x180",
             type: "image/png",
             purpose: "any"

@@ -2669,9 +2669,11 @@ textarea {
   inset: 0 auto 0 0;
   z-index: 40;
   width: min(20rem, calc(100vw - 2rem));
-  padding: 1rem;
+  height: 100dvh;
+  padding: 1rem 0.75rem calc(1rem + env(safe-area-inset-bottom)) 1rem;
   display: grid;
-  align-content: start;
+  grid-template-rows: auto minmax(0, 1fr);
+  align-content: stretch;
   gap: 1rem;
   background:
     radial-gradient(circle at top right, rgba(31, 116, 255, 0.15), transparent 26%),
@@ -2679,6 +2681,7 @@ textarea {
     var(--surface-strong);
   border-right: 1px solid var(--border);
   box-shadow: 0 24px 50px rgba(7, 17, 29, 0.22);
+  overflow: hidden;
   transform: translateX(-104%);
   transition: transform 180ms ease;
 }
@@ -2696,7 +2699,24 @@ textarea {
 
 .mobile-drawer-nav {
   display: grid;
+  align-content: start;
   gap: 0.45rem;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 0.15rem 0.25rem 1rem 0;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--primary) 35%, transparent) transparent;
+}
+
+.mobile-drawer-nav::-webkit-scrollbar {
+  width: 0.35rem;
+}
+
+.mobile-drawer-nav::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--primary) 32%, transparent);
 }
 
 .loading-inline {

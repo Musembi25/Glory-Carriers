@@ -4,6 +4,7 @@ import { registerSW } from "virtual:pwa-register";
 import App from "./App";
 import "./styles.css";
 import "./styles/discipleship-portal.css";
+import "./styles/cell-group-management.css";
 
 const updateServiceWorker = registerSW({
   immediate: true,

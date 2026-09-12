@@ -1,4 +1,4 @@
-import { startTransition, useEffect, useRef, useState } from "react";
+import { startTransition, useEffect, useMemo, useRef, useState } from "react";
 import { useAuth } from "../context/AuthContext";
 import { computeUserAssignmentStats, getDisplayStatus, isWorkLesson } from "../lib/discipleshipAssignments";
 import { parseNotificationLaunchParams } from "../lib/notificationRouting.js";
@@ -20,9 +20,11 @@ import {
 } from "./announcements/AnnouncementReactions.jsx";
 import { BrandLogo } from "./BrandLogo";
 import { DiscipleshipSection } from "./DiscipleshipSection";
+import { CellGroupManagementSection } from "./management/CellGroupManagementSection";
 import { NotificationCenter } from "./NotificationCenter.jsx";
 import { NotificationPreferences } from "./NotificationPreferences.jsx";
 import { PushPermissionPrompt } from "./PushPermissionPrompt.jsx";
+import dashboardBackdrop from "../../logo.png";
 
 const sections = [
   { id: "events", label: "Dashboard", shortLabel: "Home", icon: "home" },
@@ -40,6 +42,13 @@ const sections = [
   { id: "meetings", label: "Virtual Meetings", shortLabel: "Meet", icon: "video" },
   { id: "messages", label: "Messages", shortLabel: "Chats", icon: "chat" },
   { id: "members", label: "Members", shortLabel: "People", icon: "users" },
+  {
+    id: "management",
+    label: "Management",
+    shortLabel: "Manage",
+    icon: "management",
+    leaderOnly: true
+  },
   { id: "settings", label: "Settings", shortLabel: "Settings", icon: "settings" }
 ];
 
@@ -437,6 +446,15 @@ function NavIcon({ name }) {
           <path d="M4 17h16" />
         </svg>
       );
+    case "management":
+      return (
+        <svg {...commonProps}>
+          <rect x="3" y="3" width="7" height="7" rx="1.5" />
+          <rect x="14" y="3" width="7" height="7" rx="1.5" />
+          <rect x="3" y="14" width="7" height="7" rx="1.5" />
+          <path d="M14 14h7M14 17.5h7M14 21h4" />
+        </svg>
+      );
     case "settings":
       return (
         <svg {...commonProps}>
@@ -483,7 +501,7 @@ function EmptyState({ title, description }) {
   );
 }
 
-function MobileSectionNav({ activeSection, onSelect, open, onOpenChange }) {
+function MobileSectionNav({ sections: navSections, activeSection, onSelect, open, onOpenChange }) {
   return (
     <>
       {open ? (
@@ -508,7 +526,7 @@ function MobileSectionNav({ activeSection, onSelect, open, onOpenChange }) {
         </div>
 
         <nav className="mobile-drawer-nav" aria-label="Primary navigation">
-          {sections.map((section) => (
+          {navSections.map((section) => (
             <button
               key={section.id}
               type="button"
@@ -531,6 +549,7 @@ function MobileSectionNav({ activeSection, onSelect, open, onOpenChange }) {
 }
 
 function SidebarNav({
+  sections: navSections,
   activeSection,
   onSelect,
   theme,
@@ -539,6 +558,16 @@ function SidebarNav({
   currentMember,
   onSignOut
 }) {
+  const [moreOpen, setMoreOpen] = useState(false);
+  const primarySectionIds = new Set(["events", "planning", "prayer", "tasks", "discipleship"]);
+  const primarySections = navSections.filter((section) => primarySectionIds.has(section.id));
+  const moreSections = navSections.filter((section) => !primarySectionIds.has(section.id));
+
+  const selectSection = (sectionId) => {
+    onSelect(sectionId);
+    setMoreOpen(false);
+  };
+
   return (
     <header className="sidebar desktop-nav">
       <div className="desktop-nav-inner">
@@ -547,7 +576,8 @@ function SidebarNav({
         </div>
 
         <nav className="desktop-nav-links" aria-label="Desktop navigation">
-          {sections.map((section) => (
+          <span className="desktop-nav-section-label">Workspace</span>
+          {primarySections.map((section) => (
             <button
               key={section.id}
               type="button"
@@ -556,7 +586,9 @@ function SidebarNav({
                   ? "sidebar-link desktop-nav-link active"
                   : "sidebar-link desktop-nav-link"
               }
-              onClick={() => onSelect(section.id)}
+              aria-current={activeSection === section.id ? "page" : undefined}
+              title={section.label}
+              onClick={() => selectSection(section.id)}
             >
               <span className="sidebar-link-icon" aria-hidden="true">
                 <NavIcon name={section.icon} />
@@ -564,6 +596,45 @@ function SidebarNav({
               <span>{section.shortLabel}</span>
             </button>
           ))}
+          {moreSections.length ? (
+            <div className="desktop-nav-more">
+              <span className="desktop-nav-section-label desktop-nav-section-label--more">Explore</span>
+              <button
+                type="button"
+                className={moreSections.some((section) => section.id === activeSection)
+                  ? "sidebar-link desktop-nav-link desktop-nav-more-trigger active"
+                  : "sidebar-link desktop-nav-link desktop-nav-more-trigger"}
+                aria-expanded={moreOpen}
+                aria-haspopup="menu"
+                onClick={() => setMoreOpen((open) => !open)}
+              >
+                <span className="sidebar-link-icon" aria-hidden="true">
+                  <NavIcon name="menu" />
+                </span>
+                <span>More</span>
+                <span className="desktop-nav-caret" aria-hidden="true" />
+              </button>
+              {moreOpen ? (
+                <div className="desktop-nav-menu" role="menu" aria-label="More navigation options">
+                  {moreSections.map((section) => (
+                    <button
+                      key={section.id}
+                      type="button"
+                      role="menuitem"
+                      className={activeSection === section.id ? "desktop-nav-menu-item active" : "desktop-nav-menu-item"}
+                      aria-current={activeSection === section.id ? "page" : undefined}
+                      onClick={() => selectSection(section.id)}
+                    >
+                      <span className="sidebar-link-icon" aria-hidden="true">
+                        <NavIcon name={section.icon} />
+                      </span>
+                      <span>{section.label}</span>
+                    </button>
+                  ))}
+                </div>
+              ) : null}
+            </div>
+          ) : null}
         </nav>
 
         <div className="desktop-nav-right">
@@ -645,6 +716,7 @@ export function AppShell() {
   const [discipleshipTabFocus, setDiscipleshipTabFocus] = useState("");
   const [discipleshipSessionAttendance, setDiscipleshipSessionAttendance] = useState([]);
   const [discipleshipDiscussions, setDiscipleshipDiscussions] = useState([]);
+  const [cellGroup, setCellGroup] = useState(null);
   const [selectedDiscipleshipClassId, setSelectedDiscipleshipClassId] = useState("");
   const [icebreaker, setIcebreaker] = useState(null);
   const [selectedEventId, setSelectedEventId] = useState("");
@@ -714,6 +786,11 @@ export function AppShell() {
   const hasSeededRealtimeIdsRef = useRef(false);
 
   const isAdmin = profile?.role === "admin";
+  const canManageCellGroup = isAdmin || cellGroup?.leader_id === user?.id;
+  const navSections = useMemo(
+    () => sections.filter((section) => !section.leaderOnly || canManageCellGroup),
+    [canManageCellGroup]
+  );
   const sortedEvents = [...events].sort(
     (left, right) => new Date(left.starts_at) - new Date(right.starts_at)
   );
@@ -1514,6 +1591,28 @@ export function AppShell() {
 
   useEffect(() => {
     void loadAppData({ showLoader: true });
+  }, [user?.id]);
+
+  useEffect(() => {
+    if (!supabase || !user?.id) {
+      return;
+    }
+
+    async function loadCellGroup() {
+      await supabase.rpc("ensure_default_cell_group");
+      const { data } = await supabase
+        .from("cell_groups")
+        .select("*")
+        .order("created_at", { ascending: true })
+        .limit(1)
+        .maybeSingle();
+
+      if (data) {
+        setCellGroup(data);
+      }
+    }
+
+    void loadCellGroup();
   }, [user?.id]);
 
   useEffect(() => {
@@ -5999,7 +6098,12 @@ export function AppShell() {
     );
   }
 
-  const sectionContent = loading ? null : activeSection === "events"
+  const selfManagedSections = new Set(["discipleship", "management"]);
+  const isManagementSection = activeSection === "management";
+  const deferSectionForGlobalLoad = loading && !selfManagedSections.has(activeSection);
+  const showDashboardChrome = !selfManagedSections.has(activeSection);
+
+  const sectionContent = deferSectionForGlobalLoad ? null : activeSection === "events"
     ? renderEventSection()
     : activeSection === "planning"
       ? renderPlanningSection()
@@ -6050,6 +6154,15 @@ export function AppShell() {
                 ? renderMessagesSection()
                 : activeSection === "members"
                   ? renderMembersSection()
+                  : activeSection === "management"
+                    ? (
+                      <CellGroupManagementSection
+                        user={user}
+                        isAdmin={isAdmin}
+                        profiles={profiles}
+                        onNavigateSection={setActiveSection}
+                      />
+                    )
                   : activeSection === "settings"
                     ? renderSettingsSection()
                     : null;
@@ -6057,6 +6170,7 @@ export function AppShell() {
   return (
     <div className="app-shell">
       <SidebarNav
+        sections={navSections}
         activeSection={activeSection}
         onSelect={setActiveSection}
         theme={theme}
@@ -6068,8 +6182,8 @@ export function AppShell() {
         onSignOut={() => signOut()}
       />
 
-      <main className="main-content">
-        <header className="topbar">
+      <main className={`main-content${isManagementSection ? " main-content--management" : ""}`}>
+        {showDashboardChrome ? <header className="topbar">
           <div className="topbar-hero">
             <div className="avatar-orb">
               <Avatar member={currentMember} size="large" />
@@ -6170,7 +6284,7 @@ export function AppShell() {
               </button>
             </div>
           </div>
-        </header>
+        </header> : null}
 
         {toastNotifications.length ? (
           <div className="toast-stack" aria-live="polite" aria-atomic="false">
@@ -6206,6 +6320,7 @@ export function AppShell() {
           </div>
         ) : null}
 
+        {showDashboardChrome ? (
         <section className="stats-grid">
           <StatCard
             label="Upcoming events"
@@ -6238,6 +6353,7 @@ export function AppShell() {
             accent="orange"
           />
         </section>
+        ) : null}
 
         {shouldShowFocusBar ? (
           <section className="focus-bar">
@@ -6270,7 +6386,7 @@ export function AppShell() {
           </section>
         ) : null}
 
-        {loading ? (
+        {loading && showDashboardChrome ? (
           <Panel title="Loading workspace" subtitle="Pulling the latest data from Supabase.">
             <div className="loading-inline">
               <div className="spinner" aria-hidden="true" />
@@ -6278,12 +6394,32 @@ export function AppShell() {
           </Panel>
         ) : null}
 
-        {!loading ? (
-          <div className="section-stage" key={activeSection}>
+        {(!loading || selfManagedSections.has(activeSection)) ? (
+          <div
+            className={`section-stage${[
+              "events",
+              "planning",
+              "prayer",
+              "tasks",
+              "resources",
+              "discipleship",
+              "leadership",
+              "meetings",
+              "messages",
+              "members",
+              "settings"
+            ].includes(activeSection) ? ` workspace-page workspace-page--${activeSection}` : ""}`}
+            style={activeSection === "events" ? { "--dashboard-art": `url(${dashboardBackdrop})` } : undefined}
+            key={activeSection}
+          >
             {sectionContent}
           </div>
         ) : null}
       </main>
+
+      <footer className="app-footer">
+        <span>Glory Carries 2026 &copy;</span>
+      </footer>
 
       <NotificationCenter
         notifications={notifications}
@@ -6317,6 +6453,7 @@ export function AppShell() {
       />
 
       <MobileSectionNav
+        sections={navSections}
         activeSection={activeSection}
         onSelect={setActiveSection}
         open={mobileMenuOpen}

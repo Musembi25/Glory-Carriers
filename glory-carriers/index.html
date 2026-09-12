@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#F97316">
+  <meta name="description" content="Glory Carriers — One chapter. One day. One Word. Growing together.">
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" href="icon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Lora:ital,wght@0,400;0,500;0,600;1,500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+  <title>Glory Carriers — Daily Bible Study</title>
+</head>
+<body>
+  <div id="app">
+    <div id="welcome-screen" class="screen-overlay" aria-hidden="true">
+      <div class="welcome-card">
+        <div class="brand-mark" aria-hidden="true"><span></span></div>
+        <div class="eyebrow">GLORY CARRIERS</div>
+        <p class="welcome-verse">“Let the word of Christ dwell in you richly.”</p>
+        <p class="welcome-ref">— Colossians 3:16</p>
+        <h1>Welcome, Glory Carrier.</h1>
+        <p class="muted">A quiet place to meet God through His Word.</p>
+        <form id="name-form" class="stack-form">
+          <label for="name-input">What should we call you?</label>
+          <input id="name-input" name="name" type="text" autocomplete="name" maxlength="40" placeholder="Enter your name" required>
+          <button class="btn btn-primary btn-lg" type="submit">Continue</button>
+        </form>
+      </div>
+    </div>
+
+    <header class="topbar">
+      <button id="mobile-menu" class="icon-btn mobile-only" aria-label="Open menu" title="Open menu">
+        <span class="hamburger"></span>
+      </button>
+      <a class="brand" href="#dashboard" data-route="dashboard" aria-label="Glory Carriers dashboard">
+        <span class="brand-symbol" aria-hidden="true"><span></span></span>
+        <span class="brand-text"><strong>GLORY</strong><small>CARRIERS</small></span>
+      </a>
+      <div class="topbar-spacer"></div>
+      <button id="quick-theme" class="icon-btn" aria-label="Toggle theme" title="Toggle theme">◐</button>
+      <button id="profile-button" class="profile-chip" aria-label="Open profile">
+        <span id="avatar-initials">GC</span><span id="profile-name">Glory Carrier</span>
+      </button>
+    </header>
+
+    <aside id="sidebar" class="sidebar">
+      <nav class="side-nav" aria-label="Primary navigation">
+        <button class="nav-item active" data-route="dashboard"><span>⌂</span>Dashboard</button>
+        <button class="nav-item" data-route="today"><span>◷</span>Today's Study</button>
+        <button class="nav-item" data-route="journey"><span>↗</span>Journey</button>
+        <button class="nav-item" data-route="reflections"><span>✎</span>Reflections</button>
+        <button class="nav-item" data-route="bible"><span>▤</span>Bible</button>
+        <button class="nav-item" data-route="tools"><span>✦</span>Tools</button>
+        <button class="nav-item" data-route="settings"><span>⚙</span>Settings</button>
+      </nav>
+      <div class="sidebar-quote">
+        <p>“One chapter. One day. One Word. Growing together.”</p>
+      </div>
+    </aside>
+
+    <main id="main" class="main" tabindex="-1"></main>
+
+    <nav class="bottom-nav" aria-label="Mobile navigation">
+      <button class="nav-item active" data-route="dashboard"><span>⌂</span><small>Home</small></button>
+      <button class="nav-item" data-route="today"><span>◷</span><small>Today</small></button>
+      <button class="nav-item" data-route="journey"><span>↗</span><small>Journey</small></button>
+      <button class="nav-item" data-route="reflections"><span>✎</span><small>Journal</small></button>
+      <button class="nav-item" data-route="tools"><span>✦</span><small>Tools</small></button>
+    </nav>
+
+    <div id="toast-region" class="toast-region" aria-live="polite" aria-atomic="true"></div>
+    <div id="modal-region"></div>
+  </div>
+  <script src="app.js"></script>
+</body>
+</html>

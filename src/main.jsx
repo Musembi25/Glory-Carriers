@@ -5,6 +5,8 @@ import App from "./App";
 import "./styles.css";
 import "./styles/discipleship-portal.css";
 import "./styles/cell-group-management.css";
+import "./styles/bible-study.css";
+import "./styles/bible-study-reactions.css";
 
 const updateServiceWorker = registerSW({
   immediate: true,

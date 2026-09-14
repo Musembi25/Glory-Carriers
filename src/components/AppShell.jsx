@@ -21,6 +21,7 @@ import {
 import { BrandLogo } from "./BrandLogo";
 import { DiscipleshipSection } from "./DiscipleshipSection";
 import { CellGroupManagementSection } from "./management/CellGroupManagementSection";
+import { BibleStudySection } from "./BibleStudySection";
 import { NotificationCenter } from "./NotificationCenter.jsx";
 import { NotificationPreferences } from "./NotificationPreferences.jsx";
 import { PushPermissionPrompt } from "./PushPermissionPrompt.jsx";
@@ -38,6 +39,7 @@ const sections = [
     shortLabel: "Discipleship",
     icon: "discipleship"
   },
+  { id: "bible-study", label: "Bible Study", shortLabel: "Bible", icon: "book-open" },
   { id: "leadership", label: "Leadership", shortLabel: "Leaders", icon: "calendar" },
   { id: "meetings", label: "Virtual Meetings", shortLabel: "Meet", icon: "video" },
   { id: "messages", label: "Messages", shortLabel: "Chats", icon: "chat" },
@@ -6098,7 +6100,7 @@ export function AppShell() {
     );
   }
 
-  const selfManagedSections = new Set(["discipleship", "management"]);
+  const selfManagedSections = new Set(["discipleship", "management", "bible-study"]);
   const isManagementSection = activeSection === "management";
   const deferSectionForGlobalLoad = loading && !selfManagedSections.has(activeSection);
   const showDashboardChrome = !selfManagedSections.has(activeSection);
@@ -6146,6 +6148,8 @@ export function AppShell() {
                   userAvatarUrl={currentMember?.avatar_url ?? ""}
                 />
               )
+            : activeSection === "bible-study"
+              ? <BibleStudySection user={user} profile={profile} profiles={profiles} isAdmin={isAdmin} />
             : activeSection === "leadership"
               ? renderLeadershipSection()
               : activeSection === "meetings"

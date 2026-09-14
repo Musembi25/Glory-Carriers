@@ -103,3 +103,30 @@
 @media (max-width: 900px) { .bible-community-grid { grid-template-columns: 1fr; } }
 @media (max-width: 520px) { .bible-inline-compose { flex-direction: column; }.bible-inline-compose button { width: 100%; }.bible-live-pill { display: none; } }
 @media (prefers-reduced-motion: reduce) { .bible-community-grid * { animation: none !important; transition: none !important; } }
+
+/* Keep every Bible Study surface legible when the app is using its dark theme. */
+:root[data-theme="dark"] .bible-study { --bs-dark: #090b10; color: #f7f8fa; }
+:root[data-theme="dark"] .bible-study .bible-current,
+:root[data-theme="dark"] .bible-study .bible-stat,
+:root[data-theme="dark"] .bible-study .bible-panel,
+:root[data-theme="dark"] .bible-study .bible-reader { background: #1b1d22; border-color: #393d46; color: #f7f8fa; box-shadow: 0 10px 28px #00000036; }
+:root[data-theme="dark"] .bible-study .bible-question-card { background: linear-gradient(135deg, #2a211b, #1b1d22); border-color: #504234; color: #f7f8fa; }
+:root[data-theme="dark"] .bible-study .bible-reply,
+:root[data-theme="dark"] .bible-study .bible-answer { background: linear-gradient(135deg, #252831, #1b1d22); border-color: #3b414d; color: #f7f8fa; }
+:root[data-theme="dark"] .bible-study .bible-panel textarea,
+:root[data-theme="dark"] .bible-study .bible-select select,
+:root[data-theme="dark"] .bible-study .bible-inline-compose input { background: #111319; border-color: #464c58; color: #f7f8fa; }
+:root[data-theme="dark"] .bible-study .bible-panel textarea::placeholder,
+:root[data-theme="dark"] .bible-study .bible-inline-compose input::placeholder { color: #aeb5c0; opacity: 1; }
+:root[data-theme="dark"] .bible-study .bible-current p,
+:root[data-theme="dark"] .bible-study .bible-stat p,
+:root[data-theme="dark"] .bible-study .bible-muted,
+:root[data-theme="dark"] .bible-study .bible-feed small,
+:root[data-theme="dark"] .bible-study .bible-reply small,
+:root[data-theme="dark"] .bible-study .bible-answer small,
+:root[data-theme="dark"] .bible-study .bible-question-head small { color: #c2c8d0; }
+:root[data-theme="dark"] .bible-study .bible-btn.secondary { background: #242832; border-color: #4a5060; color: #f7f8fa; }
+:root[data-theme="dark"] .bible-study .bible-plan button:hover,
+:root[data-theme="dark"] .bible-study .bible-plan button.current { background: #3a2920; }
+:root[data-theme="dark"] .bible-study .bible-answer-count { background: #472517; color: #fed7aa; }
+:root[data-theme="dark"] .bible-study .bible-live-pill { background: #123c32; color: #a7f3d0; }

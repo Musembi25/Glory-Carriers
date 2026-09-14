@@ -22,11 +22,19 @@ const DISCIPLESHIP_NOTIFICATION_TYPES = new Set([
   "discipleship_enrollment_approved"
 ]);
 
+const BIBLE_STUDY_NOTIFICATION_TYPES = new Set([
+  "bible_study_takeaway_posted",
+  "bible_study_takeaway_reply",
+  "bible_study_question_posted",
+  "bible_study_question_answer"
+]);
+
 export const NOTIFICATION_CATEGORIES = [
   { id: "events", label: "Events" },
   { id: "meetings", label: "Meetings" },
   { id: "assignments", label: "Assignments" },
   { id: "discipleship", label: "Discipleship" },
+  { id: "bible_study", label: "Bible Study" },
   { id: "prayer", label: "Prayer" },
   { id: "messages", label: "Messages" },
   { id: "announcements", label: "Announcements" },
@@ -49,6 +57,10 @@ export function getNotificationCategory(notificationType) {
 
   if (DISCIPLESHIP_NOTIFICATION_TYPES.has(notificationType)) {
     return "discipleship";
+  }
+
+  if (BIBLE_STUDY_NOTIFICATION_TYPES.has(notificationType)) {
+    return "bible_study";
   }
 
   if (notificationType === "prayer_reminder") {
@@ -112,6 +124,10 @@ export function getSectionForNotification(notification) {
 
   if (targetTable === "discipleship_classes" || targetTable === "discipleship_lessons") {
     return "discipleship";
+  }
+
+  if (targetTable.startsWith("bible_study_")) {
+    return "bible-study";
   }
 
   if (targetTable === "announcements" || notificationType === "announcement_posted") {

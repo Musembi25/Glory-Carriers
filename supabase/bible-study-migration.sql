@@ -144,3 +144,75 @@ begin
     alter publication supabase_realtime add table public.bible_study_question_answers;
   end if;
 end $$;
+
+-- Bible Study activity also enters the app-wide notification and Web Push pipeline.
+do $$
+begin
+  if not exists (select 1 from pg_enum where enumtypid = 'public.notification_type'::regtype and enumlabel = 'bible_study_takeaway_posted') then
+    alter type public.notification_type add value 'bible_study_takeaway_posted';
+  end if;
+  if not exists (select 1 from pg_enum where enumtypid = 'public.notification_type'::regtype and enumlabel = 'bible_study_takeaway_reply') then
+    alter type public.notification_type add value 'bible_study_takeaway_reply';
+  end if;
+  if not exists (select 1 from pg_enum where enumtypid = 'public.notification_type'::regtype and enumlabel = 'bible_study_question_posted') then
+    alter type public.notification_type add value 'bible_study_question_posted';
+  end if;
+  if not exists (select 1 from pg_enum where enumtypid = 'public.notification_type'::regtype and enumlabel = 'bible_study_question_answer') then
+    alter type public.notification_type add value 'bible_study_question_answer';
+  end if;
+end $$;
+
+alter table public.notification_preferences add column if not exists bible_study_enabled boolean not null default true;
+
+create or replace function public.notify_bible_study_takeaway()
+returns trigger language plpgsql security definer set search_path = public as $$
+begin
+  insert into public.notifications (user_id, notification_type, title, body, entity_table, entity_id)
+  select id, 'bible_study_takeaway_posted'::public.notification_type, 'New Bible Study takeaway', left(new.content, 150), 'bible_study_takeaways', new.id
+  from public.profiles where is_active = true and id <> new.user_id;
+  return new;
+end;
+$$;
+
+create or replace function public.notify_bible_study_takeaway_reply()
+returns trigger language plpgsql security definer set search_path = public as $$
+declare takeaway_author uuid;
+begin
+  select user_id into takeaway_author from public.bible_study_takeaways where id = new.takeaway_id;
+  if takeaway_author is not null and takeaway_author <> new.user_id then
+    perform public.create_notification(takeaway_author, 'bible_study_takeaway_reply'::public.notification_type, 'New reply to your takeaway', left(new.content, 150), 'bible_study_takeaway_replies', new.id);
+  end if;
+  return new;
+end;
+$$;
+
+create or replace function public.notify_bible_study_question()
+returns trigger language plpgsql security definer set search_path = public as $$
+begin
+  insert into public.notifications (user_id, notification_type, title, body, entity_table, entity_id)
+  select id, 'bible_study_question_posted'::public.notification_type, 'New Bible Study question', left(new.content, 150), 'bible_study_questions', new.id
+  from public.profiles where is_active = true and id <> new.user_id;
+  return new;
+end;
+$$;
+
+create or replace function public.notify_bible_study_question_answer()
+returns trigger language plpgsql security definer set search_path = public as $$
+declare question_author uuid;
+begin
+  select user_id into question_author from public.bible_study_questions where id = new.question_id;
+  if question_author is not null and question_author <> new.user_id then
+    perform public.create_notification(question_author, 'bible_study_question_answer'::public.notification_type, 'Your Bible Study question was answered', left(new.content, 150), 'bible_study_question_answers', new.id);
+  end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists on_bible_study_takeaway_notify on public.bible_study_takeaways;
+create trigger on_bible_study_takeaway_notify after insert on public.bible_study_takeaways for each row execute function public.notify_bible_study_takeaway();
+drop trigger if exists on_bible_study_takeaway_reply_notify on public.bible_study_takeaway_replies;
+create trigger on_bible_study_takeaway_reply_notify after insert on public.bible_study_takeaway_replies for each row execute function public.notify_bible_study_takeaway_reply();
+drop trigger if exists on_bible_study_question_notify on public.bible_study_questions;
+create trigger on_bible_study_question_notify after insert on public.bible_study_questions for each row execute function public.notify_bible_study_question();
+drop trigger if exists on_bible_study_question_answer_notify on public.bible_study_question_answers;
+create trigger on_bible_study_question_answer_notify after insert on public.bible_study_question_answers for each row execute function public.notify_bible_study_question_answer();

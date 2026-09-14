@@ -80,3 +80,67 @@ from (values
   ('Colossians',1,17),('Colossians',2,18),('Colossians',3,19),('Colossians',4,20)
 ) as plan(book, chapter, sort_order)
 on conflict (reading_date) do nothing;
+
+-- Community conversations: replies to takeaways and an open, group-wide Q&A.
+create table if not exists public.bible_study_takeaway_replies (
+  id uuid primary key default gen_random_uuid(),
+  takeaway_id uuid not null references public.bible_study_takeaways(id) on delete cascade,
+  user_id uuid not null references public.profiles(id) on delete cascade,
+  content text not null check (char_length(trim(content)) between 1 and 2000),
+  created_at timestamptz not null default timezone('utc', now()),
+  updated_at timestamptz not null default timezone('utc', now())
+);
+
+create table if not exists public.bible_study_questions (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references public.profiles(id) on delete cascade,
+  content text not null check (char_length(trim(content)) between 1 and 3000),
+  created_at timestamptz not null default timezone('utc', now()),
+  updated_at timestamptz not null default timezone('utc', now())
+);
+
+create table if not exists public.bible_study_question_answers (
+  id uuid primary key default gen_random_uuid(),
+  question_id uuid not null references public.bible_study_questions(id) on delete cascade,
+  user_id uuid not null references public.profiles(id) on delete cascade,
+  content text not null check (char_length(trim(content)) between 1 and 3000),
+  created_at timestamptz not null default timezone('utc', now()),
+  updated_at timestamptz not null default timezone('utc', now())
+);
+
+create index if not exists idx_bible_takeaway_replies_takeaway on public.bible_study_takeaway_replies(takeaway_id, created_at);
+create index if not exists idx_bible_questions_created on public.bible_study_questions(created_at desc);
+create index if not exists idx_bible_question_answers_question on public.bible_study_question_answers(question_id, created_at);
+
+alter table public.bible_study_takeaway_replies enable row level security;
+alter table public.bible_study_questions enable row level security;
+alter table public.bible_study_question_answers enable row level security;
+
+drop policy if exists "bible_takeaway_replies_select" on public.bible_study_takeaway_replies;
+drop policy if exists "bible_takeaway_replies_self_write" on public.bible_study_takeaway_replies;
+drop policy if exists "bible_questions_select" on public.bible_study_questions;
+drop policy if exists "bible_questions_self_write" on public.bible_study_questions;
+drop policy if exists "bible_question_answers_select" on public.bible_study_question_answers;
+drop policy if exists "bible_question_answers_self_write" on public.bible_study_question_answers;
+
+create policy "bible_takeaway_replies_select" on public.bible_study_takeaway_replies for select to authenticated using (public.is_active_user());
+create policy "bible_takeaway_replies_self_write" on public.bible_study_takeaway_replies for all to authenticated using (public.is_admin() or user_id = auth.uid()) with check (public.is_active_user() and (public.is_admin() or user_id = auth.uid()));
+create policy "bible_questions_select" on public.bible_study_questions for select to authenticated using (public.is_active_user());
+create policy "bible_questions_self_write" on public.bible_study_questions for all to authenticated using (public.is_admin() or user_id = auth.uid()) with check (public.is_active_user() and (public.is_admin() or user_id = auth.uid()));
+create policy "bible_question_answers_select" on public.bible_study_question_answers for select to authenticated using (public.is_active_user());
+create policy "bible_question_answers_self_write" on public.bible_study_question_answers for all to authenticated using (public.is_admin() or user_id = auth.uid()) with check (public.is_active_user() and (public.is_admin() or user_id = auth.uid()));
+
+-- Run these once in the Supabase SQL editor to have new posts appear immediately
+-- for members who are already on the Bible Study page.
+do $$
+begin
+  if not exists (select 1 from pg_publication_tables where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'bible_study_takeaway_replies') then
+    alter publication supabase_realtime add table public.bible_study_takeaway_replies;
+  end if;
+  if not exists (select 1 from pg_publication_tables where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'bible_study_questions') then
+    alter publication supabase_realtime add table public.bible_study_questions;
+  end if;
+  if not exists (select 1 from pg_publication_tables where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'bible_study_question_answers') then
+    alter publication supabase_realtime add table public.bible_study_question_answers;
+  end if;
+end $$;

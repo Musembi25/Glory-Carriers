@@ -6205,6 +6205,17 @@ export function AppShell() {
         <span>Pages</span>
       </button>
 
+      <button
+        type="button"
+        className="app-mobile-theme-trigger"
+        onClick={() => setTheme((current) => (current === "light" ? "dark" : "light"))}
+        aria-label={theme === "light" ? "Switch to dark theme" : "Switch to light theme"}
+        title={theme === "light" ? "Switch to dark theme" : "Switch to light theme"}
+      >
+        <span aria-hidden="true">{theme === "light" ? "☾" : "☀"}</span>
+        <span>{theme === "light" ? "Dark" : "Light"}</span>
+      </button>
+
       <main className={`main-content${isManagementSection ? " main-content--management" : ""}`}>
         {showDashboardChrome ? <header className="topbar">
           <div className="topbar-hero">

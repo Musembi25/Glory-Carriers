@@ -39,7 +39,7 @@ const sections = [
     shortLabel: "Discipleship",
     icon: "discipleship"
   },
-  { id: "bible-study", label: "Bible Study", shortLabel: "Bible", icon: "book-open" },
+  { id: "bible-study", label: "Bible Study", shortLabel: "Bible", icon: "scripture" },
   { id: "leadership", label: "Leadership", shortLabel: "Leaders", icon: "calendar" },
   { id: "meetings", label: "Virtual Meetings", shortLabel: "Meet", icon: "video" },
   { id: "messages", label: "Messages", shortLabel: "Chats", icon: "chat" },
@@ -392,6 +392,14 @@ function NavIcon({ name }) {
         <svg {...commonProps}>
           <path d="M4.5 6.5A2.5 2.5 0 0 1 7 4h4.5a3 3 0 0 1 3 3v13a3 3 0 0 0-3-3H7a2.5 2.5 0 0 0-2.5 2.5V6.5Z" />
           <path d="M19.5 6.5A2.5 2.5 0 0 0 17 4h-4.5a3 3 0 0 0-3 3v13a3 3 0 0 1 3-3H17a2.5 2.5 0 0 1 2.5 2.5V6.5Z" />
+        </svg>
+      );
+    case "scripture":
+      return (
+        <svg {...commonProps}>
+          <path d="M5 4.5h8.2A2.8 2.8 0 0 1 16 7.3V20H7.2A2.2 2.2 0 0 0 5 22V4.5Z" />
+          <path d="M16 7.3A2.8 2.8 0 0 1 18.8 4.5H20v15.3A2.2 2.2 0 0 0 17.8 22H16" />
+          <path d="M10.5 8v8M7.8 11.5h5.4" />
         </svg>
       );
     case "discipleship":
@@ -6185,6 +6193,17 @@ export function AppShell() {
         currentMember={currentMember}
         onSignOut={() => signOut()}
       />
+
+      <button
+        type="button"
+        className="app-mobile-menu-trigger"
+        aria-label="Open page navigation"
+        aria-expanded={mobileMenuOpen}
+        onClick={() => setMobileMenuOpen(true)}
+      >
+        <NavIcon name="menu" />
+        <span>Pages</span>
+      </button>
 
       <main className={`main-content${isManagementSection ? " main-content--management" : ""}`}>
         {showDashboardChrome ? <header className="topbar">

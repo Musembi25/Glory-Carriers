@@ -73,7 +73,10 @@ export default defineConfig({
         ]
       },
       devOptions: {
-        enabled: false
+        // Keep the manifest and service worker available on localhost too, so the
+        // browser can offer installation while the app is being developed.
+        enabled: true,
+        type: "module"
       }
     })
   ],

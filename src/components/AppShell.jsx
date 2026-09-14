@@ -24,7 +24,7 @@ import { CellGroupManagementSection } from "./management/CellGroupManagementSect
 import { NotificationCenter } from "./NotificationCenter.jsx";
 import { NotificationPreferences } from "./NotificationPreferences.jsx";
 import { PushPermissionPrompt } from "./PushPermissionPrompt.jsx";
-import dashboardBackdrop from "../../logo.png";
+const dashboardBackdrop = `${import.meta.env.BASE_URL}icons/icon-512.png`;
 
 const sections = [
   { id: "events", label: "Dashboard", shortLabel: "Home", icon: "home" },

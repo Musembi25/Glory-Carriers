@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+const groupLogo = `${import.meta.env.BASE_URL}icons/icon-512.png`;
 import { supabase } from "../../lib/supabase";
-import { exportMembersExcel, exportMembersPdf } from "../../lib/cellGroupExport";
+import { exportMemberProfilePdf, exportMembersExcel, exportMembersPdf } from "../../lib/cellGroupExport";
 import {
   DEPARTMENTS,
   EDITABLE_MEMBERSHIP_STATUSES,
@@ -169,7 +170,7 @@ function MemberAvatar({ profile, size = "" }) {
   );
 }
 
-function ActionMenu({ member, onView, onEdit, onRemove }) {
+function ActionMenu({ member, onView, onEdit, onDownload, onRemove }) {
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
 
@@ -190,6 +191,7 @@ function ActionMenu({ member, onView, onEdit, onRemove }) {
         <div className="cgm-action-menu">
           <button type="button" onClick={() => { setOpen(false); onView(member); }}><Icon name="eye" size={14} /> View</button>
           <button type="button" onClick={() => { setOpen(false); onEdit(member); }}><Icon name="edit" size={14} /> Edit</button>
+          <button type="button" onClick={() => { setOpen(false); onDownload(member); }}><Icon name="download" size={14} /> Download PDF</button>
           <button type="button" className="danger" onClick={() => { setOpen(false); onRemove(member); }}><Icon name="trash" size={14} /> Remove</button>
         </div>
       ) : null}
@@ -211,6 +213,55 @@ function ToastStack({ toasts, onDismiss }) {
         </div>
       ))}
     </div>
+  );
+}
+
+function ReportsExportCenter({ groupName, members, exporting, onExport, isFiltered }) {
+  const active = members.filter((member) => member.membership_status === "active").length;
+  const temporarilyInactive = members.filter((member) => member.membership_status === "temporarily_inactive").length;
+
+  return (
+    <section className="cgm-reports" aria-label="Membership reports and exports">
+      <div className="cgm-reports-heading">
+        <div className="cgm-reports-brand">
+          <img src={groupLogo} alt="Glory Carriers logo" />
+          <div>
+            <p>GLORY CARRIERS</p>
+            <h4>Membership Reports</h4>
+          </div>
+        </div>
+        <p className="cgm-reports-description">Official membership records and administrative reports.</p>
+      </div>
+      <div className="cgm-reports-summary" aria-label="Current report summary">
+        <div><span>Current Members</span><strong>{members.length}</strong></div>
+        <div><span>Active</span><strong>{active}</strong></div>
+        <div><span>Temporarily Inactive</span><strong>{temporarilyInactive}</strong></div>
+        {isFiltered ? <span className="cgm-reports-filter-note">Filtered membership report</span> : <span className="cgm-reports-filter-note">All current members</span>}
+      </div>
+      <div className="cgm-report-card-grid">
+        <article className="cgm-report-card">
+          <div className="cgm-report-card-icon"><Icon name="file-pdf" size={20} /></div>
+          <div className="cgm-report-card-copy">
+            <h5>Membership PDF Report</h5>
+            <p>Generate a professionally formatted report containing the current membership records.</p>
+          </div>
+          <button type="button" className="cgm-btn cgm-btn-report" disabled={!!exporting || !members.length} onClick={() => void onExport("pdf")}>
+            <Icon name="download" /> {exporting === "pdf" ? "Preparing Membership Report..." : "Download PDF"}
+          </button>
+        </article>
+        <article className="cgm-report-card">
+          <div className="cgm-report-card-icon"><Icon name="file-sheet" size={20} /></div>
+          <div className="cgm-report-card-copy">
+            <h5>Membership Excel Report</h5>
+            <p>Download the complete membership records in a structured Excel workbook.</p>
+          </div>
+          <button type="button" className="cgm-btn cgm-btn-secondary" disabled={!!exporting || !members.length} onClick={() => void onExport("excel")}>
+            <Icon name="download" /> {exporting === "excel" ? "Preparing Excel Report..." : "Download Excel"}
+          </button>
+        </article>
+      </div>
+      {members.length === 0 ? <p className="cgm-reports-empty">There are no current members in this report selection.</p> : null}
+    </section>
   );
 }
 
@@ -709,19 +760,50 @@ export function CellGroupManagementSection({
   async function handleExport(format) {
     if (exporting) return;
     setExporting(format);
-    toast("Preparing download...", "Your file will save automatically.", "success");
+    const isFiltered = Boolean(search.trim() || statusFilter !== "all" || deptFilter !== "all" || discFilter !== "all" || yearFilter !== "all" || sortBy !== "name_asc");
+    toast(
+      format === "excel" ? "Preparing Excel Report..." : "Preparing Membership Report...",
+      isFiltered ? "Your report reflects the current filters." : "Your report includes all current members.",
+      "success"
+    );
     try {
       const fields = EXPORT_FIELDS.filter((f) => f.default).map((f) => f.key);
-      const exportData = { members: filteredMembers, fields, groupName: cellGroup?.name, leaderName: leaderProfile?.full_name };
+      const exportData = {
+        members: filteredMembers,
+        fields,
+        groupName: cellGroup?.name,
+        filters: { search: search.trim(), status: statusFilter, department: deptFilter, discipleship: discFilter, joinedYear: yearFilter, sort: sortBy }
+      };
       if (format === "excel") {
         await exportMembersExcel(exportData);
       } else {
         await exportMembersPdf(exportData);
       }
-      toast("Download complete", format === "excel" ? "Excel file saved to your downloads." : "PDF report saved to your downloads.");
+      toast(
+        format === "excel" ? "Membership Excel report downloaded successfully." : "Membership PDF downloaded successfully.",
+        "Your official membership report has been saved to your downloads."
+      );
     } catch (err) {
       console.error(err);
-      toast("Download failed", "We couldn't generate the file. Please try again.", "error");
+      toast(
+        format === "excel" ? "Unable to generate the Excel report." : "Unable to generate the membership PDF.",
+        "Please try again.",
+        "error"
+      );
+    } finally {
+      setExporting(null);
+    }
+  }
+
+  async function handleMemberPdf(member) {
+    if (exporting) return;
+    setExporting(`member-${member.id}`);
+    try {
+      await exportMemberProfilePdf({ member, groupName: cellGroup?.name || "Glory Carriers" });
+      toast("Member profile PDF downloaded successfully.", "The individual member profile has been saved to your downloads.");
+    } catch (err) {
+      console.error("Member profile PDF generation failed", err);
+      toast("Unable to generate the member profile PDF.", "Please try again.", "error");
     } finally {
       setExporting(null);
     }
@@ -924,12 +1006,6 @@ export function CellGroupManagementSection({
               </p>
             </div>
             <div className="cgm-panel-header-actions">
-              <button type="button" className="cgm-btn cgm-btn-download cgm-btn-download--compact" disabled={!!exporting || !filteredMembers.length} onClick={() => void handleExport("excel")}>
-                <Icon name="file-sheet" /> Excel
-              </button>
-              <button type="button" className="cgm-btn cgm-btn-download cgm-btn-download--compact" disabled={!!exporting || !filteredMembers.length} onClick={() => void handleExport("pdf")}>
-                <Icon name="file-pdf" /> PDF
-              </button>
               <button type="button" className="cgm-btn cgm-btn-primary" onClick={openAddForm}>
                 <Icon name="plus" /> Add Member
               </button>
@@ -985,6 +1061,13 @@ export function CellGroupManagementSection({
               </label>
             </div>
           </div>
+          <ReportsExportCenter
+            groupName={cellGroup?.name}
+            members={filteredMembers}
+            exporting={exporting}
+            onExport={handleExport}
+            isFiltered={Boolean(search.trim() || statusFilter !== "all" || deptFilter !== "all" || discFilter !== "all" || yearFilter !== "all" || sortBy !== "name_asc")}
+          />
           <div className="cgm-panel-body">
             {filteredMembers.length ? (
               <>
@@ -1037,6 +1120,7 @@ export function CellGroupManagementSection({
                                 member={m}
                                 onView={setViewMember}
                                 onEdit={openEditForm}
+                                onDownload={(member) => void handleMemberPdf(member)}
                                 onRemove={setConfirmRemove}
                               />
                             </td>
@@ -1084,6 +1168,9 @@ export function CellGroupManagementSection({
                           </button>
                           <button type="button" className="cgm-btn cgm-btn-secondary" onClick={() => openEditForm(m)}>
                             <Icon name="edit" size={14} /> Edit
+                          </button>
+                          <button type="button" className="cgm-btn cgm-btn-download" disabled={!!exporting} onClick={() => void handleMemberPdf(m)}>
+                            <Icon name="download" size={14} /> PDF
                           </button>
                           <button type="button" className="cgm-btn cgm-btn-ghost cgm-btn-danger" onClick={() => setConfirmRemove(m)}>
                             <Icon name="trash" size={14} /> Remove
@@ -1335,6 +1422,8 @@ export function CellGroupManagementSection({
           member={viewMember}
           onClose={() => setViewMember(null)}
           onEdit={() => openEditForm(viewMember)}
+          onDownload={() => void handleMemberPdf(viewMember)}
+          downloading={exporting === `member-${viewMember.id}`}
           onRemove={() => setConfirmRemove(viewMember)}
         />
       ) : null}
@@ -1419,62 +1508,53 @@ export function CellGroupManagementSection({
   );
 }
 
-function MemberViewDrawer({ member, onClose, onEdit, onRemove }) {
+function MemberViewDrawer({ member, onClose, onEdit, onDownload, downloading, onRemove }) {
   const statusMeta = getMembershipStatusMeta(member.membership_status);
   const discYes = normalizeDiscipleshipStatus(member.discipleship_status) === "yes";
+  const listedDepartments = (member.departments || []).filter((department) => department !== "Other" && department !== "None");
+  const departmentValue = listedDepartments.join(", ") || ((member.departments || []).includes("Other") ? "Other" : "No department assigned");
+  const profileDate = (value) => new Intl.DateTimeFormat(undefined, { day: "2-digit", month: "long", year: "numeric" }).format(new Date(`${value}T00:00:00`));
 
   return (
     <div className="cgm-overlay cgm-drawer-overlay" onClick={(e) => e.target === e.currentTarget && onClose()}>
-      <div className="cgm-drawer cgm-view-drawer" role="dialog" aria-label="Member details">
-        <div className="cgm-drawer-header">
-          <div className="cgm-member-cell">
-            <MemberAvatar profile={member.profile} size="large" />
-            <div>
-              <h3>{member.profile?.full_name || "Unnamed"}</h3>
-              <div className="cgm-member-email">{member.profile?.email}</div>
-            </div>
-          </div>
+      <div className="cgm-drawer cgm-view-drawer" role="dialog" aria-label="Member details" aria-modal="true">
+        <div className="cgm-drawer-header cgm-profile-drawer-header">
+          <div className="cgm-profile-brand"><img src={groupLogo} alt="Glory Carriers" /> <span>GLORY CARRIERS</span></div>
           <button type="button" className="cgm-close-btn" onClick={onClose} aria-label="Close"><Icon name="x" /></button>
         </div>
         <div className="cgm-drawer-body">
-          <div className="cgm-detail-section">
-            <h4>Profile</h4>
-            <div className="cgm-detail-row"><span>Full Name</span><span>{member.profile?.full_name || "Not provided"}</span></div>
-            <div className="cgm-detail-row"><span>Date of Birth</span><span>{member.date_of_birth ? formatDate(member.date_of_birth) : "Not provided"}</span></div>
-            <div className="cgm-detail-row"><span>Favorite Food</span><span>{member.favorite_food || "Not provided"}</span></div>
-            <div className="cgm-detail-row"><span>Phone</span><span>{member.phone || "Not provided"}</span></div>
-            {member.gender ? <div className="cgm-detail-row"><span>Gender</span><span>{member.gender}</span></div> : null}
-            {member.bio ? <div className="cgm-detail-row"><span>Bio</span><span>{member.bio}</span></div> : null}
-          </div>
-          <div className="cgm-detail-section">
-            <h4>Ministry</h4>
-            <div className="cgm-detail-row"><span>Department(s)</span><span>{formatDepartments(member)}</span></div>
-          </div>
-          <div className="cgm-detail-section">
-            <h4>Cell Group</h4>
-            <div className="cgm-detail-row"><span>Joined</span><span>{formatJoinedDate(member)}</span></div>
-            {member.joined_date ? (
-              <div className="cgm-detail-row"><span>Exact Date</span><span>{formatDate(member.joined_date)}</span></div>
-            ) : null}
-            <div className="cgm-detail-row"><span>Status</span><span className={statusMeta.pillClass}>{statusMeta.label}</span></div>
-          </div>
-          <div className="cgm-detail-section">
-            <h4>Discipleship</h4>
-            <div className="cgm-detail-row">
-              <span>Completed Discipleship Class?</span>
-              <span className={`cgm-disc-badge${discYes ? " yes" : ""}`}>{discYes ? "Yes" : "No"}</span>
-            </div>
-          </div>
-          {member.notes ? (
-            <div className="cgm-detail-section">
-              <h4>Notes</h4>
-              <p className="cgm-notes-text">{member.notes}</p>
-            </div>
-          ) : null}
-          <div className="cgm-form-actions">
+          <section className="cgm-profile-hero">
+            <button type="button" className="cgm-profile-photo" onClick={() => member.profile?.avatar_url && window.open(member.profile.avatar_url, "_blank", "noopener,noreferrer")} aria-label={member.profile?.avatar_url ? "View profile photo larger" : "Member initials"}>
+              <MemberAvatar profile={member.profile} size="profile" />
+            </button>
+            <div><p>Glory Carriers Member</p><h2>{member.profile?.full_name || "Unnamed"}</h2><span className={statusMeta.pillClass}>{statusMeta.label}</span></div>
+          </section>
+          <div className="cgm-profile-actions">
+            <button type="button" className="cgm-btn cgm-btn-download" onClick={onDownload} disabled={downloading}>
+              <Icon name="download" /> {downloading ? "Preparing Member Profile..." : "Download PDF"}
+            </button>
             <button type="button" className="cgm-btn cgm-btn-primary" onClick={onEdit}>
               <Icon name="edit" /> Edit Member
             </button>
+          </div>
+          <ProfileSection title="Personal information">
+            <ProfileCard label="Full Name" value={member.profile?.full_name || ""} />
+            {member.date_of_birth ? <ProfileCard label="Date of Birth" value={profileDate(member.date_of_birth)} /> : null}
+            {member.favorite_food ? <ProfileCard label="Favorite Food" value={member.favorite_food} /> : null}
+          </ProfileSection>
+          <ProfileSection title="Membership information">
+            <ProfileCard label="Membership Status" value={statusMeta.label} />
+            {member.joined_month && member.joined_year ? <ProfileCard label="Joined Month & Year" value={formatJoinedDate(member)} /> : null}
+            {member.joined_date ? <ProfileCard label="Exact Joined Date" value={profileDate(member.joined_date)} /> : null}
+          </ProfileSection>
+          <ProfileSection title="Serving / Department information">
+            <ProfileCard label="Department(s) serving in" value={departmentValue} />
+            {member.custom_department ? <ProfileCard label="Custom department" value={member.custom_department} /> : null}
+          </ProfileSection>
+          <ProfileSection title="Discipleship">
+            <ProfileCard label="Completed Discipleship Class?" value={discYes ? "Yes" : "No"} highlight={discYes} />
+          </ProfileSection>
+          <div className="cgm-form-actions cgm-profile-remove">
             <button type="button" className="cgm-btn cgm-btn-ghost cgm-btn-danger" onClick={onRemove}>
               <Icon name="trash" /> Remove Member
             </button>
@@ -1483,4 +1563,12 @@ function MemberViewDrawer({ member, onClose, onEdit, onRemove }) {
       </div>
     </div>
   );
+}
+
+function ProfileSection({ title, children }) {
+  return <section className="cgm-profile-section"><h3>{title}</h3><div className="cgm-profile-card-grid">{children}</div></section>;
+}
+
+function ProfileCard({ label, value, highlight = false }) {
+  return <div className="cgm-profile-info-card"><span>{label}</span><strong className={highlight ? "cgm-profile-yes" : ""}>{value}</strong></div>;
 }

@@ -8,6 +8,11 @@ const Book = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" st
 </svg>;
 const stamp = (date) => new Intl.DateTimeFormat(undefined, { dateStyle: "medium", timeStyle: "short" }).format(new Date(date));
 const avatar = (person) => person?.avatar_url ? <img src={person.avatar_url} alt=""/> : (person?.full_name || "Member").split(" ").map((word) => word[0]).slice(0,2).join("").toUpperCase();
+const REACTIONS = [
+  ["praying_hands", "🙏", "Praying hands"], ["smile", "😊", "Smile"], ["bowing", "🙇", "Bow"],
+  ["thumbs_up", "👍", "Thumbs up"], ["crying", "😢", "Crying"], ["amazed", "😮", "Amazed"],
+  ["love", "❤️", "Love"], ["clapping", "👏", "Clapping"], ["shy", "🫣", "Shy"]
+];
 
 function MentionComposer({ value, onChange, profiles, placeholder, label }) {
   const [open, setOpen] = useState(false); const match = value.match(/(?:^|\s)@([^\s@]*)$/); const query = match?.[1]?.toLowerCase() || "";
@@ -23,7 +28,7 @@ export function BibleStudySection({ user, profile, profiles, isAdmin }) {
   const [reader, setReader] = useState(null), [chapter, setChapter] = useState([]), [selected, setSelected] = useState(""), [takeaway, setTakeaway] = useState(""), [question, setQuestion] = useState(""), [replyDrafts, setReplyDrafts] = useState({}), [answerDrafts, setAnswerDrafts] = useState({}), [editing, setEditing] = useState(null), [editDraft, setEditDraft] = useState(""), [actionMenu, setActionMenu] = useState(""), [loading, setLoading] = useState(true), [saving, setSaving] = useState(false);
   const load = useCallback(async (withLoader=true) => { if (!supabase) return; if (withLoader) setLoading(true); const result = await Promise.all([supabase.from("bible_study_readings").select("*").order("sort_order"),supabase.from("bible_study_completions").select("*"),supabase.from("bible_study_takeaways").select("*").order("created_at",{ascending:false}),supabase.from("bible_study_takeaway_reactions").select("*"),supabase.from("bible_study_takeaway_replies").select("*").order("created_at"),supabase.from("bible_study_questions").select("*").order("created_at",{ascending:false}),supabase.from("bible_study_question_answers").select("*").order("created_at")]); if (!result.some((item)=>item.error)) setState({readings:result[0].data||[],completions:result[1].data||[],takeaways:result[2].data||[],reactions:result[3].data||[],replies:result[4].data||[],questions:result[5].data||[],answers:result[6].data||[]}); if (withLoader) setLoading(false); }, []);
   useEffect(()=>{void load();},[load]);
-  useEffect(()=>{if(!supabase)return;const channel=supabase.channel("bible-study-community");["bible_study_takeaways","bible_study_takeaway_replies","bible_study_questions","bible_study_question_answers"].forEach((table)=>channel.on("postgres_changes",{event:"*",schema:"public",table},()=>void load(false)));channel.subscribe();return()=>{void supabase.removeChannel(channel);};},[load]);
+  useEffect(()=>{if(!supabase)return;const channel=supabase.channel("bible-study-community");["bible_study_takeaways","bible_study_takeaway_reactions","bible_study_takeaway_replies","bible_study_questions","bible_study_question_answers"].forEach((table)=>channel.on("postgres_changes",{event:"*",schema:"public",table},()=>void load(false)));channel.subscribe();return()=>{void supabase.removeChannel(channel);};},[load]);
   useEffect(()=>{ if(!actionMenu) return undefined; const close=(event)=>{ if(!event.target.closest?.(".bible-actions")) setActionMenu(""); }; document.addEventListener("click",close); return()=>document.removeEventListener("click",close); },[actionMenu]);
   const today=new Date().toISOString().slice(0,10), current=state.readings.find((item)=>item.reading_date===today)||state.readings.filter((item)=>item.reading_date<=today).at(-1)||state.readings[0], discussion=state.readings.find((item)=>item.id===selected)||current;
   const person=(id)=>profiles.find((item)=>item.id===id), done=(reading)=>state.completions.some((item)=>item.reading_id===reading?.id&&item.user_id===user.id), edited=(item)=>item.updated_at&&new Date(item.updated_at)-new Date(item.created_at)>1000;
@@ -32,7 +37,8 @@ export function BibleStudySection({ user, profile, profiles, isAdmin }) {
   const mentions=async(type,id,content)=>{const names=[...content.matchAll(/@([^@\n]+?)(?=\s|$|[.,!?])/g)].map((item)=>item[1].trim().toLowerCase());const targets=profiles.filter((item)=>item.is_active&&item.id!==user.id&&names.includes((item.full_name||"").toLowerCase()));if(targets.length)await supabase.from("bible_study_mentions").insert(targets.map((item)=>({content_type:type,content_id:id,mentioned_user_id:item.id,mentioned_by:user.id})));};
   const insert=async(table,payload,callback)=>{setSaving(true);const {data,error}=await supabase.from(table).insert(payload).select().single();if(!error)await callback?.(data);await load(false);setSaving(false);};
   const edit=async()=>{if(!editing||!editDraft.trim())return;setSaving(true);await supabase.from(editing.table).update({content:editDraft.trim(),updated_at:new Date().toISOString()}).eq("id",editing.item.id).eq("user_id",user.id);setEditing(null);await load(false);setSaving(false);};
-  const toggleReaction=async(takeawayId,reaction)=>{const existing=state.reactions.find((item)=>item.takeaway_id===takeawayId&&item.user_id===user.id&&item.reaction===reaction);setSaving(true);if(existing)await supabase.from("bible_study_takeaway_reactions").delete().eq("id",existing.id);else await supabase.from("bible_study_takeaway_reactions").insert({takeaway_id:takeawayId,user_id:user.id,reaction});await load(false);setSaving(false);};
+  const reactionsFor=(target)=>state.reactions.filter((item)=>(item.content_type ? item.content_type===target.type&&item.content_id===target.id : target.type==="takeaway"&&item.takeaway_id===target.id));
+  const toggleReaction=async(target,reaction)=>{const existing=reactionsFor(target).find((item)=>item.user_id===user.id&&item.reaction===reaction);setSaving(true);if(existing)await supabase.from("bible_study_takeaway_reactions").delete().eq("id",existing.id);else await supabase.from("bible_study_takeaway_reactions").insert({takeaway_id:target.type==="takeaway"?target.id:null,content_type:target.type,content_id:target.id,user_id:user.id,reaction});await load(false);setSaving(false);};
   const remove=async(table,item,noun)=>{if(!window.confirm(`Delete this ${noun}? This action cannot be undone.`))return;setSaving(true);await supabase.from(table).delete().eq("id",item.id).eq("user_id",user.id);await load(false);setSaving(false);};
   const Actions=({table,item,noun})=>{const id=`${table}-${item.id}`,open=actionMenu===id;return (item.user_id===user.id||isAdmin)?<div className="bible-actions">
 <button type="button" className="bible-actions-trigger" aria-label={`Actions for this ${noun}`} aria-haspopup="menu" aria-expanded={open} onClick={(event)=>{event.stopPropagation();setActionMenu(open?"":id);}}>•••</button>{open?<div className="bible-actions-menu" role="menu" aria-label={`${noun} actions`}>
@@ -48,6 +54,7 @@ export function BibleStudySection({ user, profile, profiles, isAdmin }) {
 <button type="button" className="bible-btn primary" onClick={()=>void edit()} disabled={saving}>Save changes</button>
 </div>
 </div>;
+  const ReactionBar=({target})=>{const reactions=reactionsFor(target);return <div className="bible-text-reactions" aria-label="Reactions">{REACTIONS.map(([value,emoji,label])=>{const count=reactions.filter((item)=>item.reaction===value).length;const selected=reactions.some((item)=>item.user_id===user.id&&item.reaction===value);return <button key={value} type="button" className={selected?"selected":""} aria-label={`${label}${count?`: ${count}`:""}`} aria-pressed={selected} title={label} disabled={saving} onClick={()=>void toggleReaction(target,value)}><span aria-hidden="true">{emoji}</span>{count?<b>{count}</b>:null}</button>;})}</div>;};
   const Reply=({item,table="bible_study_takeaway_replies"})=>
 <article className="bible-thread-reply">
 <span className="bible-avatar">{avatar(person(item.user_id))}</span>
@@ -58,7 +65,7 @@ export function BibleStudySection({ user, profile, profiles, isAdmin }) {
 <small>{stamp(item.created_at)}{edited(item)?" · Edited":""}</small>
 </span>
 <Actions table={table} item={item} noun="reply"/>
-</header>{editing?.item.id===item.id?<Editor kind="reply"/>:<p>{item.content}</p>}</div>
+</header>{editing?.item.id===item.id?<Editor kind="reply"/>:<p>{item.content}</p>}<ReactionBar target={{type:table==="bible_study_takeaway_replies"?"takeaway_reply":"question_answer",id:item.id}}/></div>
 </article>;
   if(loading)return <div className="bible-study bible-loading">Preparing Bible Study…</div>;
   return <div className="bible-study">
@@ -121,7 +128,7 @@ export function BibleStudySection({ user, profile, profiles, isAdmin }) {
 <small>{stamp(post.created_at)}{edited(post)?" · Edited":""}</small>
 </span>
 <Actions table="bible_study_takeaways" item={post} noun="takeaway"/>
-</header>{editing?.item.id===post.id?<Editor kind="takeaway"/>:<p>{post.content}</p>}<section className="bible-thread">
+</header>{editing?.item.id===post.id?<Editor kind="takeaway"/>:<p>{post.content}</p>}<ReactionBar target={{type:"takeaway",id:post.id}}/><section className="bible-thread">
 <strong>{state.replies.some((item)=>item.takeaway_id===post.id)?"Conversation":"Be the first to respond to this takeaway."}</strong>{state.replies.filter((item)=>item.takeaway_id===post.id).slice(-8).map((item)=>
 <Reply key={item.id} item={item}/>) }<form onSubmit={(event)=>{event.preventDefault();const content=replyDrafts[post.id]?.trim();if(content)void insert("bible_study_takeaway_replies",{takeaway_id:post.id,user_id:user.id,content},async(item)=>{await mentions("takeaway_reply",item.id,content);setReplyDrafts((state)=>({...state,[post.id]:""}));});}}>
 <MentionComposer value={replyDrafts[post.id]||""} onChange={(value)=>setReplyDrafts((state)=>({...state,[post.id]:value}))} profiles={profiles} label="Reply to takeaway" placeholder="Write a reply. Type @ to mention a member."/>
@@ -151,7 +158,7 @@ export function BibleStudySection({ user, profile, profiles, isAdmin }) {
 <small>{stamp(post.created_at)}{edited(post)?" · Edited":""}</small>
 </span>
 <Actions table="bible_study_questions" item={post} noun="message"/>
-</header>{editing?.item.id===post.id?<Editor kind="message"/>:<p>{post.content}</p>}<section className="bible-answers">{state.answers.filter((item)=>item.question_id===post.id).map((item)=>
+</header>{editing?.item.id===post.id?<Editor kind="message"/>:<p>{post.content}</p>}<ReactionBar target={{type:"question",id:post.id}}/><section className="bible-answers">{state.answers.filter((item)=>item.question_id===post.id).map((item)=>
 <Reply key={item.id} item={item} table="bible_study_question_answers"/>)}</section>
 <form onSubmit={(event)=>{event.preventDefault();const content=answerDrafts[post.id]?.trim();if(content)void insert("bible_study_question_answers",{question_id:post.id,user_id:user.id,content},async(item)=>{await mentions("question_answer",item.id,content);setAnswerDrafts((state)=>({...state,[post.id]:""}));});}}>
 <MentionComposer value={answerDrafts[post.id]||""} onChange={(value)=>setAnswerDrafts((state)=>({...state,[post.id]:value}))} profiles={profiles} label="Reply to message" placeholder="Write a reply. Type @ to mention a member."/>

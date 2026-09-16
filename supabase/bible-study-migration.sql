@@ -69,7 +69,25 @@ create policy "bible_reactions_self_write" on public.bible_study_takeaway_reacti
 -- Safe upgrade for installations that ran an earlier version of this migration.
 alter table public.bible_study_takeaway_reactions drop constraint if exists bible_study_takeaway_reactions_reaction_check;
 alter table public.bible_study_takeaway_reactions add constraint bible_study_takeaway_reactions_reaction_check
-  check (reaction in ('thumbs_up','fire','love','laugh','smile','amazed','bowing','folded_hands'));
+  check (reaction in ('thumbs_up','fire','love','laugh','smile','amazed','bowing','folded_hands','praying_hands','crying','clapping','shy'));
+
+-- Reuse the existing reactions table for every Bible Study conversation item.
+-- Existing takeaway reactions remain attached to their original takeaway.
+alter table public.bible_study_takeaway_reactions add column if not exists content_type text;
+alter table public.bible_study_takeaway_reactions add column if not exists content_id uuid;
+alter table public.bible_study_takeaway_reactions alter column takeaway_id drop not null;
+update public.bible_study_takeaway_reactions
+set content_type = 'takeaway', content_id = takeaway_id
+where content_type is null or content_id is null;
+alter table public.bible_study_takeaway_reactions drop constraint if exists bible_study_takeaway_reactions_content_type_check;
+alter table public.bible_study_takeaway_reactions add constraint bible_study_takeaway_reactions_content_type_check
+  check (content_type in ('takeaway','takeaway_reply','question','question_answer'));
+alter table public.bible_study_takeaway_reactions alter column content_type set not null;
+alter table public.bible_study_takeaway_reactions alter column content_id set not null;
+create unique index if not exists bible_study_content_reactions_unique
+  on public.bible_study_takeaway_reactions(content_type, content_id, user_id, reaction);
+create index if not exists idx_bible_study_content_reactions_target
+  on public.bible_study_takeaway_reactions(content_type, content_id);
 
 insert into public.bible_study_readings (book, chapter, reading_date, sort_order, status)
 select book, chapter, date '2026-09-07' + (sort_order - 1), sort_order, 'scheduled'

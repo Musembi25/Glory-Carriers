@@ -726,6 +726,13 @@ export function AppShell() {
   const [discipleshipTabFocus, setDiscipleshipTabFocus] = useState("");
   const [discipleshipSessionAttendance, setDiscipleshipSessionAttendance] = useState([]);
   const [discipleshipDiscussions, setDiscipleshipDiscussions] = useState([]);
+  const [bibleStudyReadings, setBibleStudyReadings] = useState([]);
+  const [bibleStudyTakeaways, setBibleStudyTakeaways] = useState([]);
+  const [bibleStudyReplies, setBibleStudyReplies] = useState([]);
+  const [bibleStudyQuestions, setBibleStudyQuestions] = useState([]);
+  const [bibleStudyAnswers, setBibleStudyAnswers] = useState([]);
+  const [bibleStudyCompletions, setBibleStudyCompletions] = useState([]);
+  const [biblePartnerStreaks, setBiblePartnerStreaks] = useState([]);
   const [cellGroup, setCellGroup] = useState(null);
   const [selectedDiscipleshipClassId, setSelectedDiscipleshipClassId] = useState("");
   const [icebreaker, setIcebreaker] = useState(null);
@@ -791,7 +798,11 @@ export function AppShell() {
     reactions: new Set(),
     discipleship_classes: new Set(),
     discipleship_lessons: new Set(),
-    discipleship_discussions: new Set()
+    discipleship_discussions: new Set(),
+    bible_study_takeaways: new Set(),
+    bible_study_takeaway_replies: new Set(),
+    bible_study_questions: new Set(),
+    bible_study_question_answers: new Set()
   });
   const hasSeededRealtimeIdsRef = useRef(false);
 
@@ -1074,6 +1085,29 @@ export function AppShell() {
       caption: "Guidelines, assignments, and class project on the Discipleship page."
     }
   ];
+  const bibleToday = bibleStudyReadings.find((reading) => reading.reading_date === new Date().toISOString().slice(0, 10)) || bibleStudyReadings.filter((reading) => reading.reading_date <= new Date().toISOString().slice(0, 10)).at(-1) || bibleStudyReadings[0];
+  const bibleCommunityActivity = [
+    ...bibleStudyTakeaways.map((item) => ({ id: item.id, kind: "Takeaway", content: item.content, userId: item.user_id, createdAt: item.created_at })),
+    ...bibleStudyReplies.map((item) => ({ id: item.id, kind: "Reply", content: item.content, userId: item.user_id, createdAt: item.created_at })),
+    ...bibleStudyQuestions.map((item) => ({ id: item.id, kind: "Question", content: item.content, userId: item.user_id, createdAt: item.created_at })),
+    ...bibleStudyAnswers.map((item) => ({ id: item.id, kind: "Answer", content: item.content, userId: item.user_id, createdAt: item.created_at }))
+  ].sort((left, right) => new Date(right.createdAt) - new Date(left.createdAt)).slice(0, 4);
+  const myPartnerStreaks = biblePartnerStreaks.filter((item) => item.status === "active" && (item.member_one_id === user.id || item.member_two_id === user.id));
+  const pendingPartnerInvites = biblePartnerStreaks.filter((item) => item.status === "pending" && item.invited_user_id === user.id);
+  const partnerDashboardCards = myPartnerStreaks.slice(0, 2).map((item) => {
+    const partnerId = item.member_one_id === user.id ? item.member_two_id : item.member_one_id;
+    const partner = profiles.find((person) => person.id === partnerId);
+    const scheduled = bibleStudyReadings.filter((reading) => reading.reading_date >= item.started_on && reading.reading_date <= new Date().toISOString().slice(0, 10));
+    let streak = 0;
+    for (const reading of [...scheduled].reverse()) {
+      const both = bibleStudyCompletions.some((row) => row.reading_id === reading.id && row.user_id === user.id) && bibleStudyCompletions.some((row) => row.reading_id === reading.id && row.user_id === partnerId);
+      if (!both) break;
+      streak += 1;
+    }
+    const mine = bibleToday && bibleStudyCompletions.some((row) => row.reading_id === bibleToday.id && row.user_id === user.id);
+    const theirs = bibleToday && bibleStudyCompletions.some((row) => row.reading_id === bibleToday.id && row.user_id === partnerId);
+    return { id: item.id, partner, streak, mine, theirs };
+  });
   const shouldShowFocusBar = ["events", "planning", "tasks"].includes(activeSection);
   const replyingToMessage = replyingToMessageId
     ? messages.find((message) => message.id === replyingToMessageId) ?? null
@@ -1441,7 +1475,11 @@ export function AppShell() {
       reactions: new Set(),
       discipleship_classes: new Set(),
       discipleship_lessons: new Set(),
-      discipleship_discussions: new Set()
+      discipleship_discussions: new Set(),
+      bible_study_takeaways: new Set(),
+      bible_study_takeaway_replies: new Set(),
+      bible_study_questions: new Set(),
+      bible_study_question_answers: new Set()
     };
     setToastNotifications([]);
   }, [user?.id]);
@@ -1519,7 +1557,14 @@ export function AppShell() {
       supabase
         .from("discipleship_discussions")
         .select("*")
-        .order("created_at", { ascending: true })
+        .order("created_at", { ascending: true }),
+      supabase.from("bible_study_readings").select("*").order("sort_order"),
+      supabase.from("bible_study_takeaways").select("*").order("created_at", { ascending: false }),
+      supabase.from("bible_study_takeaway_replies").select("*").order("created_at", { ascending: false }),
+      supabase.from("bible_study_questions").select("*").order("created_at", { ascending: false }),
+      supabase.from("bible_study_question_answers").select("*").order("created_at", { ascending: false }),
+      supabase.from("bible_study_completions").select("*"),
+      supabase.from("bible_study_partner_streaks").select("*").order("created_at", { ascending: false })
     ]);
 
     const failingResult = results.find((result) => result.error);
@@ -1558,6 +1603,13 @@ export function AppShell() {
       setDiscipleshipMemberNotes(results[24].data ?? []);
       setDiscipleshipSessionAttendance(results[25].data ?? []);
       setDiscipleshipDiscussions(results[26].data ?? []);
+      setBibleStudyReadings(results[27].data ?? []);
+      setBibleStudyTakeaways(results[28].data ?? []);
+      setBibleStudyReplies(results[29].data ?? []);
+      setBibleStudyQuestions(results[30].data ?? []);
+      setBibleStudyAnswers(results[31].data ?? []);
+      setBibleStudyCompletions(results[32].data ?? []);
+      setBiblePartnerStreaks(results[33].data ?? []);
     });
 
     if (!hasSeededRealtimeIdsRef.current) {
@@ -1588,7 +1640,11 @@ export function AppShell() {
         ),
         discipleship_discussions: new Set(
           (results[26].data ?? []).map((post) => post.id)
-        )
+        ),
+        bible_study_takeaways: new Set((results[28].data ?? []).map((item) => item.id)),
+        bible_study_takeaway_replies: new Set((results[29].data ?? []).map((item) => item.id)),
+        bible_study_questions: new Set((results[30].data ?? []).map((item) => item.id)),
+        bible_study_question_answers: new Set((results[31].data ?? []).map((item) => item.id))
       };
       knownRealtimeIdsRef.current.reactions = new Set(
         (results[16].data ?? []).map((reaction) => reaction.id)
@@ -1748,7 +1804,11 @@ export function AppShell() {
       "discipleship_submission_history",
       "discipleship_member_notes",
       "discipleship_session_attendance",
-      "discipleship_discussions"
+      "discipleship_discussions",
+      "bible_study_takeaways",
+      "bible_study_takeaway_replies",
+      "bible_study_questions",
+      "bible_study_question_answers"
     ];
     const notifiableTables = [
       "events",
@@ -1763,7 +1823,11 @@ export function AppShell() {
       "announcements",
       "discipleship_classes",
       "discipleship_lessons",
-      "discipleship_discussions"
+      "discipleship_discussions",
+      "bible_study_takeaways",
+      "bible_study_takeaway_replies",
+      "bible_study_questions",
+      "bible_study_question_answers"
     ];
 
     tables.forEach((table) => {
@@ -3107,6 +3171,24 @@ export function AppShell() {
             )}
           </Panel>
         </div>
+
+        <Panel
+          className="dashboard-bible-panel"
+          title="Bible Study community"
+          subtitle={bibleToday ? `Today: ${bibleToday.book} ${bibleToday.chapter} • Read, share, and grow together.` : "Shared reading and conversations from the community."}
+          action={<button type="button" className="accent-button" onClick={() => setActiveSection("bible-study")}>Open Bible Study</button>}
+        >
+          <div className="dashboard-bible-summary">
+            <span className="dashboard-bible-icon">📖</span>
+            <div><strong>{bibleToday ? `${bibleToday.book} ${bibleToday.chapter}` : "Reading plan coming soon"}</strong><p>{bibleStudyTakeaways.length} takeaways · {bibleStudyReplies.length} replies · {bibleStudyQuestions.length} open questions</p></div>
+            <span className="dashboard-bible-live"><i /> LIVE</span>
+          </div>
+          <div className="dashboard-partner-streaks">
+            <div><strong>Partner Streaks</strong><span>{pendingPartnerInvites.length ? `${pendingPartnerInvites.length} invitation${pendingPartnerInvites.length === 1 ? "" : "s"} waiting` : myPartnerStreaks.length ? "Stay consistent together" : "Invite someone to study together"}</span></div>
+            {partnerDashboardCards.length ? <div className="dashboard-partner-list">{partnerDashboardCards.map((item) => <button type="button" key={item.id} onClick={() => setActiveSection("bible-study")}><span className="dashboard-partner-mark">◆</span><span className="dashboard-partner-avatar">{item.partner?.avatar_url ? <img src={item.partner.avatar_url} alt=""/> : (item.partner?.full_name || "P").slice(0, 1)}</span><span><strong>You & {item.partner?.full_name || "Partner"}</strong><small>{item.streak} day{item.streak === 1 ? "" : "s"} · {item.mine && item.theirs ? "Completed together" : item.mine ? `Waiting on ${item.partner?.full_name || "partner"}` : "Your reading is waiting"}</small></span><b>Open</b></button>)}</div> : <button type="button" className="dashboard-partner-start" onClick={() => setActiveSection("bible-study")}>Start a Partner Streak</button>}
+          </div>
+          {bibleCommunityActivity.length ? <div className="dashboard-bible-activity">{bibleCommunityActivity.map((item) => <button type="button" key={`${item.kind}-${item.id}`} onClick={() => setActiveSection("bible-study")}><span>{item.kind === "Takeaway" ? "✨" : item.kind === "Question" ? "💭" : item.kind === "Answer" ? "💡" : "💬"}</span><div><small>{item.kind} · {getMemberLabel(item.userId)}</small><strong>{truncateText(item.content, 110)}</strong></div><b>View →</b></button>)}</div> : <div className="dashboard-bible-empty">🌿 Be the first to share a Bible Study takeaway or question.</div>}
+        </Panel>
 
         <Panel
           title="Discipleship"

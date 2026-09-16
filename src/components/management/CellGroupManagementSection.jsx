@@ -216,7 +216,7 @@ function ToastStack({ toasts, onDismiss }) {
   );
 }
 
-function ReportsExportCenter({ groupName, members, exporting, onExport, isFiltered }) {
+function ReportsExportCenter({ groupName, members, exporting, onExport, isFiltered, memberName, onMemberNameChange }) {
   const active = members.filter((member) => member.membership_status === "active").length;
   const temporarilyInactive = members.filter((member) => member.membership_status === "temporarily_inactive").length;
 
@@ -232,6 +232,20 @@ function ReportsExportCenter({ groupName, members, exporting, onExport, isFilter
         </div>
         <p className="cgm-reports-description">Official membership records and administrative reports.</p>
       </div>
+      <label className="cgm-report-member-search">
+        <span>Member full name</span>
+        <div className="cgm-report-member-search-input">
+          <Icon name="search" size={16} />
+          <input
+            type="search"
+            value={memberName}
+            onChange={(event) => onMemberNameChange(event.target.value)}
+            placeholder="Type a member's full name for an individual report"
+            aria-label="Member full name for report"
+          />
+        </div>
+        <small>{memberName.trim() ? `Preparing a report for matching members in ${groupName || "this cell group"}.` : "Leave blank to include all current members."}</small>
+      </label>
       <div className="cgm-reports-summary" aria-label="Current report summary">
         <div><span>Current Members</span><strong>{members.length}</strong></div>
         <div><span>Active</span><strong>{active}</strong></div>
@@ -1067,6 +1081,8 @@ export function CellGroupManagementSection({
             exporting={exporting}
             onExport={handleExport}
             isFiltered={Boolean(search.trim() || statusFilter !== "all" || deptFilter !== "all" || discFilter !== "all" || yearFilter !== "all" || sortBy !== "name_asc")}
+            memberName={search}
+            onMemberNameChange={setSearch}
           />
           <div className="cgm-panel-body">
             {filteredMembers.length ? (

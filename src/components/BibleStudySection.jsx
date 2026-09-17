@@ -13,6 +13,10 @@ const REACTIONS = [
   ["thumbs_up", "👍", "Thumbs up"], ["crying", "😢", "Crying"], ["amazed", "😮", "Amazed"],
   ["love", "❤️", "Love"], ["clapping", "👏", "Clapping"], ["shy", "🫣", "Shy"]
 ];
+const REACTION_META = Object.fromEntries([
+  ...REACTIONS,
+  ["fire", "🔥", "Fire"], ["laugh", "😄", "Laugh"], ["folded_hands", "🙏", "Praying hands"]
+].map(([value, emoji, label]) => [value, { emoji, label }]));
 
 function MentionComposer({ value, onChange, profiles, placeholder, label }) {
   const [open, setOpen] = useState(false); const match = value.match(/(?:^|\s)@([^\s@]*)$/); const query = match?.[1]?.toLowerCase() || "";
@@ -54,7 +58,8 @@ export function BibleStudySection({ user, profile, profiles, isAdmin }) {
 <button type="button" className="bible-btn primary" onClick={()=>void edit()} disabled={saving}>Save changes</button>
 </div>
 </div>;
-  const ReactionBar=({target})=>{const reactions=reactionsFor(target);return <div className="bible-text-reactions" aria-label="Reactions">{REACTIONS.map(([value,emoji,label])=>{const count=reactions.filter((item)=>item.reaction===value).length;const selected=reactions.some((item)=>item.user_id===user.id&&item.reaction===value);return <button key={value} type="button" className={selected?"selected":""} aria-label={`${label}${count?`: ${count}`:""}`} aria-pressed={selected} title={label} disabled={saving} onClick={()=>void toggleReaction(target,value)}><span aria-hidden="true">{emoji}</span>{count?<b>{count}</b>:null}</button>;})}</div>;};
+  const ReactedMembers=({target})=>{const groups=Object.entries(reactionsFor(target).reduce((all,item)=>{(all[item.reaction]??=[]).push(item);return all;},{}));if(!groups.length)return null;return <div className="bible-reacted-members" aria-label="Members who reacted">{groups.map(([reaction,items])=>{const meta=REACTION_META[reaction]||{emoji:"•",label:reaction};const names=items.map((item)=>person(item.user_id)?.full_name||"Member");return <div key={reaction}><span aria-label={meta.label}>{meta.emoji}</span><span className="bible-reactor-stack">{items.slice(0,3).map((item)=><span className="bible-reactor" key={item.id} title={person(item.user_id)?.full_name||"Member"}>{avatar(person(item.user_id))}</span>)}</span><small>{names.join(", ")}</small></div>;})}</div>;};
+  const ReactionBar=({target})=>{const reactions=reactionsFor(target);return <><div className="bible-text-reactions" aria-label="Reactions">{REACTIONS.map(([value,emoji,label])=>{const count=reactions.filter((item)=>item.reaction===value).length;const selected=reactions.some((item)=>item.user_id===user.id&&item.reaction===value);return <button key={value} type="button" className={selected?"selected":""} aria-label={`${label}${count?`: ${count}`:""}`} aria-pressed={selected} title={label} disabled={saving} onClick={()=>void toggleReaction(target,value)}><span aria-hidden="true">{emoji}</span>{count?<b>{count}</b>:null}</button>;})}</div><ReactedMembers target={target}/></>;};
   const Reply=({item,table="bible_study_takeaway_replies"})=>
 <article className="bible-thread-reply">
 <span className="bible-avatar">{avatar(person(item.user_id))}</span>

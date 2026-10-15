@@ -222,22 +222,27 @@ export function AuthProvider({ children }) {
         return;
       }
 
-      const {
-        data: { session: currentSession }
-      } = await supabase.auth.getSession();
+      try {
+        const { data, error } = await supabase.auth.getSession();
+        if (error) throw error;
+        if (!isMounted) return;
 
-      if (!isMounted) {
-        return;
+        const currentSession = data?.session ?? null;
+        setIsRecoveryMode(hasRecoveryParams());
+        setSession(currentSession);
+
+        if (currentSession?.user) {
+          await hydrateSignedInUser(currentSession.user.id);
+        }
+      } catch (error) {
+        console.error("Failed to restore authentication session", error);
+        if (isMounted) {
+          setSession(null);
+          setProfile(null);
+        }
+      } finally {
+        if (isMounted) setInitializing(false);
       }
-
-      setIsRecoveryMode(hasRecoveryParams());
-      setSession(currentSession);
-
-      if (currentSession?.user) {
-        await hydrateSignedInUser(currentSession.user.id);
-      }
-
-      setInitializing(false);
     }
 
     void bootstrapAuth();

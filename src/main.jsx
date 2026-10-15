@@ -8,6 +8,7 @@ import "./styles/discipleship-portal.css";
 import "./styles/cell-group-management.css";
 import "./styles/bible-study.css";
 import "./styles/bible-study-reactions.css";
+import "./styles/gc-pulse.css";
 
 const updateServiceWorker = registerSW({
   immediate: true,

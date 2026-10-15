@@ -20,6 +20,7 @@ import {
   getAnnouncementReactionTotals
 } from "./announcements/AnnouncementReactions.jsx";
 import { BrandLogo } from "./BrandLogo";
+import { GCPulseActivities } from "./GCPulseActivities.jsx";
 import { DiscipleshipAssignments } from "./DiscipleshipAssignments.jsx";
 import { CellGroupManagementSection } from "./management/CellGroupManagementSection";
 import { BibleStudySection } from "./BibleStudySection";
@@ -37,7 +38,7 @@ const communityBackgrounds = [
 
 const sections = [
   { id: "dashboard", label: "Dashboard", shortLabel: "Home", icon: "home" },
-  { id: "announcements", label: "Announcements & Trends", shortLabel: "Trends", icon: "chat" },
+  { id: "announcements", label: "GC Pulse", shortLabel: "Pulse", icon: "activity" },
   { id: "events", label: "Events", shortLabel: "Events", icon: "calendar" },
   { id: "prayer", label: "Prayer", shortLabel: "Prayer", icon: "prayer" },
   { id: "resources", label: "Resources", shortLabel: "Files", icon: "book-open" },
@@ -373,12 +374,25 @@ function NavIcon({ name }) {
           <path d="M9.5 20v-5h5v5" />
         </svg>
       );
+    case "search":
+      return (
+        <svg {...commonProps}>
+          <circle cx="10.8" cy="10.8" r="6.8" />
+          <path d="m16 16 4.2 4.2" />
+        </svg>
+      );
     case "sparkles":
       return (
         <svg {...commonProps}>
           <path d="m12 3 1.8 4.7L18.5 9.5l-4.7 1.8L12 16l-1.8-4.7L5.5 9.5l4.7-1.8L12 3Z" />
           <path d="m18.5 3 .7 1.8L21 5.5l-1.8.7-.7 1.8-.7-1.8L16 5.5l1.8-.7.7-1.8Z" />
           <path d="m18.5 16 .7 1.8 1.8.7-1.8.7-.7 1.8-.7-1.8-1.8-.7 1.8-.7.7-1.8Z" />
+        </svg>
+      );
+    case "activity":
+      return (
+        <svg {...commonProps}>
+          <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
         </svg>
       );
     case "check-square":
@@ -807,7 +821,19 @@ export function AppShell() {
   const [notifications, setNotifications] = useState([]);
   const [announcements, setAnnouncements] = useState([]);
   const [announcementReplies, setAnnouncementReplies] = useState([]);
+  const [announcementToFocus, setAnnouncementToFocus] = useState("");
   const [announcementRepliesAvailable, setAnnouncementRepliesAvailable] = useState(true);
+  useEffect(() => {
+    if (activeSection !== "announcements" || !announcementToFocus) return undefined;
+    const frame = window.requestAnimationFrame(() => {
+      const post = document.getElementById(`announcement-${announcementToFocus}`);
+      if (!post) return;
+      post.scrollIntoView({ behavior: "smooth", block: "start" });
+      post.focus({ preventScroll: true });
+      setAnnouncementToFocus("");
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [activeSection, announcementToFocus, announcements]);
   const [leadershipAssignments, setLeadershipAssignments] = useState([]);
   const [eventCheckIns, setEventCheckIns] = useState([]);
   const [prayerReminders, setPrayerReminders] = useState([]);
@@ -844,7 +870,11 @@ export function AppShell() {
   const [meetingForm, setMeetingForm] = useState(emptyMeetingForm);
   const [announcementForm, setAnnouncementForm] = useState(emptyAnnouncementForm);
   const [announcementFeedFilter, setAnnouncementFeedFilter] = useState("all");
+  const [pulseSearchQuery, setPulseSearchQuery] = useState("");
   const [announcementReplyDrafts, setAnnouncementReplyDrafts] = useState({});
+  const [pulseMessageDraft, setPulseMessageDraft] = useState("");
+  const [pulseReplyTargetId, setPulseReplyTargetId] = useState("");
+  const [pulseEditingMessageId, setPulseEditingMessageId] = useState("");
   const [announcementPhotos, setAnnouncementPhotos] = useState([]);
   const [uploadingAnnouncementPhotos, setUploadingAnnouncementPhotos] = useState(false);
   const [editingEventId, setEditingEventId] = useState("");
@@ -3073,6 +3103,13 @@ export function AppShell() {
     });
   }
 
+  function openCommunityPost(announcementId) {
+    setAnnouncementFeedFilter("all");
+    setPulseSearchQuery("");
+    setAnnouncementToFocus(announcementId);
+    setActiveSection("announcements");
+  }
+
   async function deleteAnnouncement(announcementId) {
     const target = announcements.find((item) => item.id === announcementId);
     if (!target || (!isAdmin && target.created_by !== user?.id)) {
@@ -3196,26 +3233,67 @@ export function AppShell() {
     URL.revokeObjectURL(url);
   }
 
+  async function sendPulseLoungeMessage(event) {
+    event.preventDefault();
+    const content = pulseMessageDraft.trim();
+    if (!content) return;
+    await runAction(async () => {
+      const query = pulseEditingMessageId
+        ? supabase.from("messages").update({ content }).eq("id", pulseEditingMessageId).eq("sender_id", user.id)
+        : supabase.from("messages").insert({
+            sender_id: user.id,
+            recipient_id: null,
+            title: "",
+            content,
+            reply_to_message_id: pulseReplyTargetId || null
+          });
+      const { error } = await query;
+      if (error) throw error;
+      setPulseMessageDraft("");
+      setPulseReplyTargetId("");
+      setPulseEditingMessageId("");
+    }, pulseEditingMessageId ? "Live Lounge message updated." : "Shared in the Live Lounge.");
+  }
+
   function renderAnnouncementsSection() {
     const cutoff = new Date(liveNow).getTime() - 7 * 24 * 60 * 60 * 1000;
     const feedAnnouncements = sortedAnnouncements.filter((announcement) => {
       if (announcementFeedFilter === "mine") return announcement.created_by === user?.id;
       if (announcementFeedFilter === "recent") return new Date(announcement.created_at).getTime() >= cutoff;
       return true;
+    }).filter((announcement) => {
+      const query = pulseSearchQuery.trim().toLocaleLowerCase();
+      if (!query) return true;
+      const author = profiles.find((member) => member.id === announcement.created_by);
+      return [announcement.title, announcement.body, author?.full_name]
+        .some((value) => value?.toLocaleLowerCase().includes(query));
     });
+    const loungeMessages = messages.filter((message) => message.recipient_id === null)
+      .sort((left, right) => new Date(right.created_at) - new Date(left.created_at)).slice(0, 4);
+    const liveEvent = sortedEvents.find((event) => event.ends_at && new Date(event.starts_at) <= liveNow && new Date(event.ends_at) >= liveNow);
+    const nextPulseEvent = sortedEvents.find((event) => new Date(event.starts_at) > liveNow);
+    const currentPulseActivity = liveEvent || loungeMessages.some((message) => liveNow.getTime() - new Date(message.created_at).getTime() < 30 * 60 * 1000);
     return (
-      <div className="section-stack community-feed">
-        <header className="page-intro page-intro--art">
-          <div>
-            <p className="eyebrow">Community</p>
-            <h1>Announcements &amp; Trends</h1>
-            <p>Updates, encouragement, and moments from the Glory Carriers community.</p>
+      <div className="section-stack community-feed gc-pulse-page">
+        <header className="gc-pulse-header">
+          <div className="gc-pulse-heading-copy">
+            <p className="gc-pulse-kicker">GLORY CARRIERS · COMMUNITY</p>
+            <h1>GC Pulse</h1>
+            <p>Your live space to share, connect, and grow together.</p>
+          </div>
+          <div className="gc-pulse-header-state">
+            <span className={currentPulseActivity ? "gc-pulse-live-indicator is-live" : "gc-pulse-live-indicator"}><i />{currentPulseActivity ? "Live now" : "Community space"}</span>
+            <label className="gc-pulse-search"><span className="sr-only">Search GC Pulse posts</span><input type="search" value={pulseSearchQuery} onChange={(event) => setPulseSearchQuery(event.target.value)} placeholder="Search the pulse" /><NavIcon name="search" /></label>
           </div>
         </header>
 
         {!announcementRepliesAvailable ? <div className="banner info">Community posting, replies, and image attachments require the additive announcements migration in <code>supabase/announcements-community-migration.sql</code>.</div> : null}
 
-        <Panel title="Share with the community" subtitle="Keep your group encouraged and informed.">
+        <GCPulseActivities user={user} isAdmin={isAdmin} />
+
+        <div className="gc-pulse-layout">
+        <main className="gc-pulse-main-column">
+        <Panel className="gc-pulse-composer-panel" title="Start something" subtitle="Share an update, a moment, or a word of encouragement.">
           <form className="stack-form announcement-composer" onSubmit={saveAnnouncement}>
             <label className="field">
               <span>Headline <small>(optional)</small></span>
@@ -3244,14 +3322,17 @@ export function AppShell() {
           </form>
         </Panel>
 
-        <div className="announcement-feed-toolbar" role="group" aria-label="Filter announcements">
-          {[['all','All'],['recent','Recent'],['mine','My posts']].map(([value,label]) => <button key={value} type="button" className={announcementFeedFilter===value?'active':''} aria-pressed={announcementFeedFilter===value} onClick={()=>setAnnouncementFeedFilter(value)}>{label}</button>)}
+        <div className="gc-pulse-feed-heading">
+          <div><p className="gc-pulse-kicker">COMMUNITY MOMENTS</p><h2>The Feed</h2></div>
+          <div className="announcement-feed-toolbar" role="group" aria-label="Filter community posts">
+            {[['all','All'],['recent','Recent'],['mine','My posts']].map(([value,label]) => <button key={value} type="button" className={announcementFeedFilter===value?'active':''} aria-pressed={announcementFeedFilter===value} onClick={()=>setAnnouncementFeedFilter(value)}>{label}</button>)}
+          </div>
         </div>
         <div className="community-feed-list">
           {feedAnnouncements.length ? feedAnnouncements.map((announcement) => {
             const author = profiles.find((member) => member.id === announcement.created_by);
             const canManage = isAdmin || announcement.created_by === user?.id;
-            return <article key={announcement.id} className="community-post">
+            return <article key={announcement.id} id={`announcement-${announcement.id}`} tabIndex={-1} className="community-post">
               <header className="community-post-header">
                 <Avatar member={author} size="small" />
                 <div className="community-post-author"><strong>{author?.full_name || author?.email || "Community member"}</strong><time dateTime={announcement.created_at}>{formatDateTime(announcement.created_at)}{announcement.updated_at && announcement.updated_at !== announcement.created_at ? " · Edited" : ""}</time></div>
@@ -3271,6 +3352,29 @@ export function AppShell() {
               </section>
             </article>;
           }) : <EmptyState title={announcements.length ? "No posts match this view" : "A fresh beginning"} description={announcements.length ? "Try another filter to see more community updates." : "There are no announcements yet. Share the first update with your community."} />}
+        </div>
+        </main>
+
+        <aside className="gc-pulse-side-rail" aria-label="Live community">
+          <section className="gc-pulse-rail-panel gc-pulse-lounge">
+            <div className="gc-pulse-rail-heading"><div><p className="gc-pulse-kicker">SAY HELLO</p><h2>Live Lounge</h2></div><span className={currentPulseActivity ? "gc-pulse-dot is-live" : "gc-pulse-dot"} aria-label={currentPulseActivity ? "Recent activity" : "No recent activity"} /></div>
+            {loungeMessages.length ? <div className="gc-pulse-lounge-list">{loungeMessages.map((message) => {
+              const author = getMember(message.sender_id);
+              const repliedMessage = messages.find((candidate) => candidate.id === message.reply_to_message_id);
+              return <article key={message.id} className="gc-pulse-lounge-message"><Avatar member={author} size="small" /><div><div className="gc-pulse-lounge-meta"><strong>{getMemberLabel(message.sender_id)}</strong><time dateTime={message.created_at}>{formatDateTime(message.created_at)}</time></div>{repliedMessage ? <p className="gc-pulse-lounge-reply">Replying to {getMemberLabel(repliedMessage.sender_id)}</p> : null}<p>{message.content}</p><div className="gc-pulse-lounge-actions"><ReactionBar entityTable="messages" entityId={message.id} /><button type="button" onClick={() => { setPulseEditingMessageId(""); setPulseMessageDraft(""); setPulseReplyTargetId(message.id); }}>Reply</button>{canDeleteMessage(message) ? <><button type="button" onClick={() => { setPulseEditingMessageId(message.id); setPulseReplyTargetId(""); setPulseMessageDraft(message.content); }}>Edit</button><button type="button" onClick={() => void deleteMessage(message)}>Delete</button></> : null}</div></div></article>;
+            })}</div> : <p className="gc-pulse-rail-empty">No group messages yet. Start a friendly conversation.</p>}
+            {pulseReplyTargetId || pulseEditingMessageId ? <div className="gc-pulse-replying"><span>{pulseEditingMessageId ? "Editing your message" : `Replying to ${getMemberLabel(messages.find((message) => message.id === pulseReplyTargetId)?.sender_id)}`}</span><button type="button" aria-label="Cancel" onClick={() => { setPulseReplyTargetId(""); setPulseEditingMessageId(""); setPulseMessageDraft(""); }}>×</button></div> : null}
+            <form className="gc-pulse-lounge-form" onSubmit={sendPulseLoungeMessage}><input aria-label={pulseEditingMessageId ? "Edit Live Lounge message" : "Write to the Live Lounge"} value={pulseMessageDraft} onChange={(event) => setPulseMessageDraft(event.target.value)} maxLength={2000} placeholder="Say something kind…" /><button type="submit" aria-label={pulseEditingMessageId ? "Save message" : "Send message"} disabled={submitting || !pulseMessageDraft.trim()}>{pulseEditingMessageId ? "Save" : "Send"}</button></form>
+            <button type="button" className="gc-pulse-text-link" onClick={() => setActiveSection("messages")}>Open all messages <span aria-hidden="true">→</span></button>
+          </section>
+
+          <section className="gc-pulse-rail-panel gc-pulse-next-event">
+            <div className="gc-pulse-rail-heading"><div><p className="gc-pulse-kicker">UP NEXT</p><h2>Gather together</h2></div><NavIcon name="calendar" /></div>
+            {liveEvent ? <div className="gc-pulse-event-feature"><span className="gc-pulse-event-status">HAPPENING NOW</span><h3>{liveEvent.title}</h3><p>{liveEvent.location || "Location details in Events"}</p><button type="button" onClick={() => { setSelectedEventId(liveEvent.id); setActiveSection("events"); }}>Open gathering</button></div> : nextPulseEvent ? <div className="gc-pulse-event-feature"><span className="gc-pulse-event-status">NEXT GATHERING</span><h3>{nextPulseEvent.title}</h3><p>{formatDateTime(nextPulseEvent.starts_at)}{nextPulseEvent.location ? ` · ${nextPulseEvent.location}` : ""}</p><button type="button" onClick={() => { setSelectedEventId(nextPulseEvent.id); setActiveSection("events"); }}>View event</button></div> : <p className="gc-pulse-rail-empty">There are no upcoming gatherings scheduled yet.</p>}
+          </section>
+
+          <section className="gc-pulse-rail-note"><NavIcon name="sparkles" /><p>Make room for encouragement, good questions, and the little moments that bring us together.</p></section>
+        </aside>
         </div>
       </div>
     );
@@ -4169,7 +4273,9 @@ export function AppShell() {
   }
 
   function renderDashboardSection() {
-    const latestAnnouncements = sortedAnnouncements.slice(0, 2);
+    const latestAnnouncements = [...announcements]
+      .sort((left, right) => new Date(right.created_at) - new Date(left.created_at))
+      .slice(0, 4);
     const nextEvents = sortedEvents.filter((item) => new Date(item.starts_at) >= new Date(liveNow)).slice(0, 2);
     return <div className="section-stack dashboard-overview">
       <section className="dashboard-welcome-card"><BrandLogo compact /><p className="eyebrow">{liveDateLabel}</p><h1>{greetingMessage}</h1><p>Make room for fellowship, Scripture, and the people God has placed around you.</p><div><button type="button" className="primary-button" onClick={() => setActiveSection("bible-study")}>Continue Bible Study</button><button type="button" className="secondary-button" onClick={() => setActiveSection("events")}>Explore events</button><button type="button" className="ghost-button dashboard-notifications-button" onClick={() => setShowNotificationCenter(true)}><NavIcon name="bell" />Notifications {unreadNotifications.length ? <span className="notification-count">{unreadNotifications.length}</span> : null}</button></div></section>
@@ -4181,8 +4287,15 @@ export function AppShell() {
         <Panel title="Coming up" subtitle="Gather with the community." action={<button type="button" className="text-button" onClick={() => setActiveSection("events")}>All events</button>}>
           {nextEvents.length ? <div className="dashboard-compact-list">{nextEvents.map((eventRecord) => <button type="button" key={eventRecord.id} onClick={() => setActiveSection("events")}><span className="event-date-block"><strong>{new Intl.DateTimeFormat(undefined, { day: "2-digit" }).format(new Date(eventRecord.starts_at))}</strong><span>{new Intl.DateTimeFormat(undefined, { month: "short" }).format(new Date(eventRecord.starts_at))}</span></span><span><strong>{eventRecord.title}</strong><small>{formatDateTime(eventRecord.starts_at)} · {eventRecord.location || "Location to be confirmed"}</small></span></button>)}</div> : <EmptyState title="No upcoming gatherings" description="New group events will appear here when scheduled." />}
         </Panel>
-        <Panel title="Community updates" subtitle="A few recent notes from your group." action={<button type="button" className="text-button" onClick={() => setActiveSection("announcements")}>All announcements</button>}>
-          {latestAnnouncements.length ? <div className="dashboard-announcement-list">{latestAnnouncements.map((item) => { const author = profiles.find((member) => member.id === item.created_by); return <button type="button" key={item.id} onClick={() => setActiveSection("announcements")}><span className="dashboard-announcement-author"><Avatar member={author} size="small" /></span><span><strong>{item.title}</strong><small>{author?.full_name || "Community member"} · {formatDateTime(item.created_at)}</small><p>{truncateText(item.body, 120)}</p></span></button>; })}</div> : <EmptyState title="No announcements yet" description="Updates from the community will show here." />}
+        <Panel title="Announcements" subtitle="Recent words and moments from your community. Open a post to see its full conversation." action={<button type="button" className="text-button" onClick={() => setActiveSection("announcements")}>Open GC Pulse</button>}>
+          {latestAnnouncements.length ? <div className="dashboard-community-photos">{latestAnnouncements.map((item) => {
+            const author = profiles.find((member) => member.id === item.created_by);
+            const photos = Array.isArray(item.attachments) ? item.attachments.slice(0, 3) : [];
+            return <button type="button" className="dashboard-community-photo-card" key={item.id} onClick={() => openCommunityPost(item.id)} aria-label={`Open post by ${author?.full_name || "a community member"} to view reactions and replies`}>
+              {photos.length ? <span className={`dashboard-community-photo-gallery photo-count-${Math.min(photos.length, 3)}`}>{photos.map((photo, index) => <img key={`${photo}-${index}`} src={photo} alt={`Community photo ${index + 1}`} loading="lazy" />)}{item.attachments.length > photos.length ? <span className="dashboard-community-photo-more">+{item.attachments.length - photos.length}</span> : null}</span> : <span className="dashboard-community-text-mark" aria-hidden="true"><NavIcon name="chat" /></span>}
+              <span className="dashboard-community-photo-copy"><strong>{item.title || "Community update"}</strong><small>{author?.full_name || "Community member"} · {formatDateTime(item.created_at)}</small><span>{truncateText(item.body, 110)}</span><b>View post &amp; responses <span aria-hidden="true">→</span></b></span>
+            </button>;
+          })}</div> : <EmptyState title="No announcements yet" description="Updates and photos shared in GC Pulse will appear here." />}
         </Panel>
         <Panel title="Your activity" subtitle="A quick look at what is waiting for you.">
           <div className="dashboard-activity-summary"><div><span>Unread notifications</span><strong>{unreadNotifications.length}</strong><button type="button" className="text-button" onClick={() => setShowNotificationCenter(true)}>Review notifications</button></div><div><span>Pending tasks</span><strong>{myPendingTasks}</strong><small>Event responsibilities assigned to you</small></div></div>

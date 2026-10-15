@@ -427,6 +427,14 @@ function NavIcon({ name }) {
           <path d="M10.5 8v8M7.8 11.5h5.4" />
         </svg>
       );
+    case "clipboard-list":
+      return (
+        <svg {...commonProps}>
+          <rect x="5" y="5" width="14" height="16" rx="2" />
+          <path d="M9 5.5V4.7A1.7 1.7 0 0 1 10.7 3h2.6A1.7 1.7 0 0 1 15 4.7v.8" />
+          <path d="M8.5 10h1M12 10h3.5M8.5 14h1M12 14h3.5M8.5 18h1M12 18h3.5" />
+        </svg>
+      );
     case "discipleship":
       return (
         <svg {...commonProps}>

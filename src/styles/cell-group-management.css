@@ -1803,3 +1803,4 @@
     width: min(100%, 56rem);
   }
 }
+.cgm-admin-shortcuts { display:flex; flex-wrap:wrap; gap:.55rem; margin:0 0 1rem; padding:.75rem; border:1px solid var(--border); border-radius:1rem; background:var(--surface-strong); }

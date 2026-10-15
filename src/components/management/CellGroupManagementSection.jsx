@@ -927,6 +927,12 @@ export function CellGroupManagementSection({
         </div>
       </section>
 
+      {isAdmin ? <nav className="cgm-admin-shortcuts" aria-label="Administrative tools">
+        <button type="button" className="cgm-btn cgm-btn-secondary" onClick={() => onNavigateSection("bible-study")}>Bible Study reading plan</button>
+        <button type="button" className="cgm-btn cgm-btn-secondary" onClick={() => onNavigateSection("events")}>Events management</button>
+        <button type="button" className="cgm-btn cgm-btn-secondary" onClick={() => onNavigateSection("announcements")}>Announcement oversight</button>
+      </nav> : null}
+
       <div className="cgm-shell">
       <nav className="cgm-tabs" role="tablist">
         {MANAGEMENT_TABS.map((tab) => (

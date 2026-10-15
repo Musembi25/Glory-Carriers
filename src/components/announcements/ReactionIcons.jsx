@@ -1,18 +1,16 @@
 export const announcementReactionMeta = [
-  { reaction: "love", emoji: "❤️" },
-  { reaction: "pray", emoji: "🙏" },
-  { reaction: "great", emoji: "👏" },
-  { reaction: "excited", emoji: "🔥" },
-  { reaction: "amen", emoji: "🙌" },
-  { reaction: "like", emoji: "👍" },
-  { reaction: "celebrating", emoji: "🎉" },
-  { reaction: "helpful", emoji: "💡" }
+  { reaction: "love", label: "Love", emoji: "❤️" },
+  { reaction: "pray", label: "Pray", emoji: "🙏" },
+  { reaction: "great", label: "Great", emoji: "✨" },
+  { reaction: "excited", label: "Excited", emoji: "🤩" },
+  { reaction: "amen", label: "Amen", emoji: "🙌" },
+  { reaction: "like", label: "Like", emoji: "👍" },
+  { reaction: "celebrating", label: "Celebrate", emoji: "🎉" },
+  { reaction: "helpful", label: "Helpful", emoji: "💡" }
 ];
 
 export function getReactionMeta(reaction) {
   return announcementReactionMeta.find((item) => item.reaction === reaction);
 }
 
-export function getReactionEmoji(reaction) {
-  return getReactionMeta(reaction)?.emoji ?? "❤️";
-}
+export function getReactionEmoji(reaction) { return getReactionMeta(reaction)?.emoji ?? "❤️"; }

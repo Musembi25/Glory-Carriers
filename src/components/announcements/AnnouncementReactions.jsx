@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { announcementReactionMeta, getReactionMeta } from "./ReactionIcons.jsx";
+import { announcementReactionMeta, getReactionEmoji, getReactionMeta } from "./ReactionIcons.jsx";
 
 const ENTITY_TABLE = "announcements";
 
@@ -34,6 +34,7 @@ function MemberAvatar({ member, size = "small" }) {
 
 export function AnnouncementReactions({
   announcementId,
+  entityTable = ENTITY_TABLE,
   reactions,
   profiles,
   userId,
@@ -48,9 +49,9 @@ export function AnnouncementReactions({
   const rows = useMemo(
     () =>
       reactions.filter(
-        (row) => row.entity_table === ENTITY_TABLE && row.entity_id === announcementId
+        (row) => row.entity_table === entityTable && row.entity_id === announcementId
       ),
-    [reactions, announcementId]
+    [reactions, announcementId, entityTable]
   );
 
   const profileById = useMemo(
@@ -95,13 +96,10 @@ export function AnnouncementReactions({
 
       seen.add(row.user_id);
       const profile = profileById.get(row.user_id);
-      const meta = getReactionMeta(row.reaction);
-
       list.push({
         id: row.user_id,
         profile,
-        reaction: row.reaction,
-        emoji: meta?.emoji ?? "❤️"
+        reaction: getReactionMeta(row.reaction)?.reaction ?? "love"
       });
     }
 
@@ -126,7 +124,7 @@ export function AnnouncementReactions({
 
   async function handleToggle(reaction) {
     const wasSelected = userReaction === reaction;
-    const result = await onToggle({ announcementId, reaction });
+    const result = await onToggle({ entityTable, entityId: announcementId, reaction });
 
     if (result !== false) {
       showFeedback(wasSelected ? "Removed" : "You reacted");
@@ -169,10 +167,10 @@ export function AnnouncementReactions({
                 aria-pressed={isSelected}
                 aria-label={
                   isSelected
-                    ? "Remove your reaction"
+                    ? `Remove your ${item.label} reaction`
                     : count
-                      ? `${count} reactions`
-                      : "Add reaction"
+                      ? `${item.label}, ${count} reactions`
+                      : `React with ${item.label}`
                 }
               >
                 <span className="announcement-reaction-btn-emoji" aria-hidden="true">
@@ -221,9 +219,7 @@ export function AnnouncementReactions({
           onClick={onMessageShortcut}
           aria-label="Open messages"
         >
-          <span className="announcement-reaction-btn-emoji" aria-hidden="true">
-            💬
-          </span>
+          <span className="announcement-reaction-btn-emoji" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M20 11.5a7.5 7.5 0 0 1-7.5 7.5H6l-3 2v-7.5A7.5 7.5 0 0 1 10.5 6H12"/><path d="M16 3v6m-3-3h6"/></svg></span>
         </button>
       </div>
 
@@ -252,7 +248,7 @@ export function AnnouncementReactions({
                   <span className="announcement-participant-name">{name}</span>
                   <span className="announcement-participant-reaction">
                     <span className="announcement-reaction-btn-emoji" aria-hidden="true">
-                      {participant.emoji}
+                      {getReactionEmoji(participant.reaction)}
                     </span>
                   </span>
                 </li>
@@ -261,6 +257,79 @@ export function AnnouncementReactions({
           </ul>
         </div>
       ) : null}
+    </div>
+  );
+}
+
+export function AnnouncementReplyReactions({ replyId, reactions, userId, disabled, onToggle }) {
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const rows = useMemo(
+    () => reactions.filter((row) => row.entity_table === "announcement_replies" && row.entity_id === replyId),
+    [reactions, replyId]
+  );
+  const counts = useMemo(
+    () => rows.reduce((result, row) => {
+      result[row.reaction] = (result[row.reaction] ?? 0) + 1;
+      return result;
+    }, {}),
+    [rows]
+  );
+  const userReaction = rows.find((row) => row.user_id === userId)?.reaction ?? null;
+  const usedReactions = announcementReactionMeta.filter((item) => counts[item.reaction]);
+
+  async function toggle(reaction) {
+    await onToggle({ entityTable: "announcement_replies", entityId: replyId, reaction });
+    setPickerOpen(false);
+  }
+
+  return (
+    <div className="community-reply-reactions">
+      {usedReactions.map((item) => (
+        <button
+          key={item.reaction}
+          type="button"
+          className={`community-reply-reaction${userReaction === item.reaction ? " active" : ""}`}
+          aria-pressed={userReaction === item.reaction}
+          aria-label={`${item.label}, ${counts[item.reaction]} reactions${userReaction === item.reaction ? ", remove your reaction" : ""}`}
+          title={item.label}
+          disabled={disabled}
+          onClick={() => void toggle(item.reaction)}
+        >
+          <span aria-hidden="true">{item.emoji}</span>
+          <span className="community-reply-reaction-count">{counts[item.reaction]}</span>
+        </button>
+      ))}
+      <div className="community-reply-reaction-picker-wrap">
+        <button
+          type="button"
+          className="community-reply-react-trigger"
+          aria-expanded={pickerOpen}
+          aria-label={pickerOpen ? "Close reaction picker" : "React to comment"}
+          disabled={disabled}
+          onClick={() => setPickerOpen((open) => !open)}
+        >
+          <span aria-hidden="true">{userReaction ? getReactionEmoji(userReaction) : "+"}</span>
+          <span>{userReaction ? "Reacted" : "React"}</span>
+        </button>
+        {pickerOpen ? (
+          <div className="community-reply-reaction-picker" role="group" aria-label="Choose a reaction">
+            {announcementReactionMeta.map((item) => (
+              <button
+                key={item.reaction}
+                type="button"
+                className={userReaction === item.reaction ? "active" : ""}
+                aria-label={`${userReaction === item.reaction ? "Remove" : "React with"} ${item.label}`}
+                aria-pressed={userReaction === item.reaction}
+                title={item.label}
+                disabled={disabled}
+                onClick={() => void toggle(item.reaction)}
+              >
+                <span aria-hidden="true">{item.emoji}</span>
+              </button>
+            ))}
+          </div>
+        ) : null}
+      </div>
     </div>
   );
 }

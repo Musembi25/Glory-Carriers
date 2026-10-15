@@ -3,6 +3,7 @@ import ReactDOM from "react-dom/client";
 import { registerSW } from "virtual:pwa-register";
 import App from "./App";
 import "./styles.css";
+import "./styles/auth-screen.css";
 import "./styles/discipleship-portal.css";
 import "./styles/cell-group-management.css";
 import "./styles/bible-study.css";

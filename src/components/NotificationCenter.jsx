@@ -14,6 +14,13 @@ function isToday(dateValue) {
   );
 }
 
+function isYesterday(dateValue) {
+  const date = new Date(dateValue);
+  const yesterday = new Date();
+  yesterday.setDate(yesterday.getDate() - 1);
+  return date.getFullYear() === yesterday.getFullYear() && date.getMonth() === yesterday.getMonth() && date.getDate() === yesterday.getDate();
+}
+
 function groupNotifications(notifications, filter) {
   const active = notifications.filter((notification) => {
     if (filter === "archive") {
@@ -33,6 +40,7 @@ function groupNotifications(notifications, filter) {
 
   const unread = [];
   const today = [];
+  const yesterday = [];
   const earlier = [];
 
   for (const notification of active) {
@@ -46,10 +54,15 @@ function groupNotifications(notifications, filter) {
       continue;
     }
 
+    if (isYesterday(notification.created_at)) {
+      yesterday.push(notification);
+      continue;
+    }
+
     earlier.push(notification);
   }
 
-  return { unread, today, earlier, active };
+  return { unread, today, yesterday, earlier, active };
 }
 
 export function NotificationCenter({
@@ -273,6 +286,7 @@ export function NotificationCenter({
             <>
               {renderSection("Unread", grouped.unread)}
               {renderSection("Today", grouped.today)}
+      {renderSection("Yesterday", grouped.yesterday)}
               {renderSection("Earlier", grouped.earlier)}
               {!grouped.unread.length && !grouped.today.length && !grouped.earlier.length ? (
                 <div className="nc-empty">No notifications match your filters.</div>

@@ -71,7 +71,7 @@ export function getNotificationCategory(notificationType) {
     return "messages";
   }
 
-  if (notificationType === "announcement_posted") {
+  if (["announcement_posted", "announcement_reply", "announcement_reaction"].includes(notificationType)) {
     return "announcements";
   }
 
@@ -95,11 +95,11 @@ export function getSectionForNotification(notification) {
   }
 
   if (targetTable === "event_ideas") {
-    return "planning";
+    return "events";
   }
 
   if (targetTable === "tasks") {
-    return "tasks";
+    return "events";
   }
 
   if (targetTable === "messages") {
@@ -115,7 +115,7 @@ export function getSectionForNotification(notification) {
   }
 
   if (targetTable === "leadership_assignments") {
-    return "leadership";
+    return "assignments";
   }
 
   if (targetTable === "virtual_meetings" || MEETING_NOTIFICATION_TYPES.has(notificationType)) {
@@ -123,15 +123,15 @@ export function getSectionForNotification(notification) {
   }
 
   if (targetTable === "discipleship_classes" || targetTable === "discipleship_lessons") {
-    return "discipleship";
+    return "assignments";
   }
 
   if (targetTable.startsWith("bible_study_")) {
     return "bible-study";
   }
 
-  if (targetTable === "announcements" || notificationType === "announcement_posted") {
-    return "events";
+  if (targetTable === "announcements" || notificationType === "announcement_posted" || notificationType === "announcement_reply" || notificationType === "announcement_reaction") {
+    return "announcements";
   }
 
   if (targetTable === "event_check_ins") {

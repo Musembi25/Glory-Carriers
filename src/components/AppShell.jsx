@@ -16,43 +16,64 @@ import {
 import { supabase } from "../lib/supabase";
 import {
   AnnouncementReactions,
+  AnnouncementReplyReactions,
   getAnnouncementReactionTotals
 } from "./announcements/AnnouncementReactions.jsx";
 import { BrandLogo } from "./BrandLogo";
-import { DiscipleshipSection } from "./DiscipleshipSection";
+import { DiscipleshipAssignments } from "./DiscipleshipAssignments.jsx";
 import { CellGroupManagementSection } from "./management/CellGroupManagementSection";
 import { BibleStudySection } from "./BibleStudySection";
 import { NotificationCenter } from "./NotificationCenter.jsx";
 import { NotificationPreferences } from "./NotificationPreferences.jsx";
 import { PushPermissionPrompt } from "./PushPermissionPrompt.jsx";
-const dashboardBackdrop = `${import.meta.env.BASE_URL}icons/icon-512.png`;
+const communityBackgrounds = [
+  `${import.meta.env.BASE_URL}community/a.jpeg`,
+  `${import.meta.env.BASE_URL}community/b.jpeg`,
+  `${import.meta.env.BASE_URL}community/c.jpeg`,
+  `${import.meta.env.BASE_URL}community/d.jpeg`,
+  `${import.meta.env.BASE_URL}community/e.jpeg`,
+  `${import.meta.env.BASE_URL}community/fellowship.webp`
+];
 
 const sections = [
-  { id: "events", label: "Dashboard", shortLabel: "Home", icon: "home" },
-  { id: "planning", label: "Planning", shortLabel: "Plan", icon: "sparkles" },
+  { id: "dashboard", label: "Dashboard", shortLabel: "Home", icon: "home" },
+  { id: "announcements", label: "Announcements & Trends", shortLabel: "Trends", icon: "chat" },
+  { id: "events", label: "Events", shortLabel: "Events", icon: "calendar" },
   { id: "prayer", label: "Prayer", shortLabel: "Prayer", icon: "prayer" },
-  { id: "tasks", label: "Tasks", shortLabel: "Tasks", icon: "check-square" },
   { id: "resources", label: "Resources", shortLabel: "Files", icon: "book-open" },
-  {
-    id: "discipleship",
-    label: "Discipleship",
-    shortLabel: "Discipleship",
-    icon: "discipleship"
-  },
   { id: "bible-study", label: "Bible Study", shortLabel: "Bible", icon: "scripture" },
-  { id: "leadership", label: "Leadership", shortLabel: "Leaders", icon: "calendar" },
+  { id: "assignments", label: "Assignments", shortLabel: "Assignments", icon: "clipboard-list" },
   { id: "meetings", label: "Virtual Meetings", shortLabel: "Meet", icon: "video" },
-  { id: "messages", label: "Messages", shortLabel: "Chats", icon: "chat" },
+  { id: "messages", label: "Messages", shortLabel: "Messages", icon: "messages" },
   { id: "members", label: "Members", shortLabel: "People", icon: "users" },
   {
     id: "management",
-    label: "Management",
-    shortLabel: "Manage",
+    label: "Super Admin",
+    shortLabel: "Admin",
     icon: "management",
-    leaderOnly: true
+    adminOnly: true
   },
   { id: "settings", label: "Settings", shortLabel: "Settings", icon: "settings" }
 ];
+
+const navigationGroups = [
+  { label: "Main", ids: ["dashboard"] },
+  { label: "Community", ids: ["announcements", "messages", "members", "events", "meetings"] },
+  { label: "Spiritual Growth", ids: ["bible-study", "prayer", "resources"] },
+  { label: "My Activity", ids: ["notifications", "assignments", "settings"] },
+  { label: "Administration", ids: ["management"] }
+];
+const quickNavigationIds = ["dashboard", "bible-study", "announcements", "messages"];
+
+function getNavigationGroups(availableSections) {
+  const sectionById = new Map(availableSections.map((section) => [section.id, section]));
+  return navigationGroups.map((group) => ({
+    ...group,
+    items: group.ids.map((id) => id === "notifications"
+      ? { id, label: "Notifications", icon: "bell" }
+      : sectionById.get(id)).filter(Boolean)
+  })).filter((group) => group.items.length);
+}
 
 const emptyEventForm = {
   title: "",
@@ -106,11 +127,7 @@ const emptyMeetingForm = {
   leader_id: ""
 };
 
-const emptyAnnouncementForm = {
-  title: "",
-  body: "",
-  pinned: false
-};
+const emptyAnnouncementForm = { title: "", body: "", pinned: false };
 
 const emptyPasswordForm = {
   password: "",
@@ -379,6 +396,14 @@ function NavIcon({ name }) {
           <path d="M8 12.5h5" />
         </svg>
       );
+    case "messages":
+      return (
+        <svg {...commonProps}>
+          <path d="M4 5.5A2.5 2.5 0 0 1 6.5 3h10A2.5 2.5 0 0 1 19 5.5v6a2.5 2.5 0 0 1-2.5 2.5H9l-4.5 3V5.5Z" />
+          <path d="M8 8h7M8 11h4" />
+          <path d="M8 17h9.5a2.5 2.5 0 0 0 2.5-2.5V9" />
+        </svg>
+      );
     case "prayer":
       return (
         <svg {...commonProps}>
@@ -511,47 +536,123 @@ function EmptyState({ title, description }) {
   );
 }
 
-function MobileSectionNav({ sections: navSections, activeSection, onSelect, open, onOpenChange }) {
+function NavigationItem({ section, activeSection, onSelect, onOpenNotifications, unreadCount, className = "", onAfterSelect }) {
+  const isNotificationItem = section.id === "notifications";
+  const active = !isNotificationItem && activeSection === section.id;
+  const label = isNotificationItem && unreadCount
+    ? "Notifications, " + unreadCount + " unread"
+    : section.label;
+  return (
+    <button
+      type="button"
+      className={"sidebar-link " + className + (active ? " active" : "")}
+      aria-label={label}
+      aria-current={active ? "page" : undefined}
+      title={section.label}
+      onClick={() => {
+        if (isNotificationItem) onOpenNotifications();
+        else onSelect(section.id);
+        onAfterSelect?.();
+      }}
+    >
+      <span className="sidebar-link-icon" aria-hidden="true"><NavIcon name={section.icon} /></span>
+      <span>{section.label}</span>
+      {isNotificationItem && unreadCount ? <span className="navigation-unread-count">{unreadCount > 99 ? "99+" : unreadCount}</span> : null}
+    </button>
+  );
+}
+
+function MobileSectionNav({ sections: navSections, activeSection, onSelect, open, onOpenChange, menuButtonRef, unreadCount, onOpenNotifications }) {
+  const drawerRef = useRef(null);
+  const wasDrawerOpenRef = useRef(false);
+  const mobilePrimary = quickNavigationIds
+    .map((id) => navSections.find((section) => section.id === id))
+    .filter(Boolean);
+  const groups = getNavigationGroups(navSections);
+  const closeDrawer = () => {
+    onOpenChange(false);
+    menuButtonRef.current?.focus({ preventScroll: true });
+  };
+
+  useEffect(() => {
+    if (!open) {
+      if (wasDrawerOpenRef.current) {
+        wasDrawerOpenRef.current = false;
+        menuButtonRef.current?.focus({ preventScroll: true });
+      }
+      return undefined;
+    }
+
+    wasDrawerOpenRef.current = true;
+    const oldOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    drawerRef.current?.querySelector("button")?.focus();
+    const handleDrawerKeys = (event) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        closeDrawer();
+        return;
+      }
+      if (event.key !== "Tab") return;
+      const items = [...(drawerRef.current?.querySelectorAll('button:not([disabled]),a[href],[tabindex]:not([tabindex="-1"])') ?? [])];
+      if (!items.length) return;
+      const first = items[0];
+      const last = items[items.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+    document.addEventListener("keydown", handleDrawerKeys);
+    return () => {
+      document.body.style.overflow = oldOverflow;
+      document.removeEventListener("keydown", handleDrawerKeys);
+    };
+  }, [open, onOpenChange]);
+
   return (
     <>
-      {open ? (
-        <button
+      <nav className="mobile-bottom-nav" aria-label="Quick navigation">
+        {mobilePrimary.map((section) => <button
           type="button"
-          className="mobile-drawer-scrim"
-          aria-label="Close navigation menu"
-          onClick={() => onOpenChange(false)}
-        />
-      ) : null}
-
-      <aside className={open ? "mobile-drawer open" : "mobile-drawer"} aria-label="Mobile navigation">
+          key={section.id}
+          className={activeSection === section.id ? "mobile-bottom-link active" : "mobile-bottom-link"}
+          aria-current={activeSection === section.id ? "page" : undefined}
+          onClick={() => onSelect(section.id)}
+        ><NavIcon name={section.icon}/><span>{section.shortLabel}</span></button>)}
+      </nav>
+      {open ? <button type="button" className="mobile-drawer-scrim" aria-label="Close navigation menu" onClick={closeDrawer}/> : null}
+      <aside
+        id="mobile-navigation-drawer"
+        ref={drawerRef}
+        className={open ? "mobile-drawer open" : "mobile-drawer"}
+        aria-label="Main navigation"
+        role="dialog"
+        aria-modal={open ? "true" : undefined}
+        aria-hidden={!open}
+        inert={!open}
+      >
         <div className="mobile-drawer-header">
-          <BrandLogo compact />
-          <button
-            type="button"
-            className="ghost-button compact"
-            onClick={() => onOpenChange(false)}
-          >
-            Close
-          </button>
+          <BrandLogo compact/>
+          <button type="button" className="ghost-button compact mobile-drawer-close" onClick={closeDrawer} aria-label="Close navigation menu">Close</button>
         </div>
-
-        <nav className="mobile-drawer-nav" aria-label="Primary navigation">
-          {navSections.map((section) => (
-            <button
+        <nav className="mobile-drawer-nav" aria-label="Pages">
+          {groups.map((group) => <section className="mobile-drawer-group" key={group.label}>
+            <h2>{group.label}</h2>
+            {group.items.map((section) => <NavigationItem
               key={section.id}
-              type="button"
-              className={activeSection === section.id ? "sidebar-link active" : "sidebar-link"}
-              onClick={() => {
-                onSelect(section.id);
-                onOpenChange(false);
-              }}
-            >
-              <span className="sidebar-link-icon" aria-hidden="true">
-                <NavIcon name={section.icon} />
-              </span>
-              <span>{section.label}</span>
-            </button>
-          ))}
+              section={section}
+              activeSection={activeSection}
+              onSelect={onSelect}
+              onOpenNotifications={onOpenNotifications}
+              unreadCount={unreadCount}
+              className="mobile-drawer-link"
+              onAfterSelect={closeDrawer}
+            />)}
+          </section>)}
         </nav>
       </aside>
     </>
@@ -566,112 +667,57 @@ function SidebarNav({
   onThemeToggle,
   roleLabel,
   currentMember,
-  onSignOut
+  onSignOut,
+  unreadCount,
+  onOpenNotifications
 }) {
-  const [moreOpen, setMoreOpen] = useState(false);
-  const primarySectionIds = new Set(["events", "planning", "prayer", "tasks", "discipleship"]);
-  const primarySections = navSections.filter((section) => primarySectionIds.has(section.id));
-  const moreSections = navSections.filter((section) => !primarySectionIds.has(section.id));
+  const [accountOpen, setAccountOpen] = useState(false);
+  const accountRef = useRef(null);
+  useEffect(() => {
+    if (!accountOpen) return undefined;
+    const close = (event) => { if (!accountRef.current?.contains(event.target)) setAccountOpen(false); };
+    const onKey = (event) => { if (event.key === "Escape") setAccountOpen(false); };
+    document.addEventListener("pointerdown", close);
+    document.addEventListener("keydown", onKey);
+    return () => { document.removeEventListener("pointerdown", close); document.removeEventListener("keydown", onKey); };
+  }, [accountOpen]);
 
-  const selectSection = (sectionId) => {
-    onSelect(sectionId);
-    setMoreOpen(false);
-  };
+  const groups = getNavigationGroups(navSections);
 
   return (
-    <header className="sidebar desktop-nav">
+    <aside className="sidebar desktop-nav" aria-label="Main navigation">
       <div className="desktop-nav-inner">
-        <div className="desktop-nav-left">
-          <BrandLogo compact />
-        </div>
-
-        <nav className="desktop-nav-links" aria-label="Desktop navigation">
-          <span className="desktop-nav-section-label">Workspace</span>
-          {primarySections.map((section) => (
-            <button
+        <div className="desktop-nav-left"><BrandLogo compact/></div>
+        <nav className="desktop-nav-links" aria-label="Pages">
+          {groups.map((group) => <section className="desktop-nav-group" key={group.label}>
+            <h2 className="desktop-nav-section-label">{group.label}</h2>
+            {group.items.map((section) => <NavigationItem
               key={section.id}
-              type="button"
-              className={
-                activeSection === section.id
-                  ? "sidebar-link desktop-nav-link active"
-                  : "sidebar-link desktop-nav-link"
-              }
-              aria-current={activeSection === section.id ? "page" : undefined}
-              title={section.label}
-              onClick={() => selectSection(section.id)}
-            >
-              <span className="sidebar-link-icon" aria-hidden="true">
-                <NavIcon name={section.icon} />
-              </span>
-              <span>{section.shortLabel}</span>
-            </button>
-          ))}
-          {moreSections.length ? (
-            <div className="desktop-nav-more">
-              <span className="desktop-nav-section-label desktop-nav-section-label--more">Explore</span>
-              <button
-                type="button"
-                className={moreSections.some((section) => section.id === activeSection)
-                  ? "sidebar-link desktop-nav-link desktop-nav-more-trigger active"
-                  : "sidebar-link desktop-nav-link desktop-nav-more-trigger"}
-                aria-expanded={moreOpen}
-                aria-haspopup="menu"
-                onClick={() => setMoreOpen((open) => !open)}
-              >
-                <span className="sidebar-link-icon" aria-hidden="true">
-                  <NavIcon name="menu" />
-                </span>
-                <span>More</span>
-                <span className="desktop-nav-caret" aria-hidden="true" />
-              </button>
-              {moreOpen ? (
-                <div className="desktop-nav-menu" role="menu" aria-label="More navigation options">
-                  {moreSections.map((section) => (
-                    <button
-                      key={section.id}
-                      type="button"
-                      role="menuitem"
-                      className={activeSection === section.id ? "desktop-nav-menu-item active" : "desktop-nav-menu-item"}
-                      aria-current={activeSection === section.id ? "page" : undefined}
-                      onClick={() => selectSection(section.id)}
-                    >
-                      <span className="sidebar-link-icon" aria-hidden="true">
-                        <NavIcon name={section.icon} />
-                      </span>
-                      <span>{section.label}</span>
-                    </button>
-                  ))}
-                </div>
-              ) : null}
-            </div>
-          ) : null}
+              section={section}
+              activeSection={activeSection}
+              onSelect={onSelect}
+              onOpenNotifications={onOpenNotifications}
+              unreadCount={unreadCount}
+              className="desktop-nav-link"
+            />)}
+          </section>)}
         </nav>
-
         <div className="desktop-nav-right">
-          <div className="desktop-profile-top">
-            <Avatar member={currentMember} size="small" />
-            <div className="desktop-profile-copy">
-              <strong>{currentMember?.full_name || "Member"}</strong>
-              <p>{currentMember?.email || ""}</p>
-            </div>
-          </div>
-
-          <div className="desktop-profile-actions">
-            <button
-              type="button"
-              className="secondary-button compact"
-              onClick={onThemeToggle}
-              aria-label="Toggle light and dark theme"
-            >
-              {theme === "light" ? "Dark" : "Light"}
+          <div className="desktop-account" ref={accountRef}>
+            <button type="button" className="desktop-profile-trigger" aria-expanded={accountOpen} aria-haspopup="menu" onClick={() => setAccountOpen((open) => !open)} title={currentMember?.full_name || "Account menu"}>
+              <Avatar member={currentMember} size="small"/>
+              <span className="desktop-profile-copy"><strong>{currentMember?.full_name || "Member"}</strong><small>{roleLabel}</small></span>
+              <span className="desktop-account-caret" aria-hidden="true"/>
             </button>
-            <button type="button" className="ghost-button compact" onClick={onSignOut}>
-              Exit
-            </button>
+            {accountOpen ? <div className="desktop-account-menu" role="menu" aria-label="Account menu">
+              <button type="button" role="menuitem" onClick={() => { onSelect("settings"); setAccountOpen(false); }}>Profile &amp; settings</button>
+              <button type="button" role="menuitem" onClick={() => { onThemeToggle(); setAccountOpen(false); }}>{theme === "light" ? "Switch to dark theme" : "Switch to light theme"}</button>
+              <button type="button" role="menuitem" onClick={() => { setAccountOpen(false); onSignOut(); }}>Sign out</button>
+            </div> : null}
           </div>
         </div>
       </div>
-    </header>
+    </aside>
   );
 }
 
@@ -685,8 +731,42 @@ export function AppShell() {
     clearAuthNotice,
     updatePassword
   } = useAuth();
-  const [activeSection, setActiveSection] = useState("events");
+  const [mobileAccountOpen, setMobileAccountOpen] = useState(false);
+  const mobileAccountMenuRef = useRef(null);
+  const [activeSection, setActiveSection] = useState(() => {
+    const requested = window.location.hash.replace(/^#\/?/, "");
+    const normalized = requested === "leadership" ? "assignments" : requested;
+    return sections.some((section) => section.id === normalized) && (normalized !== "management" || profile?.role === "admin") ? normalized : "dashboard";
+  });
+
+  useEffect(() => {
+    const currentSection = window.location.hash.replace(/^#\/?/, "");
+    if (currentSection !== activeSection) {
+      window.history.pushState({ section: activeSection }, "", `#${activeSection}`);
+    }
+  }, [activeSection]);
+
+  useEffect(() => {
+    if (!mobileAccountOpen) return undefined;
+    const close = (event) => { if (!mobileAccountMenuRef.current?.contains(event.target)) setMobileAccountOpen(false); };
+    const onKey = (event) => { if (event.key === "Escape") setMobileAccountOpen(false); };
+    document.addEventListener("pointerdown", close);
+    document.addEventListener("keydown", onKey);
+    return () => { document.removeEventListener("pointerdown", close); document.removeEventListener("keydown", onKey); };
+  }, [mobileAccountOpen]);
+
+  useEffect(() => {
+    function restoreSectionFromHistory() {
+      const requested = window.location.hash.replace(/^#\/?/, "");
+      const normalized = requested === "leadership" ? "assignments" : requested;
+      setActiveSection(sections.some((section) => section.id === normalized) ? normalized : "dashboard");
+    }
+    window.addEventListener("popstate", restoreSectionFromHistory);
+    return () => window.removeEventListener("popstate", restoreSectionFromHistory);
+  }, []);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const mobileMenuTriggerRef = useRef(null);
+  const [communityBackgroundIndex, setCommunityBackgroundIndex] = useState(0);
   const [theme, setTheme] = useState(() => {
     const storedTheme = window.localStorage.getItem("glory-carriers-theme");
 
@@ -698,6 +778,15 @@ export function AppShell() {
       ? "dark"
       : "light";
   });
+  useEffect(() => {
+    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (reducedMotion) return undefined;
+    const rotation = window.setInterval(() => {
+      setCommunityBackgroundIndex((current) => (current + 1) % communityBackgrounds.length);
+    }, 14000);
+    return () => window.clearInterval(rotation);
+  }, []);
+  const communityBackdrop = communityBackgrounds[communityBackgroundIndex];
   const [events, setEvents] = useState([]);
   const [ideas, setIdeas] = useState([]);
   const [votes, setVotes] = useState([]);
@@ -709,6 +798,8 @@ export function AppShell() {
   const [resources, setResources] = useState([]);
   const [notifications, setNotifications] = useState([]);
   const [announcements, setAnnouncements] = useState([]);
+  const [announcementReplies, setAnnouncementReplies] = useState([]);
+  const [announcementRepliesAvailable, setAnnouncementRepliesAvailable] = useState(true);
   const [leadershipAssignments, setLeadershipAssignments] = useState([]);
   const [eventCheckIns, setEventCheckIns] = useState([]);
   const [prayerReminders, setPrayerReminders] = useState([]);
@@ -723,7 +814,6 @@ export function AppShell() {
   const [discipleshipAssignmentSubmissions, setDiscipleshipAssignmentSubmissions] = useState([]);
   const [discipleshipSubmissionHistory, setDiscipleshipSubmissionHistory] = useState([]);
   const [discipleshipMemberNotes, setDiscipleshipMemberNotes] = useState([]);
-  const [discipleshipTabFocus, setDiscipleshipTabFocus] = useState("");
   const [discipleshipSessionAttendance, setDiscipleshipSessionAttendance] = useState([]);
   const [discipleshipDiscussions, setDiscipleshipDiscussions] = useState([]);
   const [bibleStudyReadings, setBibleStudyReadings] = useState([]);
@@ -734,7 +824,7 @@ export function AppShell() {
   const [bibleStudyCompletions, setBibleStudyCompletions] = useState([]);
   const [biblePartnerStreaks, setBiblePartnerStreaks] = useState([]);
   const [cellGroup, setCellGroup] = useState(null);
-  const [selectedDiscipleshipClassId, setSelectedDiscipleshipClassId] = useState("");
+  const [selectedAssignmentClassId, setSelectedAssignmentClassId] = useState("");
   const [icebreaker, setIcebreaker] = useState(null);
   const [selectedEventId, setSelectedEventId] = useState("");
   const [eventForm, setEventForm] = useState(emptyEventForm);
@@ -745,6 +835,10 @@ export function AppShell() {
   const [leadershipForm, setLeadershipForm] = useState(emptyLeadershipForm);
   const [meetingForm, setMeetingForm] = useState(emptyMeetingForm);
   const [announcementForm, setAnnouncementForm] = useState(emptyAnnouncementForm);
+  const [announcementFeedFilter, setAnnouncementFeedFilter] = useState("all");
+  const [announcementReplyDrafts, setAnnouncementReplyDrafts] = useState({});
+  const [announcementPhotos, setAnnouncementPhotos] = useState([]);
+  const [uploadingAnnouncementPhotos, setUploadingAnnouncementPhotos] = useState(false);
   const [editingEventId, setEditingEventId] = useState("");
   const [editingTaskId, setEditingTaskId] = useState("");
   const [editingResourceId, setEditingResourceId] = useState("");
@@ -752,6 +846,8 @@ export function AppShell() {
   const [editingAnnouncementId, setEditingAnnouncementId] = useState("");
   const [editingMeetingId, setEditingMeetingId] = useState("");
   const [ideaDraft, setIdeaDraft] = useState("");
+  const [memberSearch, setMemberSearch] = useState("");
+  const [memberStatusFilter, setMemberStatusFilter] = useState("all");
   const [profileForm, setProfileForm] = useState({
     full_name: "",
     avatar_url: ""
@@ -809,9 +905,12 @@ export function AppShell() {
   const isAdmin = profile?.role === "admin";
   const canManageCellGroup = isAdmin || cellGroup?.leader_id === user?.id;
   const navSections = useMemo(
-    () => sections.filter((section) => !section.leaderOnly || canManageCellGroup),
-    [canManageCellGroup]
+    () => sections.filter((section) => section.adminOnly ? isAdmin : (!section.leaderOnly || canManageCellGroup)),
+    [canManageCellGroup, isAdmin]
   );
+  useEffect(() => {
+    if (activeSection === "management" && !isAdmin) setActiveSection("dashboard");
+  }, [activeSection, isAdmin]);
   const sortedEvents = [...events].sort(
     (left, right) => new Date(left.starts_at) - new Date(right.starts_at)
   );
@@ -1004,7 +1103,7 @@ export function AppShell() {
       createdAt: taskRecord.created_at,
       action: () => {
         setSelectedEventId(taskRecord.event_id);
-        setActiveSection("tasks");
+        setActiveSection("dashboard");
       }
     })),
     ...messages.map((message) => ({
@@ -1034,8 +1133,8 @@ export function AppShell() {
       kind: "Discipleship",
       createdAt: classItem.created_at,
       action: () => {
-        setSelectedDiscipleshipClassId(classItem.id);
-        setActiveSection("discipleship");
+        setSelectedAssignmentClassId(classItem.id);
+        setActiveSection("assignments");
       }
     }))
   ]
@@ -1066,7 +1165,7 @@ export function AppShell() {
         : "A quick view of the work currently assigned to you."
     },
     {
-      label: "Discipleship",
+      label: "Class learning",
       value: (() => {
         const enrolled = discipleshipEnrollments.filter(
           (row) => row.user_id === user.id && row.status === "approved"
@@ -1082,10 +1181,16 @@ export function AppShell() {
 
         return openClasses ? `${openClasses} class${openClasses === 1 ? "" : "es"} open` : "Not enrolled";
       })(),
-      caption: "Guidelines, assignments, and class project on the Discipleship page."
+      caption: "Class assignments and progress."
     }
   ];
   const bibleToday = bibleStudyReadings.find((reading) => reading.reading_date === new Date().toISOString().slice(0, 10)) || bibleStudyReadings.filter((reading) => reading.reading_date <= new Date().toISOString().slice(0, 10)).at(-1) || bibleStudyReadings[0];
+  const completedReadingIds = new Set(bibleStudyCompletions.filter((row) => row.user_id === user.id).map((row) => row.reading_id));
+  let myBibleStreak = 0;
+  for (const reading of [...bibleStudyReadings].filter((item) => item.reading_date <= new Date().toISOString().slice(0, 10)).sort((left, right) => right.reading_date.localeCompare(left.reading_date))) {
+    if (!completedReadingIds.has(reading.id)) break;
+    myBibleStreak += 1;
+  }
   const bibleCommunityActivity = [
     ...bibleStudyTakeaways.map((item) => ({ id: item.id, kind: "Takeaway", content: item.content, userId: item.user_id, createdAt: item.created_at })),
     ...bibleStudyReplies.map((item) => ({ id: item.id, kind: "Reply", content: item.content, userId: item.user_id, createdAt: item.created_at })),
@@ -1108,12 +1213,10 @@ export function AppShell() {
     const theirs = bibleToday && bibleStudyCompletions.some((row) => row.reading_id === bibleToday.id && row.user_id === partnerId);
     return { id: item.id, partner, streak, mine, theirs };
   });
-  const shouldShowFocusBar = ["events", "planning", "tasks"].includes(activeSection);
   const replyingToMessage = replyingToMessageId
     ? messages.find((message) => message.id === replyingToMessageId) ?? null
     : null;
-  const activeSectionLabel =
-    sections.find((section) => section.id === activeSection)?.label ?? "Dashboard";
+  const activeSectionLabel = sections.find((section) => section.id === activeSection)?.label ?? "Dashboard";
 
   function getMember(memberId) {
     return profiles.find((member) => member.id === memberId) ?? null;
@@ -1564,10 +1667,11 @@ export function AppShell() {
       supabase.from("bible_study_questions").select("*").order("created_at", { ascending: false }),
       supabase.from("bible_study_question_answers").select("*").order("created_at", { ascending: false }),
       supabase.from("bible_study_completions").select("*"),
-      supabase.from("bible_study_partner_streaks").select("*").order("created_at", { ascending: false })
+      supabase.from("bible_study_partner_streaks").select("*").order("created_at", { ascending: false }),
+      supabase.from("announcement_replies").select("*").order("created_at", { ascending: true })
     ]);
 
-    const failingResult = results.find((result) => result.error);
+    const failingResult = results.find((result, index) => result.error && index !== 34);
 
     if (failingResult?.error) {
       setErrorMessage(failingResult.error.message);
@@ -1610,6 +1714,8 @@ export function AppShell() {
       setBibleStudyAnswers(results[31].data ?? []);
       setBibleStudyCompletions(results[32].data ?? []);
       setBiblePartnerStreaks(results[33].data ?? []);
+      setAnnouncementReplies(results[34]?.data ?? []);
+      setAnnouncementRepliesAvailable(!results[34]?.error);
     });
 
     if (!hasSeededRealtimeIdsRef.current) {
@@ -1810,6 +1916,10 @@ export function AppShell() {
       "bible_study_questions",
       "bible_study_question_answers"
     ];
+    if (announcementRepliesAvailable) {
+      // Older deployments can continue running until the additive community migration is applied.
+      tables.push("announcement_replies");
+    }
     const notifiableTables = [
       "events",
       "event_ideas",
@@ -1855,7 +1965,7 @@ export function AppShell() {
     return () => {
       void supabase.removeChannel(channel);
     };
-  }, [user?.id, profiles, messages, notificationPermission]);
+  }, [user?.id, profiles, messages, notificationPermission, announcementRepliesAvailable]);
 
   useEffect(() => {
     if (!events.length) {
@@ -2077,7 +2187,7 @@ export function AppShell() {
       assignee_id: taskRecord.assignee_id ?? "",
       due_at: toLocalDateTimeInput(taskRecord.due_at)
     });
-    setActiveSection("tasks");
+    setActiveSection("events");
     clearFeedback();
   }
 
@@ -2115,8 +2225,8 @@ export function AppShell() {
     }, "Task status updated.");
   }
 
-  async function updateRsvp(status) {
-    if (!selectedEventId) {
+  async function updateRsvp(status, eventId = selectedEventId) {
+    if (!eventId) {
       setErrorMessage("Select an event before sending an RSVP.");
       return;
     }
@@ -2124,7 +2234,7 @@ export function AppShell() {
     await runAction(async () => {
       const { error } = await supabase.from("rsvps").upsert(
         {
-          event_id: selectedEventId,
+          event_id: eventId,
           user_id: user.id,
           status
         },
@@ -2697,7 +2807,7 @@ export function AppShell() {
       title: assignment.title ?? "",
       notes: assignment.notes ?? ""
     });
-    setActiveSection("leadership");
+    setActiveSection("assignments");
   }
 
   async function handleLeadershipSubmit(event) {
@@ -2842,13 +2952,13 @@ export function AppShell() {
       if (linkedIdea?.event_id) {
         setSelectedEventId(linkedIdea.event_id);
       }
-      setActiveSection("planning");
+      setActiveSection("events");
     } else if (targetTable === "tasks" && targetId) {
       const linkedTask = tasks.find((task) => task.id === targetId);
       if (linkedTask?.event_id) {
         setSelectedEventId(linkedTask.event_id);
       }
-      setActiveSection("tasks");
+      setActiveSection("events");
     } else if (targetTable === "messages") {
       setActiveSection("messages");
     } else if (targetTable === "prayer_points") {
@@ -2856,35 +2966,18 @@ export function AppShell() {
     } else if (targetTable === "resources") {
       setActiveSection("resources");
     } else if (targetTable === "leadership_assignments") {
-      setActiveSection("leadership");
+      setActiveSection("assignments");
     } else if (targetTable === "discipleship_classes" && targetId) {
-      setSelectedDiscipleshipClassId(targetId);
-      const assignmentNotificationTypes = new Set([
-        "discipleship_assignment_posted",
-        "discipleship_assignment_due",
-        "discipleship_assignment_feedback",
-        "discipleship_assignment_approved",
-        "discipleship_assignment_revision"
-      ]);
-
-      if (assignmentNotificationTypes.has(notification.notification_type)) {
-        setDiscipleshipTabFocus("assignments");
-      }
-
-      setActiveSection("discipleship");
+      setSelectedAssignmentClassId(targetId);
+      setActiveSection("assignments");
     } else if (targetTable === "virtual_meetings") {
       setActiveSection("meetings");
     } else if (targetTable === "discipleship_lessons" && targetId) {
       const linkedLesson = discipleshipLessons.find((lesson) => lesson.id === targetId);
-      if (linkedLesson?.class_id) {
-        setSelectedDiscipleshipClassId(linkedLesson.class_id);
-      }
-      setDiscipleshipTabFocus(
-        notification.notification_type === "discipleship_lesson_added" ? "lessons" : "assignments"
-      );
-      setActiveSection("discipleship");
+      setSelectedAssignmentClassId(linkedLesson?.class_id ?? "");
+      setActiveSection("assignments");
     } else if (targetTable === "announcements") {
-      setActiveSection("events");
+      setActiveSection("announcements");
     } else if (targetTable === "event_check_ins" && targetId) {
       const linkedCheckIn = eventCheckIns.find((checkIn) => checkIn.id === targetId);
       if (linkedCheckIn?.event_id) {
@@ -2909,15 +3002,30 @@ export function AppShell() {
   async function saveAnnouncement(event) {
     event.preventDefault();
 
-    if (!isAdmin) {
+    if (!user?.id || !announcementRepliesAvailable || (!isAdmin && editingAnnouncementId)) {
       return;
     }
 
     await runAction(async () => {
+      setUploadingAnnouncementPhotos(true);
+      const uploadedPaths = [];
+      const uploadedUrls = [];
+      try {
+        for (const photo of announcementPhotos) {
+          const path = `${user.id}/${crypto.randomUUID()}-${photo.file.name.replace(/[^a-zA-Z0-9._-]/g, "-")}`;
+          const { error: uploadError } = await supabase.storage.from("announcement-images").upload(path, photo.file, { contentType: photo.file.type, upsert: false });
+          if (uploadError) throw uploadError;
+          uploadedPaths.push(path);
+          uploadedUrls.push(supabase.storage.from("announcement-images").getPublicUrl(path).data.publicUrl);
+        }
       const payload = {
-        title: announcementForm.title.trim(),
+        title: announcementForm.title.trim() || "Community update",
         body: announcementForm.body.trim(),
-        pinned: announcementForm.pinned
+        pinned: isAdmin ? announcementForm.pinned : false,
+        attachments: [
+          ...(editingAnnouncementId ? announcements.find((item) => item.id === editingAnnouncementId)?.attachments ?? [] : []),
+          ...uploadedUrls
+        ]
       };
       const query = editingAnnouncementId
         ? supabase.from("announcements").update(payload).eq("id", editingAnnouncementId)
@@ -2933,6 +3041,14 @@ export function AppShell() {
 
       setAnnouncementForm(emptyAnnouncementForm);
       setEditingAnnouncementId("");
+      announcementPhotos.forEach((photo) => URL.revokeObjectURL(photo.preview));
+      setAnnouncementPhotos([]);
+      } catch (error) {
+        if (uploadedPaths.length) await supabase.storage.from("announcement-images").remove(uploadedPaths);
+        throw error;
+      } finally {
+        setUploadingAnnouncementPhotos(false);
+      }
     }, editingAnnouncementId ? "Announcement updated." : "Announcement posted.");
   }
 
@@ -2950,7 +3066,8 @@ export function AppShell() {
   }
 
   async function deleteAnnouncement(announcementId) {
-    if (!isAdmin) {
+    const target = announcements.find((item) => item.id === announcementId);
+    if (!target || (!isAdmin && target.created_by !== user?.id)) {
       return;
     }
 
@@ -2965,6 +3082,31 @@ export function AppShell() {
         throw error;
       }
     }, "Announcement deleted.");
+  }
+
+  async function submitAnnouncementReply(event, announcementId) {
+    event.preventDefault();
+    const body = (announcementReplyDrafts[announcementId] ?? "").trim();
+    if (!body) return;
+    await runAction(async () => {
+      const { error } = await supabase.from("announcement_replies").insert({ announcement_id: announcementId, user_id: user.id, body });
+      if (error) throw error;
+      setAnnouncementReplyDrafts((current) => ({ ...current, [announcementId]: "" }));
+    }, "Reply posted.");
+  }
+
+  async function manageAnnouncementReply(reply, mode) {
+    if (!isAdmin && reply.user_id !== user?.id) return;
+    if (mode === "delete" && !window.confirm("Delete this reply?")) return;
+    const nextBody = mode === "edit" ? window.prompt("Edit your reply", reply.body) : null;
+    if (mode === "edit" && (!nextBody?.trim() || nextBody.trim() === reply.body)) return;
+    await runAction(async () => {
+      const query = mode === "delete"
+        ? supabase.from("announcement_replies").delete().eq("id", reply.id)
+        : supabase.from("announcement_replies").update({ body: nextBody.trim() }).eq("id", reply.id);
+      const { error } = await query;
+      if (error) throw error;
+    }, mode === "delete" ? "Reply deleted." : "Reply updated.");
   }
 
   async function togglePrayerReminder(prayerPointId) {
@@ -3046,6 +3188,122 @@ export function AppShell() {
     URL.revokeObjectURL(url);
   }
 
+  function renderAnnouncementsSection() {
+    const cutoff = new Date(liveNow).getTime() - 7 * 24 * 60 * 60 * 1000;
+    const feedAnnouncements = sortedAnnouncements.filter((announcement) => {
+      if (announcementFeedFilter === "mine") return announcement.created_by === user?.id;
+      if (announcementFeedFilter === "recent") return new Date(announcement.created_at).getTime() >= cutoff;
+      return true;
+    });
+    return (
+      <div className="section-stack community-feed">
+        <header className="page-intro page-intro--art">
+          <div>
+            <p className="eyebrow">Community</p>
+            <h1>Announcements &amp; Trends</h1>
+            <p>Updates, encouragement, and moments from the Glory Carriers community.</p>
+          </div>
+        </header>
+
+        {!announcementRepliesAvailable ? <div className="banner info">Community posting, replies, and image attachments require the additive announcements migration in <code>supabase/announcements-community-migration.sql</code>.</div> : null}
+
+        <Panel title="Share with the community" subtitle="Keep your group encouraged and informed.">
+          <form className="stack-form announcement-composer" onSubmit={saveAnnouncement}>
+            <label className="field">
+              <span>Headline <small>(optional)</small></span>
+              <input value={announcementForm.title} maxLength={180} placeholder="A short headline" onChange={(event) => setAnnouncementForm((current) => ({ ...current, title: event.target.value }))} />
+            </label>
+            <label className="field">
+              <span>Your update</span>
+              <textarea value={announcementForm.body} maxLength={2500} rows={4} placeholder="Share an update with Glory Carriers..." required onChange={(event) => setAnnouncementForm((current) => ({ ...current, body: event.target.value }))} />
+            </label>
+            <label className="field announcement-photo-field">
+              <span>Add photos</span>
+              <input type="file" accept="image/jpeg,image/png,image/webp" multiple disabled={uploadingAnnouncementPhotos || !announcementRepliesAvailable} onChange={(event) => {
+                const selected = Array.from(event.target.files ?? []);
+                const valid = selected.filter((file) => ["image/jpeg", "image/png", "image/webp"].includes(file.type) && file.size <= 8 * 1024 * 1024);
+                if (valid.length !== selected.length) setErrorMessage("Choose JPEG, PNG, or WebP photos up to 8 MB each.");
+                const prepared = valid.map((file) => ({ file, preview: URL.createObjectURL(file) })); const room = Math.max(0, 5 - announcementPhotos.length); prepared.slice(room).forEach((photo) => URL.revokeObjectURL(photo.preview)); setAnnouncementPhotos((current) => [...current, ...prepared.slice(0, room)]);
+                event.target.value = "";
+              }} />
+              {announcementPhotos.length ? <div className="announcement-photo-previews">{announcementPhotos.map((photo, index) => <div key={`${photo.file.name}-${index}`}><img src={photo.preview} alt={`Selected photo ${index + 1}`} /><button type="button" className="ghost-button compact" aria-label={`Remove ${photo.file.name}`} onClick={() => { URL.revokeObjectURL(photo.preview); setAnnouncementPhotos((current) => current.filter((_, itemIndex) => itemIndex !== index)); }}>Remove</button></div>)}</div> : null}
+            </label>
+            <div className="form-actions">
+              {isAdmin ? <label className="inline-checkbox"><input type="checkbox" checked={announcementForm.pinned} onChange={(event) => setAnnouncementForm((current) => ({ ...current, pinned: event.target.checked }))} /> Pin announcement</label> : null}
+              <button type="submit" className="primary-button" disabled={!announcementRepliesAvailable || submitting || uploadingAnnouncementPhotos}>{uploadingAnnouncementPhotos ? "Uploading photos…" : submitting ? "Publishing…" : editingAnnouncementId ? "Save changes" : "Publish update"}</button>
+              {editingAnnouncementId ? <button type="button" className="ghost-button" onClick={() => { setEditingAnnouncementId(""); setAnnouncementForm(emptyAnnouncementForm); }}>Cancel</button> : null}
+            </div>
+          </form>
+        </Panel>
+
+        <div className="announcement-feed-toolbar" role="group" aria-label="Filter announcements">
+          {[['all','All'],['recent','Recent'],['mine','My posts']].map(([value,label]) => <button key={value} type="button" className={announcementFeedFilter===value?'active':''} aria-pressed={announcementFeedFilter===value} onClick={()=>setAnnouncementFeedFilter(value)}>{label}</button>)}
+        </div>
+        <div className="community-feed-list">
+          {feedAnnouncements.length ? feedAnnouncements.map((announcement) => {
+            const author = profiles.find((member) => member.id === announcement.created_by);
+            const canManage = isAdmin || announcement.created_by === user?.id;
+            return <article key={announcement.id} className="community-post">
+              <header className="community-post-header">
+                <Avatar member={author} size="small" />
+                <div className="community-post-author"><strong>{author?.full_name || author?.email || "Community member"}</strong><time dateTime={announcement.created_at}>{formatDateTime(announcement.created_at)}{announcement.updated_at && announcement.updated_at !== announcement.created_at ? " · Edited" : ""}</time></div>
+                {announcement.pinned ? <span className="pill info">Pinned</span> : null}
+                {canManage ? <div className="community-post-actions"><button type="button" className="ghost-button compact" onClick={() => beginAnnouncementEdit(announcement)}>Edit</button><button type="button" className="ghost-button compact danger" onClick={() => deleteAnnouncement(announcement.id)}>Delete</button></div> : null}
+              </header>
+              {announcement.title ? <h2>{announcement.title}</h2> : null}
+              <p className="community-post-body">{announcement.body}</p>
+              {Array.isArray(announcement.attachments) && announcement.attachments.length ? <div className={`community-post-gallery count-${Math.min(announcement.attachments.length, 4)}`}>{announcement.attachments.map((url, index) => <img key={`${url}-${index}`} src={url} alt={`Announcement attachment ${index + 1}`} loading="lazy" />)}</div> : null}
+              <AnnouncementReactions announcementId={announcement.id} reactions={reactions} profiles={profiles} userId={user?.id} disabled={submitting} onToggle={toggleAnnouncementReaction} onMessageShortcut={() => setActiveSection("messages")} />
+              <section className="community-replies" aria-label="Replies">
+                {announcementReplies.filter((reply) => reply.announcement_id === announcement.id).map((reply) => {
+                  const replyAuthor = profiles.find((member) => member.id === reply.user_id);
+                  return <article className="community-reply" key={reply.id}><Avatar member={replyAuthor} size="small" /><div className="community-reply-content"><strong>{replyAuthor?.full_name || replyAuthor?.email || "Member"}</strong><p>{reply.body}</p><time dateTime={reply.created_at}>{formatDateTime(reply.created_at)}</time><AnnouncementReplyReactions replyId={reply.id} reactions={reactions} userId={user?.id} disabled={submitting} onToggle={toggleAnnouncementReaction} /></div>{(isAdmin || reply.user_id === user?.id) ? <div className="community-post-actions"><button type="button" className="ghost-button compact" onClick={() => manageAnnouncementReply(reply, "edit")}>Edit</button><button type="button" className="ghost-button compact danger" onClick={() => manageAnnouncementReply(reply, "delete")}>Delete</button></div> : null}</article>;
+                })}
+                <form className="community-reply-form" onSubmit={(event) => submitAnnouncementReply(event, announcement.id)}><input aria-label="Write a reply" maxLength={2000} value={announcementReplyDrafts[announcement.id] ?? ""} onChange={(event) => setAnnouncementReplyDrafts((current) => ({ ...current, [announcement.id]: event.target.value }))} placeholder="Write a reply…" /><button type="submit" className="secondary-button compact" disabled={submitting || !(announcementReplyDrafts[announcement.id] ?? "").trim()}>Reply</button></form>
+              </section>
+            </article>;
+          }) : <EmptyState title={announcements.length ? "No posts match this view" : "A fresh beginning"} description={announcements.length ? "Try another filter to see more community updates." : "There are no announcements yet. Share the first update with your community."} />}
+        </div>
+      </div>
+    );
+  }
+
+  function renderEventsDirectorySection() {
+    const upcoming = sortedEvents.filter((item) => new Date(item.starts_at) >= new Date(liveNow));
+    const past = sortedEvents.filter((item) => new Date(item.starts_at) < new Date(liveNow)).reverse();
+    const eventCard = (eventRecord) => <article key={eventRecord.id} className="event-directory-card">
+      <div className="event-date-block"><strong>{new Intl.DateTimeFormat(undefined, { day: "2-digit" }).format(new Date(eventRecord.starts_at))}</strong><span>{new Intl.DateTimeFormat(undefined, { month: "short" }).format(new Date(eventRecord.starts_at))}</span></div>
+      <div className="event-directory-copy"><h3>{eventRecord.title}</h3><p>{formatDateTime(eventRecord.starts_at)}{eventRecord.location ? ` · ${eventRecord.location}` : ""}</p>{eventRecord.description ? <p className="muted-text">{eventRecord.description}</p> : null}</div>
+      <div className="event-directory-actions"><span className={`pill ${new Date(eventRecord.starts_at) >= new Date(liveNow) ? "success" : ""}`}>{new Date(eventRecord.starts_at) >= new Date(liveNow) ? "Upcoming" : "Past"}</span>{new Date(eventRecord.starts_at) >= new Date(liveNow) ? <button type="button" className={rsvps.some((row) => row.event_id === eventRecord.id && row.user_id === user.id && row.status === "going") ? "accent-button compact" : "secondary-button compact"} onClick={() => void updateRsvp("going", eventRecord.id)}>{rsvps.some((row) => row.event_id === eventRecord.id && row.user_id === user.id && row.status === "going") ? "Going" : "RSVP"}</button> : null}<button type="button" className="ghost-button compact" onClick={() => setSelectedEventId(eventRecord.id)}>Details</button><button type="button" className="ghost-button compact" onClick={() => downloadEventCalendar(eventRecord)}>Calendar</button>{isAdmin ? <><button type="button" className="ghost-button compact" onClick={() => beginEventEdit(eventRecord)}>Edit</button><button type="button" className="ghost-button compact danger" onClick={() => deleteEvent(eventRecord.id)}>Delete</button></> : null}</div>
+    </article>;
+    return <div className="section-stack">
+      <header className="page-intro page-intro--art"><div><p className="eyebrow">Gather together</p><h1>Events</h1><p>Find the next opportunity to worship, serve, and grow together.</p></div></header>
+      {isAdmin ? <Panel title={editingEventId ? "Edit event" : "Create an event"} subtitle="Keep your community gatherings in one shared calendar." action={editingEventId ? <button type="button" className="ghost-button" onClick={() => { setEditingEventId(""); setEventForm(emptyEventForm); }}>Cancel</button> : null}>
+        <form className="grid-form two-column" onSubmit={handleEventSubmit}>
+          <label className="field"><span>Event title</span><input required maxLength={180} value={eventForm.title} onChange={(event) => setEventForm((current) => ({ ...current, title: event.target.value }))} placeholder="Prayer night, outreach, fellowship…" /></label>
+          <label className="field"><span>Location or meeting link</span><input value={eventForm.location} onChange={(event) => setEventForm((current) => ({ ...current, location: event.target.value }))} placeholder="Church hall or online" /></label>
+          <label className="field"><span>Starts</span><input required type="datetime-local" value={eventForm.starts_at} onChange={(event) => setEventForm((current) => ({ ...current, starts_at: event.target.value }))} /></label>
+          <label className="field"><span>Ends</span><input type="datetime-local" value={eventForm.ends_at} onChange={(event) => setEventForm((current) => ({ ...current, ends_at: event.target.value }))} /></label>
+          <label className="field field-wide"><span>Description</span><textarea rows={3} value={eventForm.description} onChange={(event) => setEventForm((current) => ({ ...current, description: event.target.value }))} placeholder="Share what members can expect." /></label>
+          <div className="form-actions wide"><button type="submit" className="primary-button" disabled={submitting}>{editingEventId ? "Save event" : "Create event"}</button></div>
+        </form>
+      </Panel> : null}
+      <Panel title="Upcoming events" subtitle="Your group's next gatherings.">{upcoming.length ? <div className="event-directory-list">{upcoming.map(eventCard)}</div> : <EmptyState title="Nothing scheduled yet" description="New gatherings will appear here when they're planned." />}</Panel>
+      {past.length ? <Panel title="Past events" subtitle="Previous gatherings from your community."><div className="event-directory-list">{past.map(eventCard)}</div></Panel> : null}
+      {selectedEvent ? <>
+        <Panel title={selectedEvent.title} subtitle={`${formatDateTime(selectedEvent.starts_at)} · ${selectedEvent.location || "Location to be confirmed"}`}>
+          {selectedEvent.description ? <p className="event-detail-description">{selectedEvent.description}</p> : null}
+          <div className="event-detail-actions"><button type="button" className={rsvps.some((row) => row.event_id === selectedEvent.id && row.user_id === user.id && row.status === "going") ? "accent-button" : "primary-button"} onClick={() => void updateRsvp("going", selectedEvent.id)}>{rsvps.some((row) => row.event_id === selectedEvent.id && row.user_id === user.id && row.status === "going") ? "You're going" : "RSVP · Going"}</button><button type="button" className="secondary-button" onClick={() => void updateRsvp("not_going", selectedEvent.id)}>Can't attend</button><button type="button" className={currentUserCheckIn ? "accent-button" : "secondary-button"} disabled={checkingIn} onClick={() => void handleEventCheckIn(selectedEvent.id)}>{checkingIn ? "Checking in…" : currentUserCheckIn ? "Update check-in" : "Check in"}</button><button type="button" className="ghost-button" onClick={() => downloadEventCalendar(selectedEvent)}>Add to calendar</button></div>
+          <div className="event-attendance-summary"><span>{attendingMembers.length} attending</span><span>{selectedCheckIns.length} checked in</span></div>
+        </Panel>
+        <div className="content-grid"><Panel title="Who's attending" subtitle="Member responses for this gathering.">{attendingMembers.length ? <div className="people-list">{attendingMembers.map((rsvp) => <div key={rsvp.user_id} className="person-row"><Avatar member={getMember(rsvp.user_id)} size="small" /><strong>{getMemberLabel(rsvp.user_id)}</strong><span className="pill success">Going</span></div>)}</div> : <EmptyState title="No RSVPs yet" description="Member responses will appear here." />}</Panel>
+          <Panel title="Arrival check-ins" subtitle="See who has arrived.">{selectedCheckIns.length ? <div className="people-list">{selectedCheckIns.map((checkIn) => <div key={checkIn.id} className="person-row"><Avatar member={getMember(checkIn.user_id)} size="small" /><div><strong>{getMemberLabel(checkIn.user_id)}</strong><p>{formatDateTime(checkIn.checked_in_at)}</p></div><span className="pill success">Checked in</span></div>)}</div> : <EmptyState title="No check-ins yet" description="Members can check in when they arrive." />}</Panel></div>
+        <div className="content-grid"><Panel title="Event ideas" subtitle={`Suggestions for ${selectedEvent.title}.`}><form className="community-reply-form" onSubmit={handleIdeaSubmit}><input aria-label="Suggest an event idea" maxLength={1000} value={ideaDraft} onChange={(event) => setIdeaDraft(event.target.value)} placeholder="Share an idea for this gathering…"/><button type="submit" className="secondary-button compact" disabled={submitting || !ideaDraft.trim()}>Suggest</button></form>{selectedIdeas.length ? <div className="event-idea-list">{selectedIdeas.map((idea) => <article key={idea.id}><div><strong>{getMemberLabel(idea.user_id)}</strong><p>{idea.content}</p></div><button type="button" className={hasUserVoted(idea.id) ? "accent-button compact" : "ghost-button compact"} onClick={() => toggleIdeaVote(idea.id)}>{hasUserVoted(idea.id) ? "Voted" : "Support"} · {getIdeaVoteCount(idea.id)}</button></article>)}</div> : <p className="inline-help">Share the first idea for this event.</p>}</Panel>
+          <Panel title="Event responsibilities" subtitle="Tasks remain connected to their event.">{isAdmin ? <form className="event-task-form" onSubmit={handleTaskSubmit}><label className="field"><span>{editingTaskId ? "Task title" : "Assign a responsibility"}</span><input required value={taskForm.title} onChange={(event) => setTaskForm((current) => ({ ...current, title: event.target.value }))} placeholder="Prepare the welcome table" /></label><label className="field"><span>Assigned to</span><select value={taskForm.assignee_id} onChange={(event) => setTaskForm((current) => ({ ...current, assignee_id: event.target.value }))}><option value="">Unassigned</option>{activeMembers.map((member) => <option key={member.id} value={member.id}>{member.full_name || member.email}</option>)}</select></label><label className="field"><span>Due date</span><input type="datetime-local" value={taskForm.due_at} onChange={(event) => setTaskForm((current) => ({ ...current, due_at: event.target.value }))} /></label><label className="field"><span>Details</span><textarea rows={2} value={taskForm.details} onChange={(event) => setTaskForm((current) => ({ ...current, details: event.target.value }))} /></label><button type="submit" className="secondary-button compact" disabled={submitting}>{editingTaskId ? "Save task" : "Add task"}</button>{editingTaskId ? <button type="button" className="ghost-button compact" onClick={() => { setEditingTaskId(""); setTaskForm(emptyTaskForm); }}>Cancel</button> : null}</form> : null}{selectedTasks.length ? <div className="event-task-list">{selectedTasks.map((task) => <div key={task.id}><span><strong>{task.title}</strong><small>{task.assignee_id ? getMemberLabel(task.assignee_id) : "Unassigned"}{task.due_at ? ` · Due ${formatDate(task.due_at)}` : ""}</small></span><span className="event-task-actions">{isAdmin ? <><button type="button" className="ghost-button compact" onClick={() => beginTaskEdit(task)}>Edit</button><button type="button" className="ghost-button compact danger" onClick={() => deleteTask(task.id)}>Delete</button></> : null}<button type="button" className={task.status === "completed" ? "accent-button compact" : "secondary-button compact"} disabled={!isAdmin && task.assignee_id !== user.id} onClick={() => void toggleTaskStatus(task)}>{task.status === "completed" ? "Reopen" : "Mark done"}</button></span></div>)}</div> : <EmptyState title="No responsibilities yet" description="There are no tasks linked to this event." />}</Panel></div>
+      </> : null}
+    </div>;
+  }
+
   async function recommendLeader(assignmentType) {
     if (!isAdmin) {
       return;
@@ -3071,8 +3329,8 @@ export function AppShell() {
     }, "Recommended leader selected.");
   }
 
-  async function handleEventCheckIn() {
-    if (!selectedEventId) {
+  async function handleEventCheckIn(eventId = selectedEventId) {
+    if (!eventId) {
       setErrorMessage("Choose an event before checking in.");
       return;
     }
@@ -3100,7 +3358,7 @@ export function AppShell() {
 
       const { error } = await supabase.from("event_check_ins").upsert(
         {
-          event_id: selectedEventId,
+          event_id: eventId,
           user_id: user.id,
           location_label: position ? "Shared from device location" : "Checked in without location",
           latitude: position?.coords?.latitude ?? null,
@@ -3179,7 +3437,7 @@ export function AppShell() {
           action={<button type="button" className="accent-button" onClick={() => setActiveSection("bible-study")}>Open Bible Study</button>}
         >
           <div className="dashboard-bible-summary">
-            <span className="dashboard-bible-icon">📖</span>
+            <span className="dashboard-bible-icon"><NavIcon name="scripture" /></span>
             <div><strong>{bibleToday ? `${bibleToday.book} ${bibleToday.chapter}` : "Reading plan coming soon"}</strong><p>{bibleStudyTakeaways.length} takeaways · {bibleStudyReplies.length} replies · {bibleStudyQuestions.length} open questions</p></div>
             <span className="dashboard-bible-live"><i /> LIVE</span>
           </div>
@@ -3187,19 +3445,19 @@ export function AppShell() {
             <div><strong>Partner Streaks</strong><span>{pendingPartnerInvites.length ? `${pendingPartnerInvites.length} invitation${pendingPartnerInvites.length === 1 ? "" : "s"} waiting` : myPartnerStreaks.length ? "Stay consistent together" : "Invite someone to study together"}</span></div>
             {partnerDashboardCards.length ? <div className="dashboard-partner-list">{partnerDashboardCards.map((item) => <button type="button" key={item.id} onClick={() => setActiveSection("bible-study")}><span className="dashboard-partner-mark">◆</span><span className="dashboard-partner-avatar">{item.partner?.avatar_url ? <img src={item.partner.avatar_url} alt=""/> : (item.partner?.full_name || "P").slice(0, 1)}</span><span><strong>You & {item.partner?.full_name || "Partner"}</strong><small>{item.streak} day{item.streak === 1 ? "" : "s"} · {item.mine && item.theirs ? "Completed together" : item.mine ? `Waiting on ${item.partner?.full_name || "partner"}` : "Your reading is waiting"}</small></span><b>Open</b></button>)}</div> : <button type="button" className="dashboard-partner-start" onClick={() => setActiveSection("bible-study")}>Start a Partner Streak</button>}
           </div>
-          {bibleCommunityActivity.length ? <div className="dashboard-bible-activity">{bibleCommunityActivity.map((item) => <button type="button" key={`${item.kind}-${item.id}`} onClick={() => setActiveSection("bible-study")}><span>{item.kind === "Takeaway" ? "✨" : item.kind === "Question" ? "💭" : item.kind === "Answer" ? "💡" : "💬"}</span><div><small>{item.kind} · {getMemberLabel(item.userId)}</small><strong>{truncateText(item.content, 110)}</strong></div><b>View →</b></button>)}</div> : <div className="dashboard-bible-empty">🌿 Be the first to share a Bible Study takeaway or question.</div>}
+          {bibleCommunityActivity.length ? <div className="dashboard-bible-activity">{bibleCommunityActivity.map((item) => <button type="button" key={`${item.kind}-${item.id}`} onClick={() => setActiveSection("bible-study")}><span className="dashboard-bible-activity-kind">{item.kind}</span><div><small>{item.kind} · {getMemberLabel(item.userId)}</small><strong>{truncateText(item.content, 110)}</strong></div><b>View <span aria-hidden="true">→</span></b></button>)}</div> : <div className="dashboard-bible-empty">Be the first to share a Bible Study takeaway or question.</div>}
         </Panel>
 
         <Panel
-          title="Discipleship"
-          subtitle="Discipleship 1 guidelines, weekly assignments, and the mandatory class project."
+          title="Class learning"
+          subtitle="Keep up with class sessions, assignments, and your learning progress."
           action={
             <button
               type="button"
               className="primary-button"
-              onClick={() => setActiveSection("discipleship")}
+              onClick={() => setActiveSection("assignments")}
             >
-              Open Discipleship
+              Open assignments
             </button>
           }
         >
@@ -3250,7 +3508,7 @@ export function AppShell() {
                   <p>
                     {myClassIds.size
                       ? "Review guidelines and stay current on assignments."
-                      : "Open Discipleship to join Discipleship 1 or another class."}
+                      : "Class enrollment and assignments will appear here when available."}
                   </p>
                 </article>
                 <article className="insight-card">
@@ -3328,9 +3586,9 @@ export function AppShell() {
                 <button
                   type="button"
                   className="secondary-button"
-                  onClick={() => setActiveSection("discipleship")}
+                  onClick={() => setActiveSection("assignments")}
                 >
-                  View all
+                  View assignments
                 </button>
               }
             >
@@ -3900,6 +4158,30 @@ export function AppShell() {
         </div>
       </div>
     );
+  }
+
+  function renderDashboardSection() {
+    const latestAnnouncements = sortedAnnouncements.slice(0, 2);
+    const nextEvents = sortedEvents.filter((item) => new Date(item.starts_at) >= new Date(liveNow)).slice(0, 2);
+    return <div className="section-stack dashboard-overview">
+      <section className="dashboard-welcome-card"><BrandLogo compact /><p className="eyebrow">{liveDateLabel}</p><h1>{greetingMessage}</h1><p>Make room for fellowship, Scripture, and the people God has placed around you.</p><div><button type="button" className="primary-button" onClick={() => setActiveSection("bible-study")}>Continue Bible Study</button><button type="button" className="secondary-button" onClick={() => setActiveSection("events")}>Explore events</button><button type="button" className="ghost-button dashboard-notifications-button" onClick={() => setShowNotificationCenter(true)}><NavIcon name="bell" />Notifications {unreadNotifications.length ? <span className="notification-count">{unreadNotifications.length}</span> : null}</button></div></section>
+      <div className="dashboard-overview-grid">
+        <Panel title="Today's focus" subtitle={bibleToday ? `Today's reading · ${bibleToday.book} ${bibleToday.chapter}` : "Your shared Scripture reading plan."} action={<button type="button" className="text-button" onClick={() => setActiveSection("bible-study")}>Open Bible Study</button>}>
+          <div className="dashboard-focus-reading"><span><NavIcon name="scripture" /></span><div><strong>{bibleToday ? `${bibleToday.book} ${bibleToday.chapter}` : "No reading scheduled"}</strong><p>{bibleToday ? `${bibleToday.reading_date} · ${bibleStudyTakeaways.length} community reflections` : "Visit Bible Study to see the reading plan."}</p></div></div>
+          <p className="dashboard-personal-progress">Your current reading streak: <strong>{myBibleStreak} day{myBibleStreak === 1 ? "" : "s"}</strong></p>
+        </Panel>
+        <Panel title="Coming up" subtitle="Gather with the community." action={<button type="button" className="text-button" onClick={() => setActiveSection("events")}>All events</button>}>
+          {nextEvents.length ? <div className="dashboard-compact-list">{nextEvents.map((eventRecord) => <button type="button" key={eventRecord.id} onClick={() => setActiveSection("events")}><span className="event-date-block"><strong>{new Intl.DateTimeFormat(undefined, { day: "2-digit" }).format(new Date(eventRecord.starts_at))}</strong><span>{new Intl.DateTimeFormat(undefined, { month: "short" }).format(new Date(eventRecord.starts_at))}</span></span><span><strong>{eventRecord.title}</strong><small>{formatDateTime(eventRecord.starts_at)} · {eventRecord.location || "Location to be confirmed"}</small></span></button>)}</div> : <EmptyState title="No upcoming gatherings" description="New group events will appear here when scheduled." />}
+        </Panel>
+        <Panel title="Community updates" subtitle="A few recent notes from your group." action={<button type="button" className="text-button" onClick={() => setActiveSection("announcements")}>All announcements</button>}>
+          {latestAnnouncements.length ? <div className="dashboard-announcement-list">{latestAnnouncements.map((item) => { const author = profiles.find((member) => member.id === item.created_by); return <button type="button" key={item.id} onClick={() => setActiveSection("announcements")}><span className="dashboard-announcement-author"><Avatar member={author} size="small" /></span><span><strong>{item.title}</strong><small>{author?.full_name || "Community member"} · {formatDateTime(item.created_at)}</small><p>{truncateText(item.body, 120)}</p></span></button>; })}</div> : <EmptyState title="No announcements yet" description="Updates from the community will show here." />}
+        </Panel>
+        <Panel title="Your activity" subtitle="A quick look at what is waiting for you.">
+          <div className="dashboard-activity-summary"><div><span>Unread notifications</span><strong>{unreadNotifications.length}</strong><button type="button" className="text-button" onClick={() => setShowNotificationCenter(true)}>Review notifications</button></div><div><span>Pending tasks</span><strong>{myPendingTasks}</strong><small>Event responsibilities assigned to you</small></div></div>
+          <div className="dashboard-shortcuts"><button type="button" onClick={() => setActiveSection("prayer")}><NavIcon name="prayer" />Prayer</button><button type="button" onClick={() => setActiveSection("members")}><NavIcon name="users" />Meet members</button><button type="button" onClick={() => setActiveSection("messages")}><NavIcon name="chat" />Messages</button></div>
+        </Panel>
+      </div>
+    </div>;
   }
 
   function renderPlanningSection() {
@@ -5149,6 +5431,90 @@ export function AppShell() {
     );
   }
 
+  function renderAssignmentsSection() {
+    const visibleClasses = discipleshipClasses.filter((classItem) => {
+      if (isAdmin || classItem.leader_id === user?.id) return true;
+      if (classItem.status !== "draft") return true;
+      return discipleshipEnrollments.some(
+        (row) => row.class_id === classItem.id && row.user_id === user?.id && row.status === "approved"
+      );
+    });
+    const selectedClass =
+      visibleClasses.find((classItem) => classItem.id === selectedAssignmentClassId) ?? visibleClasses[0] ?? null;
+    const isApprovedEnrolled = Boolean(selectedClass && discipleshipEnrollments.some(
+      (row) => row.class_id === selectedClass.id && row.user_id === user?.id && row.status === "approved"
+    ));
+    const manageMode = Boolean(selectedClass && (isAdmin || selectedClass.leader_id === user?.id));
+
+    return (
+      <div className="page-stack assignments-page">
+        <div className="page-intro">
+          <div>
+            <p className="eyebrow">Learning together</p>
+            <h1>Assignments</h1>
+            <p>Review class work, submit your assignments, and follow feedback from your class leader.</p>
+          </div>
+          {visibleClasses.length > 1 ? (
+            <label className="field assignments-class-picker">
+              <span>Class</span>
+              <select value={selectedClass?.id ?? ""} onChange={(event) => setSelectedAssignmentClassId(event.target.value)}>
+                {visibleClasses.map((classItem) => <option key={classItem.id} value={classItem.id}>{classItem.title}</option>)}
+              </select>
+            </label>
+          ) : null}
+        </div>
+        {selectedClass && !manageMode && !isApprovedEnrolled ? (
+          <Panel title={selectedClass.title} subtitle={selectedClass.description || "Class details and enrollment."}>
+            {(() => {
+              const enrollment = discipleshipEnrollments.find((row) => row.class_id === selectedClass.id && row.user_id === user?.id);
+              const canJoin = selectedClass.status !== "draft" && (!selectedClass.ends_at || new Date(selectedClass.ends_at) >= new Date(liveNow));
+              return <div className="assignment-enrollment-card">
+                {selectedClass.starts_at ? <p><strong>Starts:</strong> {formatDateTime(selectedClass.starts_at)}</p> : null}
+                {selectedClass.leader_id ? <p><strong>Class leader:</strong> {getMemberLabel(selectedClass.leader_id)}</p> : null}
+                {enrollment?.status === "pending" ? <p className="pill warning">Enrollment request pending</p> : null}
+                {canJoin && !enrollment ? <button type="button" className="primary-button" disabled={submitting} onClick={() => void runAction(async () => {
+                  const status = selectedClass.requires_approval ? "pending" : "approved";
+                  const now = new Date().toISOString();
+                  const { error } = await supabase.from("discipleship_enrollments").upsert({
+                    class_id: selectedClass.id,
+                    user_id: user.id,
+                    status,
+                    enrolled_at: now,
+                    ...(status === "approved" ? { approved_by: user.id, approved_at: now } : {})
+                  }, { onConflict: "class_id,user_id" });
+                  if (error) throw error;
+                }, selectedClass.requires_approval ? "Enrollment request sent." : "You joined the class.")}>{selectedClass.requires_approval ? "Request to join" : "Join class"}</button> : null}
+              </div>;
+            })()}
+          </Panel>
+        ) : selectedClass ? (
+          <DiscipleshipAssignments
+            user={user}
+            profiles={profiles}
+            selectedClass={selectedClass}
+            lessons={discipleshipLessons}
+            submissions={discipleshipAssignmentSubmissions}
+            submissionHistory={discipleshipSubmissionHistory}
+            enrollments={discipleshipEnrollments}
+            runAction={runAction}
+            submitting={submitting}
+            manageMode={manageMode}
+            isApprovedEnrolled={isApprovedEnrolled}
+            liveNow={liveNow}
+          />
+        ) : (
+          <Panel title="No class assignments yet" subtitle="Assignments appear here when you are enrolled in a class or lead one.">
+            <EmptyState title="Nothing to work on yet" description="Your class assignments and feedback will be available here once a class is active." />
+          </Panel>
+        )}
+        <div className="assignments-leadership-schedule">
+          <h2>Leader schedule</h2>
+          {renderLeadershipSection()}
+        </div>
+      </div>
+    );
+  }
+
   function formatCountdown(targetDate) {
     if (!targetDate) {
       return "";
@@ -5266,13 +5632,13 @@ export function AppShell() {
     return String(id).startsWith("optimistic-");
   }
 
-  async function deleteAnnouncementReactionRow({ announcementId, reaction, row }) {
+  async function deleteAnnouncementReactionRow({ entityTable, entityId, reaction, row }) {
     if (isOptimisticReactionId(row?.id)) {
       return supabase
         .from("reactions")
         .delete()
-        .eq("entity_table", "announcements")
-        .eq("entity_id", announcementId)
+        .eq("entity_table", entityTable)
+        .eq("entity_id", entityId)
         .eq("user_id", user.id)
         .eq("reaction", reaction);
     }
@@ -5280,20 +5646,23 @@ export function AppShell() {
     return supabase.from("reactions").delete().eq("id", row.id);
   }
 
-  async function toggleAnnouncementReaction({ announcementId, reaction }) {
+  async function toggleAnnouncementReaction({ entityTable = "announcements", entityId, announcementId, reaction }) {
     if (!supabase || !user?.id) {
       return false;
     }
 
+    const targetId = entityId ?? announcementId;
+    if (!targetId) return false;
+
     const userRows = reactions.filter(
       (row) =>
-        row.entity_table === "announcements" &&
-        row.entity_id === announcementId &&
+        row.entity_table === entityTable &&
+        row.entity_id === targetId &&
         row.user_id === user.id
     );
     const existingSame = userRows.find((row) => row.reaction === reaction);
     const previousReactions = reactions;
-    const optimisticId = `optimistic-${announcementId}-${reaction}`;
+    const optimisticId = `optimistic-${entityTable}-${targetId}-${reaction}`;
 
     let nextReactions = reactions;
 
@@ -5304,16 +5673,16 @@ export function AppShell() {
         {
           id: optimisticId,
           user_id: user.id,
-          entity_table: "announcements",
-          entity_id: announcementId,
+          entity_table: entityTable,
+          entity_id: targetId,
           reaction,
           created_at: new Date().toISOString()
         },
         ...reactions.filter(
           (row) =>
             !(
-              row.entity_table === "announcements" &&
-              row.entity_id === announcementId &&
+              row.entity_table === entityTable &&
+              row.entity_id === targetId &&
               row.user_id === user.id
             )
         )
@@ -5325,7 +5694,8 @@ export function AppShell() {
     try {
       if (existingSame) {
         const { error } = await deleteAnnouncementReactionRow({
-          announcementId,
+          entityTable,
+          entityId: targetId,
           reaction,
           row: existingSame
         });
@@ -5338,8 +5708,8 @@ export function AppShell() {
           const { error: deleteError } = await supabase
             .from("reactions")
             .delete()
-            .eq("entity_table", "announcements")
-            .eq("entity_id", announcementId)
+            .eq("entity_table", entityTable)
+            .eq("entity_id", targetId)
             .eq("user_id", user.id);
 
           if (deleteError) {
@@ -5352,8 +5722,8 @@ export function AppShell() {
           .insert([
             {
               user_id: user.id,
-              entity_table: "announcements",
-              entity_id: announcementId,
+              entity_table: entityTable,
+              entity_id: targetId,
               reaction
             }
           ])
@@ -5851,8 +6221,16 @@ export function AppShell() {
   }
 
   function renderMembersSection() {
+    const visibleMembers = profiles.filter((member) => {
+      if (!isAdmin && !member.is_active) return false;
+      if (memberStatusFilter === "active" && !member.is_active) return false;
+      if (memberStatusFilter === "paused" && member.is_active) return false;
+      const query = memberSearch.trim().toLowerCase();
+      return !query || [member.full_name, member.email, member.role].some((value) => value?.toLowerCase().includes(query));
+    });
     return (
       <div className="section-stack">
+        <header className="page-intro"><div><p className="eyebrow">Our community</p><h1>Members</h1><p>{activeMembers.length} active member{activeMembers.length === 1 ? "" : "s"} in Glory Carriers.</p></div></header>
         {isAdmin ? (
           <div className="member-overview-grid">
             <StatCard
@@ -5888,9 +6266,10 @@ export function AppShell() {
               : "See who is part of the planning space and start a conversation with any active member."
           }
         >
-          {profiles.length ? (
+          <div className="member-directory-controls"><label className="field"><span>Search members</span><input type="search" value={memberSearch} onChange={(event) => setMemberSearch(event.target.value)} placeholder="Name, email, or role" /></label>{isAdmin ? <label className="field"><span>Account status</span><select value={memberStatusFilter} onChange={(event) => setMemberStatusFilter(event.target.value)}><option value="all">All accounts</option><option value="active">Active</option><option value="paused">Paused</option></select></label> : null}<span className="inline-help">{visibleMembers.length} shown</span></div>
+          {visibleMembers.length ? (
             <div className="members-grid">
-              {profiles.map((member) => (
+              {visibleMembers.map((member) => (
                 <article key={member.id} className="member-card">
                   <div className="member-card-top">
                     <div className="member-summary">
@@ -5986,8 +6365,8 @@ export function AppShell() {
             </div>
           ) : (
             <EmptyState
-              title="No members yet"
-              description="User accounts will appear here after people sign up."
+              title={memberSearch || memberStatusFilter !== "all" ? "No matching members" : "No members yet"}
+              description={memberSearch || memberStatusFilter !== "all" ? "Try another name or account status." : "User accounts will appear here after people sign up."}
             />
           )}
 
@@ -6190,58 +6569,25 @@ export function AppShell() {
     );
   }
 
-  const selfManagedSections = new Set(["discipleship", "management", "bible-study"]);
+  const selfManagedSections = new Set(["management", "bible-study"]);
   const isManagementSection = activeSection === "management";
   const deferSectionForGlobalLoad = loading && !selfManagedSections.has(activeSection);
-  const showDashboardChrome = !selfManagedSections.has(activeSection);
+  const showDashboardChrome = activeSection !== "dashboard" && !selfManagedSections.has(activeSection);
 
-  const sectionContent = deferSectionForGlobalLoad ? null : activeSection === "events"
-    ? renderEventSection()
-    : activeSection === "planning"
-      ? renderPlanningSection()
+  const sectionContent = deferSectionForGlobalLoad ? null : activeSection === "dashboard"
+    ? renderDashboardSection()
+    : activeSection === "announcements"
+      ? renderAnnouncementsSection()
+      : activeSection === "events"
+        ? renderEventsDirectorySection()
       : activeSection === "prayer"
         ? renderPrayerSection()
-        : activeSection === "tasks"
-          ? renderTaskSection()
           : activeSection === "resources"
             ? renderResourcesSection()
-            : activeSection === "discipleship"
-              ? (
-                <DiscipleshipSection
-                  user={user}
-                  isAdmin={isAdmin}
-                  profiles={profiles}
-                  classes={discipleshipClasses}
-                  sessions={discipleshipSessions}
-                  enrollments={discipleshipEnrollments}
-                  lessons={discipleshipLessons}
-                  lessonCompletions={discipleshipLessonCompletions}
-                  assignmentSubmissions={discipleshipAssignmentSubmissions}
-                  submissionHistory={discipleshipSubmissionHistory}
-                  memberNotes={discipleshipMemberNotes}
-                  sessionAttendance={discipleshipSessionAttendance}
-                  discussions={discipleshipDiscussions}
-                  reactions={reactions}
-                  runAction={runAction}
-                  submitting={submitting}
-                  liveNow={liveNow}
-                  selectedClassId={selectedDiscipleshipClassId}
-                  onSelectClassId={setSelectedDiscipleshipClassId}
-                  focusDetailTab={discipleshipTabFocus}
-                  onFocusDetailTabConsumed={() => setDiscipleshipTabFocus("")}
-                  theme={theme}
-                  onThemeToggle={() =>
-                    setTheme((current) => (current === "light" ? "dark" : "light"))
-                  }
-                  notificationCount={unreadNotifications.length}
-                  onOpenNotifications={() => setShowNotificationTray(true)}
-                  userAvatarUrl={currentMember?.avatar_url ?? ""}
-                />
-              )
             : activeSection === "bible-study"
               ? <BibleStudySection user={user} profile={profile} profiles={profiles} isAdmin={isAdmin} />
-            : activeSection === "leadership"
-              ? renderLeadershipSection()
+            : activeSection === "assignments"
+              ? renderAssignmentsSection()
               : activeSection === "meetings"
                 ? renderMeetingsSection()
               : activeSection === "messages"
@@ -6250,12 +6596,13 @@ export function AppShell() {
                   ? renderMembersSection()
                   : activeSection === "management"
                     ? (
-                      <CellGroupManagementSection
+                      isAdmin ? <CellGroupManagementSection
                         user={user}
                         isAdmin={isAdmin}
                         profiles={profiles}
                         onNavigateSection={setActiveSection}
                       />
+                      : <EmptyState title="Access restricted" description="This control center is available to authorized administrators." />
                     )
                   : activeSection === "settings"
                     ? renderSettingsSection()
@@ -6273,33 +6620,34 @@ export function AppShell() {
         }
         roleLabel={isAdmin ? "Admin access" : "Member access"}
         currentMember={currentMember}
+        unreadCount={unreadNotifications.length}
+        onOpenNotifications={() => setShowNotificationCenter(true)}
         onSignOut={() => signOut()}
       />
 
-      <button
-        type="button"
-        className="app-mobile-menu-trigger"
-        aria-label="Open page navigation"
-        aria-expanded={mobileMenuOpen}
-        onClick={() => setMobileMenuOpen(true)}
-      >
-        <NavIcon name="menu" />
-        <span>Pages</span>
-      </button>
-
-      <button
-        type="button"
-        className="app-mobile-theme-trigger"
-        onClick={() => setTheme((current) => (current === "light" ? "dark" : "light"))}
-        aria-label={theme === "light" ? "Switch to dark theme" : "Switch to light theme"}
-        title={theme === "light" ? "Switch to dark theme" : "Switch to light theme"}
-      >
-        <span aria-hidden="true">{theme === "light" ? "☾" : "☀"}</span>
-        <span>{theme === "light" ? "Dark" : "Light"}</span>
-      </button>
-
       <main className={`main-content${isManagementSection ? " main-content--management" : ""}`}>
+        <header className="mobile-app-header">
+          <BrandLogo compact />
+          <span className="mobile-app-page-title">{activeSectionLabel}</span>
+          <button ref={mobileMenuTriggerRef} type="button" className={"mobile-app-menu-trigger" + (mobileMenuOpen || !quickNavigationIds.includes(activeSection) ? " active" : "")} aria-label={mobileMenuOpen ? "Close navigation menu" : "Open navigation menu"} aria-expanded={mobileMenuOpen} aria-controls="mobile-navigation-drawer" onClick={() => setMobileMenuOpen((open) => !open)}>
+            <NavIcon name="menu" />
+          </button>
+          <button type="button" className="mobile-app-icon-button" aria-label={`Notifications${unreadNotifications.length ? `, ${unreadNotifications.length} unread` : ""}`} onClick={() => setShowNotificationCenter(true)}>
+            <NavIcon name="bell" />{unreadNotifications.length ? <span>{unreadNotifications.length > 99 ? "99+" : unreadNotifications.length}</span> : null}
+          </button>
+          <div className="mobile-account-menu-wrap" ref={mobileAccountMenuRef}>
+            <button type="button" className="mobile-profile-button" aria-label="Open profile menu" aria-expanded={mobileAccountOpen} aria-haspopup="menu" onClick={() => setMobileAccountOpen((open) => !open)}><Avatar member={currentMember} size="small" /></button>
+            {mobileAccountOpen ? <div className="mobile-profile-menu" role="menu" aria-label="Profile menu">
+              <strong>{currentMember?.full_name || "Member"}</strong><small>{isAdmin ? "Admin access" : "Member access"}</small>
+              <button type="button" role="menuitem" onClick={() => { setActiveSection("settings"); setMobileAccountOpen(false); }}>Profile &amp; settings</button>
+              {notificationPermission !== "granted" && notificationPermission !== "unsupported" && isPushSupported() ? <button type="button" role="menuitem" onClick={() => { setShowPushPrompt(true); setMobileAccountOpen(false); }}>Enable notifications</button> : null}
+              <button type="button" role="menuitem" onClick={() => { setTheme((current) => current === "light" ? "dark" : "light"); setMobileAccountOpen(false); }}>{theme === "light" ? "Switch to dark theme" : "Switch to light theme"}</button>
+              <button type="button" role="menuitem" onClick={() => { setMobileAccountOpen(false); void signOut(); }}>Sign out</button>
+            </div> : null}
+          </div>
+        </header>
         {showDashboardChrome ? <header className="topbar">
+          <div className="mobile-brand"><BrandLogo compact /></div>
           <div className="topbar-hero">
             <div className="avatar-orb">
               <Avatar member={currentMember} size="large" />
@@ -6308,8 +6656,8 @@ export function AppShell() {
 
             <div className="topbar-copy">
               <p className="eyebrow">{activeSectionLabel}</p>
-              <h2>
-                {greetingMessage} <span className="welcome-smile">😊</span>
+                <h2>
+                {greetingMessage}
               </h2>
               <p className="muted-text">
                 Welcome back! Let&apos;s plan something meaningful together.
@@ -6436,73 +6784,7 @@ export function AppShell() {
           </div>
         ) : null}
 
-        {showDashboardChrome ? (
-        <section className="stats-grid">
-          <StatCard
-            label="Upcoming events"
-            value={events.length}
-            caption={
-              events.length
-                ? "Every event is backed by Supabase and shared instantly."
-                : "Start with the first event to unlock collaboration."
-            }
-          />
-          <StatCard
-            label="Ideas shared"
-            value={ideas.length}
-            caption="Suggestions stay linked to each event for focused planning."
-            accent="orange"
-          />
-          <StatCard
-            label={isAdmin ? "Pending tasks" : "My pending tasks"}
-            value={isAdmin ? tasks.filter((task) => task.status === "pending").length : myPendingTasks}
-            caption={
-              isAdmin
-                ? "Keep an eye on unfinished work across the whole group."
-                : "Your open responsibilities stay visible and easy to manage."
-            }
-          />
-          <StatCard
-            label="Messages live"
-            value={messages.length}
-            caption="Replies, direct notes, and broadcasts update in real time."
-            accent="orange"
-          />
-        </section>
-        ) : null}
-
-        {shouldShowFocusBar ? (
-          <section className="focus-bar">
-            <label className="field">
-              <span>Focus event</span>
-              <select
-                value={selectedEventId}
-                onChange={(event) => setSelectedEventId(event.target.value)}
-              >
-                <option value="">No event selected</option>
-                {sortedEvents.map((eventRecord) => (
-                  <option key={eventRecord.id} value={eventRecord.id}>
-                    {eventRecord.title}
-                  </option>
-                ))}
-              </select>
-            </label>
-
-            <div className="focus-summary">
-              {selectedEvent ? (
-                <>
-                  <strong>{selectedEvent.title}</strong>
-                  <span>{formatDateTime(selectedEvent.starts_at)}</span>
-                  <span>{selectedEvent.location || "Location TBD"}</span>
-                </>
-              ) : (
-                <span>Select an event to focus the RSVP, planning, and task views.</span>
-              )}
-            </div>
-          </section>
-        ) : null}
-
-        {loading && showDashboardChrome ? (
+        {loading && !selfManagedSections.has(activeSection) ? (
           <Panel title="Loading workspace" subtitle="Pulling the latest data from Supabase.">
             <div className="loading-inline">
               <div className="spinner" aria-hidden="true" />
@@ -6513,21 +6795,26 @@ export function AppShell() {
         {(!loading || selfManagedSections.has(activeSection)) ? (
           <div
             className={`section-stage${[
+              "dashboard",
               "events",
-              "planning",
+              "announcements",
               "prayer",
-              "tasks",
               "resources",
-              "discipleship",
-              "leadership",
+              "assignments",
               "meetings",
               "messages",
               "members",
               "settings"
             ].includes(activeSection) ? ` workspace-page workspace-page--${activeSection}` : ""}`}
-            style={activeSection === "events" ? { "--dashboard-art": `url(${dashboardBackdrop})` } : undefined}
+            style={{
+              "--dashboard-art": `url("${communityBackdrop}")`,
+              "--page-art": `url("${communityBackdrop}")`
+            }}
             key={activeSection}
           >
+            {!(["dashboard", "events", "announcements"].includes(activeSection)) ? (
+              <div className="section-art-strip" aria-hidden="true" />
+            ) : null}
             {sectionContent}
           </div>
         ) : null}
@@ -6574,6 +6861,9 @@ export function AppShell() {
         onSelect={setActiveSection}
         open={mobileMenuOpen}
         onOpenChange={setMobileMenuOpen}
+        menuButtonRef={mobileMenuTriggerRef}
+        unreadCount={unreadNotifications.length}
+        onOpenNotifications={() => setShowNotificationCenter(true)}
       />
     </div>
   );

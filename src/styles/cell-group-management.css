@@ -1803,4 +1803,17 @@
     width: min(100%, 56rem);
   }
 }
-.cgm-admin-shortcuts { display:flex; flex-wrap:wrap; gap:.55rem; margin:0 0 1rem; padding:.75rem; border:1px solid var(--border); border-radius:1rem; background:var(--surface-strong); }
+.cgm-admin-workspace { display:grid; grid-template-columns: 15.5rem minmax(0, 1fr); align-items:start; gap:1.25rem; }
+.cgm-admin-nav.cgm-tabs { position:sticky; top:1rem; display:flex; flex-direction:column; align-items:stretch; gap:.25rem; margin:0; padding:.8rem; overflow:visible; }
+.cgm-admin-nav-heading { margin:.35rem .7rem .45rem; color:var(--cgm-text-muted); font-size:.68rem; font-weight:800; letter-spacing:.12em; text-transform:uppercase; }
+.cgm-admin-nav-heading--tools { margin-top:1.1rem; padding-top:.9rem; border-top:1px solid var(--cgm-border); }
+.cgm-admin-nav .cgm-tab { display:flex; align-items:center; justify-content:space-between; width:100%; min-height:2.65rem; padding:.65rem .75rem; text-align:left; }
+.cgm-admin-content { min-width:0; }
+.cgm-admin-content-heading { margin:0 0 1rem; padding:.15rem .15rem .9rem; border-bottom:1px solid var(--cgm-border); }
+.cgm-admin-content-heading p { margin:0 0 .25rem; color:var(--cgm-text-muted); font-size:.67rem; font-weight:800; letter-spacing:.13em; }
+.cgm-admin-content-heading h2 { margin:0; color:var(--cgm-text); font-size:1.25rem; letter-spacing:-.02em; }
+.cgm-admin-tool-link { display:flex; align-items:center; width:100%; min-height:2.55rem; padding:.55rem .75rem; border:0; border-radius:.65rem; background:transparent; color:var(--cgm-text-muted); font:600 .84rem/1.35 var(--cgm-font); text-align:left; cursor:pointer; transition:background .15s,color .15s; }
+.cgm-admin-tool-link:hover,.cgm-admin-tool-link:focus-visible { background:var(--cgm-surface-3); color:var(--cgm-text); }
+.cgm-admin-tool-link:focus-visible { outline:2px solid var(--cgm-orange); outline-offset:2px; }
+.cgm-admin-tool-link--return { margin-top:.65rem; padding-top:.85rem; border-top:1px solid var(--cgm-border); border-radius:0; }
+@media (max-width: 900px) { .cgm-admin-workspace { grid-template-columns:1fr; } .cgm-admin-nav.cgm-tabs { position:static; display:flex; flex-direction:row; align-items:center; gap:.3rem; padding:.45rem; overflow-x:auto; } .cgm-admin-nav-heading { display:none; } .cgm-admin-nav .cgm-tab,.cgm-admin-nav .cgm-admin-tool-link { width:auto; flex:0 0 auto; min-height:2.5rem; } .cgm-admin-nav .cgm-admin-tool-link--return { margin:0; padding:.55rem .75rem; border:0; } }

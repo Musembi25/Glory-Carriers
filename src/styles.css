@@ -5816,10 +5816,14 @@ textarea {
   .mobile-app-icon-button > span { position:absolute; top:-.2rem; right:-.25rem; min-width:1.05rem; height:1.05rem; padding:0 .2rem; border-radius:999px; background:var(--accent-strong); color:#fff; font-size:.58rem; font-weight:800; line-height:1.05rem; }
   .mobile-profile-button { overflow:hidden; }
   .mobile-profile-button .avatar { width:2.2rem; height:2.2rem; }
-  .mobile-account-menu-wrap { position:relative; }
-  .mobile-profile-menu { top:calc(100% + .6rem); bottom:auto; width:13.5rem; }
-  .mobile-profile-menu strong,.mobile-profile-menu small { padding:0 .65rem; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-  .mobile-profile-menu small { margin-top:-.15rem; margin-bottom:.25rem; color:var(--text-muted); font-size:.72rem; }
+  .mobile-account-menu-wrap { position:relative; z-index:31; }
+  .mobile-profile-menu { top:calc(100% + .6rem); bottom:auto; right:0; width:min(19rem,calc(100vw - 1rem)); gap:.5rem; padding:.8rem; border-color:color-mix(in srgb,var(--text) 16%,var(--border)); border-radius:1rem; background:var(--surface-strong); box-shadow:0 14px 34px rgba(0,0,0,.2),0 2px 8px rgba(0,0,0,.1); }
+  .mobile-profile-menu strong,.mobile-profile-menu small { display:block; padding:0 .25rem; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .mobile-profile-menu strong { color:var(--text); font-size:.96rem; line-height:1.45; }
+  .mobile-profile-menu small { margin:0 0 .3rem; padding:0 .25rem .7rem; border-bottom:1px solid var(--border); color:var(--text-muted); font-size:.8rem; line-height:1.4; }
+  .mobile-profile-menu button { display:flex; align-items:center; width:100%; min-height:3.15rem; padding:.8rem .85rem; border:1px solid var(--border); border-radius:.75rem; color:var(--text); background:var(--surface-muted); font:inherit; font-size:.94rem; font-weight:650; line-height:1.4; text-align:left; white-space:normal; }
+  .mobile-profile-menu button:hover,.mobile-profile-menu button:focus-visible { color:var(--text); background:color-mix(in srgb,var(--surface-muted) 68%,var(--primary-soft)); }
+  .mobile-profile-menu button:focus-visible { outline:2px solid var(--primary-strong); outline-offset:1px; }
   .mobile-brand { display:none; }
   .app-mobile-menu-trigger,.app-mobile-theme-trigger { display:none !important; }
   .mobile-drawer { width:min(25rem,calc(100vw - 2rem)); border-radius:0 var(--radius-xl) var(--radius-xl) 0; padding:calc(.8rem + env(safe-area-inset-top)) 1rem calc(.8rem + env(safe-area-inset-bottom)); }

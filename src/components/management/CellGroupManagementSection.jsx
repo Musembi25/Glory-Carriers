@@ -870,10 +870,12 @@ export function CellGroupManagementSection({
         <div className="cgm-hero-glow" aria-hidden="true" />
         <div className="cgm-hero-inner">
           <div className="cgm-hero-copy">
-            <p className="cgm-hero-eyebrow">Leadership Portal</p>
-            <h1>{cellGroup?.name || "Cell Group Management"}</h1>
+            <p className="cgm-hero-eyebrow">{isAdmin ? "Glory Carriers Administration" : "Leadership Portal"}</p>
+            <h1>{isAdmin ? "Admin Control Center" : cellGroup?.name || "Cell Group Management"}</h1>
             <p className="cgm-hero-desc">
-              Manage membership, requests, rules, and settings from one premium workspace.
+              {isAdmin
+                ? "Manage your community, review requests, and reach the app's existing administration tools from one secure workspace."
+                : "Manage membership, requests, rules, and settings from one workspace."}
             </p>
             {leaderProfile ? (
               <span className="cgm-leader-badge">
@@ -927,20 +929,15 @@ export function CellGroupManagementSection({
         </div>
       </section>
 
-      {isAdmin ? <nav className="cgm-admin-shortcuts" aria-label="Administrative tools">
-        <button type="button" className="cgm-btn cgm-btn-secondary" onClick={() => onNavigateSection("bible-study")}>Bible Study reading plan</button>
-        <button type="button" className="cgm-btn cgm-btn-secondary" onClick={() => onNavigateSection("events")}>Events management</button>
-        <button type="button" className="cgm-btn cgm-btn-secondary" onClick={() => onNavigateSection("announcements")}>Announcement oversight</button>
-      </nav> : null}
-
       <div className="cgm-shell">
-      <nav className="cgm-tabs" role="tablist">
+      <div className="cgm-admin-workspace">
+      <nav className="cgm-tabs cgm-admin-nav" aria-label="Management sections">
+        <p className="cgm-admin-nav-heading">Workspace</p>
         {MANAGEMENT_TABS.map((tab) => (
           <button
             key={tab.id}
             type="button"
-            role="tab"
-            aria-selected={activeTab === tab.id}
+            aria-current={activeTab === tab.id ? "page" : undefined}
             className={`cgm-tab${activeTab === tab.id ? " active" : ""}`}
             onClick={() => setActiveTab(tab.id)}
           >
@@ -950,8 +947,21 @@ export function CellGroupManagementSection({
             ) : null}
           </button>
         ))}
+        {isAdmin ? <>
+          <p className="cgm-admin-nav-heading cgm-admin-nav-heading--tools">App administration</p>
+          <button type="button" className="cgm-admin-tool-link" onClick={() => onNavigateSection("members")}>Member accounts</button>
+          <button type="button" className="cgm-admin-tool-link" onClick={() => onNavigateSection("bible-study")}>Bible Study plan</button>
+          <button type="button" className="cgm-admin-tool-link" onClick={() => onNavigateSection("events")}>Events</button>
+          <button type="button" className="cgm-admin-tool-link" onClick={() => onNavigateSection("announcements")}>Announcements</button>
+          <button type="button" className="cgm-admin-tool-link cgm-admin-tool-link--return" onClick={() => onNavigateSection("dashboard")}>Return to member home</button>
+        </> : null}
       </nav>
 
+      <div className="cgm-admin-content">
+      <div className="cgm-admin-content-heading">
+        <p>{isAdmin ? "ADMIN WORKSPACE" : "GROUP WORKSPACE"}</p>
+        <h2>{MANAGEMENT_TABS.find((tab) => tab.id === activeTab)?.label || "Overview"}</h2>
+      </div>
       {activeTab === "overview" ? (
         <>
           <div className="cgm-stats-grid">
@@ -1523,6 +1533,8 @@ export function CellGroupManagementSection({
         </div>
       ) : null}
 
+      </div>
+      </div>
       </div>
 
       <ToastStack toasts={toasts} onDismiss={(id) => setToasts((c) => c.filter((t) => t.id !== id))} />

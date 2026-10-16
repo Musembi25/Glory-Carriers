@@ -581,23 +581,29 @@ function EmptyState({ title, description }) {
   );
 }
 
-function PulseMediaCarousel({ attachments, title, onOpen, onLike, initialIndex = 0 }) {
+function PulseMediaCarousel({ attachments, title, onLike, initialIndex = 0 }) {
   const [index, setIndex] = useState(initialIndex);
   const [heart, setHeart] = useState(null);
   const tapRef = useRef(null);
-  const openTimerRef = useRef(null);
   const heartTimerRef = useRef(null);
+  const swipeStartRef = useRef(null);
   const count = attachments.length;
   const currentIndex = Math.min(index, Math.max(count - 1, 0));
   const move = (direction) => setIndex((current) => (current + direction + count) % count);
 
   useEffect(() => () => {
-    window.clearTimeout(openTimerRef.current);
     window.clearTimeout(heartTimerRef.current);
   }, []);
 
   function handleMediaTap(event) {
     if (event.pointerType === "mouse" && event.button !== 0) return;
+    const start = swipeStartRef.current;
+    swipeStartRef.current = null;
+    if (event.pointerType === "touch" && start && Math.abs(event.clientX - start.x) > 42) {
+      tapRef.current = null;
+      move(event.clientX < start.x ? 1 : -1);
+      return;
+    }
     const now = Date.now();
     const target = event.currentTarget.getBoundingClientRect();
     const point = { x: ((event.clientX - target.left) / target.width) * 100, y: ((event.clientY - target.top) / target.height) * 100 };
@@ -605,7 +611,6 @@ function PulseMediaCarousel({ attachments, title, onOpen, onLike, initialIndex =
     const isDoubleTap = previous && now - previous.time < 300 && Math.hypot(point.x - previous.x, point.y - previous.y) < 15;
 
     if (isDoubleTap) {
-      window.clearTimeout(openTimerRef.current);
       tapRef.current = null;
       setHeart({ ...point, id: now });
       window.clearTimeout(heartTimerRef.current);
@@ -615,17 +620,15 @@ function PulseMediaCarousel({ attachments, title, onOpen, onLike, initialIndex =
     }
 
     tapRef.current = { ...point, time: now };
-    window.clearTimeout(openTimerRef.current);
-    openTimerRef.current = window.setTimeout(() => onOpen(currentIndex), 310);
   }
 
   if (!count) return null;
 
   return (
     <div className="pulse-media-carousel" aria-label={`${count} photo${count === 1 ? "" : "s"}`}>
-      <button type="button" className="pulse-media-stage" onPointerUp={handleMediaTap} onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); onOpen(currentIndex); } }} aria-label={`Open photo ${currentIndex + 1} of ${count}. Double tap to like`}>
-        <img src={attachments[currentIndex]} alt={title ? `${title} · photo ${currentIndex + 1}` : `Community photo ${currentIndex + 1}`} loading="lazy" />
-      </button>
+      <div className="pulse-media-stage" onPointerDown={(event) => { swipeStartRef.current = { x: event.clientX }; }} onPointerUp={handleMediaTap} onPointerCancel={() => { swipeStartRef.current = null; }} aria-label={`Photo ${currentIndex + 1} of ${count}. Double tap to like`}>
+        <img src={attachments[currentIndex]} alt={title ? `${title} · photo ${currentIndex + 1}` : `Community photo ${currentIndex + 1}`} loading="lazy" decoding="async" />
+      </div>
       {heart ? <span className="pulse-like-heart" style={{ "--heart-x": `${heart.x}%`, "--heart-y": `${heart.y}%` }} aria-hidden="true">♥</span> : null}
       {count > 1 ? <>
         <button type="button" className="pulse-media-control previous" onClick={() => move(-1)} aria-label="Previous photo">‹</button>
@@ -665,6 +668,64 @@ function PulseTextLikeArea({ children, onLike }) {
   }
 
   return <p className="community-post-body pulse-text-like-area" onPointerUp={handleTextTap}>{children}{heart ? <span className="pulse-like-heart" style={{ "--heart-x": `${heart.x}%`, "--heart-y": `${heart.y}%` }} aria-hidden="true">♥</span> : null}</p>;
+}
+
+function PulseCommentsSheet({ post, replies, profiles, reactions, userId, isAdmin, submitting, draft, onDraftChange, onClose, closeButtonRef, onToggleReaction, onManageReply, onSubmit }) {
+  return <div className="pulse-overlay pulse-comments-overlay" role="presentation" onMouseDown={onClose}>
+    <section className="pulse-conversation-sheet pulse-comments-sheet" role="dialog" aria-modal="true" aria-labelledby="pulse-conversation-title" onMouseDown={(event) => event.stopPropagation()}>
+      <header><div><p className="gc-pulse-kicker">COMMUNITY CONVERSATION</p><h2 id="pulse-conversation-title">Comments</h2><p>{replies.length ? `${replies.length} comment${replies.length === 1 ? "" : "s"}` : "Start the conversation"}</p></div><button ref={closeButtonRef} type="button" aria-label="Close comments" onClick={onClose}>×</button></header>
+      <div className="pulse-conversation-thread">{replies.length ? replies.map((reply) => { const replyAuthor = profiles.find((member) => member.id === reply.user_id); return <article className="community-reply" key={reply.id}><Avatar member={replyAuthor} size="small" /><div className="community-reply-content"><strong>{replyAuthor?.full_name || replyAuthor?.email || "Member"}</strong><p>{reply.body}</p><time dateTime={reply.created_at}>{formatDateTime(reply.created_at)}</time><AnnouncementReplyReactions replyId={reply.id} reactions={reactions} userId={userId} disabled={submitting} onToggle={onToggleReaction} /></div>{(isAdmin || reply.user_id === userId) ? <div className="community-post-actions"><button type="button" className="ghost-button compact" onClick={() => onManageReply(reply, "edit")}>Edit</button><button type="button" className="ghost-button compact danger" onClick={() => onManageReply(reply, "delete")}>Delete</button></div> : null}</article> }) : <p className="pulse-conversation-empty">No comments yet. Be the first to encourage someone.</p>}</div>
+      <form className="community-reply-form" onSubmit={(event) => onSubmit(event, post.id)}><textarea autoFocus rows={1} aria-label="Write a comment" maxLength={2000} value={draft} onChange={(event) => onDraftChange(event.target.value)} placeholder="Write a thoughtful comment…" /><button type="submit" className="primary-button compact" disabled={submitting || !draft.trim()}>Send</button></form>
+    </section>
+  </div>;
+}
+
+function PulseMediaViewer({ attachments, title, initialIndex = 0, onClose, closeButtonRef }) {
+  const [index, setIndex] = useState(initialIndex);
+  const [zoomed, setZoomed] = useState(false);
+  const tapRef = useRef(null);
+  const swipeStartRef = useRef(null);
+  const count = attachments.length;
+  const currentIndex = Math.min(index, Math.max(count - 1, 0));
+  const move = (direction) => { setZoomed(false); setIndex((current) => (current + direction + count) % count); };
+
+  useEffect(() => {
+    function onKeyDown(event) {
+      if (count > 1 && event.key === "ArrowLeft") move(-1);
+      if (count > 1 && event.key === "ArrowRight") move(1);
+    }
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [count, onClose]);
+
+  function handlePointerUp(event) {
+    const start = swipeStartRef.current;
+    swipeStartRef.current = null;
+    if (event.pointerType === "touch" && start && Math.abs(event.clientX - start.x) > 48) {
+      move(event.clientX < start.x ? 1 : -1);
+      return;
+    }
+    const now = Date.now();
+    const previous = tapRef.current;
+    if (previous && now - previous < 280) {
+      setZoomed((value) => !value);
+      tapRef.current = null;
+      return;
+    }
+    tapRef.current = now;
+  }
+
+  if (!count) return null;
+
+  return <section className="pulse-lightbox" role="dialog" aria-modal="true" aria-label="Photo viewer" onMouseDown={(event) => event.stopPropagation()}>
+    <button ref={closeButtonRef} type="button" className="pulse-lightbox-close" aria-label="Close photo viewer" onClick={onClose}>×</button>
+    <div className={`pulse-viewer-stage${zoomed ? " is-zoomed" : ""}`} onPointerDown={(event) => { swipeStartRef.current = { x: event.clientX }; }} onPointerUp={handlePointerUp}>
+      <img src={attachments[currentIndex]} alt={title ? `${title} · photo ${currentIndex + 1} of ${count}` : `Community photo ${currentIndex + 1} of ${count}`} decoding="async" />
+    </div>
+    <span className="pulse-viewer-counter">{currentIndex + 1} / {count}</span>
+    {count > 1 ? <><button type="button" className="pulse-viewer-nav previous" aria-label="Previous photo" onClick={() => move(-1)}>‹</button><button type="button" className="pulse-viewer-nav next" aria-label="Next photo" onClick={() => move(1)}>›</button></> : null}
+    <span className="pulse-viewer-hint">Double tap to {zoomed ? "fit" : "zoom"}</span>
+  </section>;
 }
 
 function NavigationItem({ section, activeSection, onSelect, onOpenNotifications, unreadCount, className = "", onAfterSelect }) {
@@ -989,11 +1050,39 @@ export function AppShell() {
   const [uploadingAnnouncementPhotos, setUploadingAnnouncementPhotos] = useState(false);
   const [pulseComposerOpen, setPulseComposerOpen] = useState(false);
   const [pulseConversationId, setPulseConversationId] = useState("");
-  const [pulseMediaViewer, setPulseMediaViewer] = useState(null);
+  const pulseOverlayCloseRef = useRef(null);
   const [announcementTextTheme, setAnnouncementTextTheme] = useState("sunrise");
   const [announcementTextFont, setAnnouncementTextFont] = useState("default");
   const [announcementTextColor, setAnnouncementTextColor] = useState("auto");
   const announcementReactionLocksRef = useRef(new Set());
+  useEffect(() => {
+    if (!pulseConversationId) return undefined;
+    const scrollY = window.scrollY;
+    const previous = {
+      overflow: document.body.style.overflow,
+      position: document.body.style.position,
+      top: document.body.style.top,
+      width: document.body.style.width
+    };
+    document.body.style.overflow = "hidden";
+    document.body.style.position = "fixed";
+    document.body.style.top = `-${scrollY}px`;
+    document.body.style.width = "100%";
+    window.requestAnimationFrame(() => pulseOverlayCloseRef.current?.focus());
+    const handleOverlayEscape = (event) => {
+      if (event.key !== "Escape") return;
+      setPulseConversationId("");
+    };
+    window.addEventListener("keydown", handleOverlayEscape);
+    return () => {
+      document.body.style.overflow = previous.overflow;
+      document.body.style.position = previous.position;
+      document.body.style.top = previous.top;
+      document.body.style.width = previous.width;
+      window.removeEventListener("keydown", handleOverlayEscape);
+      window.scrollTo(0, scrollY);
+    };
+  }, [pulseConversationId]);
   const [editingEventId, setEditingEventId] = useState("");
   const [editingTaskId, setEditingTaskId] = useState("");
   const [editingResourceId, setEditingResourceId] = useState("");
@@ -3520,7 +3609,7 @@ export function AppShell() {
               </header>
               {hasHeadline ? <h2 className="community-post-title">{announcement.title}</h2> : null}
               {textTheme ? <PulseTextLikeArea onLike={() => { if (!hasLikedPost) void toggleAnnouncementReaction({ entityTable: "announcements", entityId: announcement.id, reaction: "like" }); }}>{announcement.body}</PulseTextLikeArea> : <p className="community-post-body">{announcement.body}</p>}
-              {Array.isArray(announcement.attachments) && announcement.attachments.length ? <PulseMediaCarousel attachments={announcement.attachments} title={announcement.title} onOpen={(index) => setPulseMediaViewer({ attachments: announcement.attachments, title: announcement.title, index })} onLike={() => { if (!hasLikedPost) void toggleAnnouncementReaction({ entityTable: "announcements", entityId: announcement.id, reaction: "like" }); }} /> : null}
+              {Array.isArray(announcement.attachments) && announcement.attachments.length ? <PulseMediaCarousel attachments={announcement.attachments} title={announcement.title} onLike={() => { if (!hasLikedPost) void toggleAnnouncementReaction({ entityTable: "announcements", entityId: announcement.id, reaction: "like" }); }} /> : null}
               <AnnouncementReactions announcementId={announcement.id} reactions={reactions} profiles={profiles} userId={user?.id} disabled={submitting} onToggle={toggleAnnouncementReaction} onMessageShortcut={() => setActiveSection("messages")} />
               <button type="button" className="pulse-conversation-button" onClick={() => setPulseConversationId(announcement.id)}><span aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M5 18.5 3.5 20V6.5A2.5 2.5 0 0 1 6 4h12a2.5 2.5 0 0 1 2.5 2.5v8A2.5 2.5 0 0 1 18 17H8.5L5 18.5Z" /><path d="M8 9h8M8 12.5h5" /></svg></span>{announcementReplies.filter((reply) => reply.announcement_id === announcement.id).length ? `View ${announcementReplies.filter((reply) => reply.announcement_id === announcement.id).length} conversation${announcementReplies.filter((reply) => reply.announcement_id === announcement.id).length === 1 ? "" : "s"}` : "Start the conversation"}</button>
             </article>;
@@ -3549,14 +3638,7 @@ export function AppShell() {
           <section className="gc-pulse-rail-note"><NavIcon name="sparkles" /><p>Make room for encouragement, good questions, and the little moments that bring us together.</p></section>
         </aside>
         </div>
-        {conversationPost ? <div className="pulse-overlay" role="presentation" onMouseDown={() => setPulseConversationId("")}>
-          <section className="pulse-conversation-sheet" role="dialog" aria-modal="true" aria-labelledby="pulse-conversation-title" onMouseDown={(event) => event.stopPropagation()}>
-            <header><div><p className="gc-pulse-kicker">COMMUNITY CONVERSATION</p><h2 id="pulse-conversation-title">Conversation</h2><p>{conversationPost.title || "Reply to this community update"}</p></div><button type="button" aria-label="Close conversation" onClick={() => setPulseConversationId("")}>×</button></header>
-            <div className="pulse-conversation-thread">{conversationReplies.length ? conversationReplies.map((reply) => { const replyAuthor = profiles.find((member) => member.id === reply.user_id); return <article className="community-reply" key={reply.id}><Avatar member={replyAuthor} size="small" /><div className="community-reply-content"><strong>{replyAuthor?.full_name || replyAuthor?.email || "Member"}</strong><p>{reply.body}</p><time dateTime={reply.created_at}>{formatDateTime(reply.created_at)}</time><AnnouncementReplyReactions replyId={reply.id} reactions={reactions} userId={user?.id} disabled={submitting} onToggle={toggleAnnouncementReaction} /></div>{(isAdmin || reply.user_id === user?.id) ? <div className="community-post-actions"><button type="button" className="ghost-button compact" onClick={() => manageAnnouncementReply(reply, "edit")}>Edit</button><button type="button" className="ghost-button compact danger" onClick={() => manageAnnouncementReply(reply, "delete")}>Delete</button></div> : null}</article> }) : <p className="pulse-conversation-empty">No comments yet. Be the first to encourage someone.</p>}</div>
-            <form className="community-reply-form" onSubmit={(event) => submitAnnouncementReply(event, conversationPost.id)}><input autoFocus aria-label="Write a comment" maxLength={2000} value={announcementReplyDrafts[conversationPost.id] ?? ""} onChange={(event) => setAnnouncementReplyDrafts((current) => ({ ...current, [conversationPost.id]: event.target.value }))} placeholder="Write a thoughtful comment…" /><button type="submit" className="primary-button compact" disabled={submitting || !(announcementReplyDrafts[conversationPost.id] ?? "").trim()}>Send</button></form>
-          </section>
-        </div> : null}
-        {pulseMediaViewer ? <div className="pulse-overlay pulse-media-overlay" role="presentation" onMouseDown={() => setPulseMediaViewer(null)}><section className="pulse-lightbox" role="dialog" aria-modal="true" aria-label="Photo viewer" onMouseDown={(event) => event.stopPropagation()}><button type="button" aria-label="Close photo viewer" onClick={() => setPulseMediaViewer(null)}>×</button><PulseMediaCarousel key={`${pulseMediaViewer.title}-${pulseMediaViewer.index}`} attachments={pulseMediaViewer.attachments} title={pulseMediaViewer.title} initialIndex={pulseMediaViewer.index} onOpen={() => {}} /></section></div> : null}
+        {conversationPost ? <PulseCommentsSheet post={conversationPost} replies={conversationReplies} profiles={profiles} reactions={reactions} userId={user?.id} isAdmin={isAdmin} submitting={submitting} draft={announcementReplyDrafts[conversationPost.id] ?? ""} onDraftChange={(value) => setAnnouncementReplyDrafts((current) => ({ ...current, [conversationPost.id]: value }))} onClose={() => setPulseConversationId("")} closeButtonRef={pulseOverlayCloseRef} onToggleReaction={toggleAnnouncementReaction} onManageReply={manageAnnouncementReply} onSubmit={submitAnnouncementReply} /> : null}
       </div>
     );
   }

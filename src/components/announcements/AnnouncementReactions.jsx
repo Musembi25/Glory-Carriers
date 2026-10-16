@@ -132,131 +132,26 @@ export function AnnouncementReactions({
   }
 
   return (
-    <div className="announcement-reactions">
-      {totalReactions > 0 ? (
-        <div className="announcement-reaction-stats" aria-live="polite">
-          <div className="announcement-reaction-stats-chips">
-            {topReactions.map((item) => (
-              <span key={item.reaction} className="announcement-reaction-stat">
-                <span className="announcement-reaction-emoji" aria-hidden="true">
-                  {item.emoji}
-                </span>
-                <span className="announcement-reaction-stat-count">{item.count}</span>
-              </span>
-            ))}
-          </div>
-          <span className="announcement-reaction-stat-total">
-            {totalReactions} total
-          </span>
+    <div className="announcement-reactions pulse-reaction-row" role="group" aria-label="Post reactions">
+      <button
+        type="button"
+        className={`pulse-like-button${userReaction === "like" ? " active" : ""}`}
+        onClick={() => handleToggle("like")}
+        disabled={disabled}
+        aria-pressed={userReaction === "like"}
+        aria-label={userReaction === "like" ? "Unlike this post" : "Like this post"}
+      >
+        <svg viewBox="0 0 24 24" fill={userReaction === "like" ? "currentColor" : "none"} stroke="currentColor" strokeWidth="1.9" aria-hidden="true"><path d="M20.8 8.2c0 5-8.8 10.2-8.8 10.2S3.2 13.2 3.2 8.2A4.6 4.6 0 0 1 12 6.3a4.6 4.6 0 0 1 8.8 1.9Z" /></svg>
+        <span>Like</span>
+      </button>
+      {totalReactions > 0 ? <span className="pulse-reaction-total" aria-live="polite"><span aria-hidden="true">{topReactions.slice(0, 2).map((item) => item.emoji).join("")}</span>{totalReactions}</span> : null}
+      <details className="pulse-reaction-menu">
+        <summary aria-label="More reactions"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" aria-hidden="true"><circle cx="5" cy="12" r="1" /><circle cx="12" cy="12" r="1" /><circle cx="19" cy="12" r="1" /></svg></summary>
+        <div className="pulse-reaction-popover" role="group" aria-label="More reactions">
+          {announcementReactionMeta.filter((item) => item.reaction !== "like").map((item) => <button key={item.reaction} type="button" className={userReaction === item.reaction ? "active" : ""} onClick={() => handleToggle(item.reaction)} disabled={disabled} aria-pressed={userReaction === item.reaction} aria-label={`${item.label}${reactionCounts[item.reaction] ? `, ${reactionCounts[item.reaction]} reactions` : ""}`}><span aria-hidden="true">{item.emoji}</span><small>{item.label}</small></button>)}
         </div>
-      ) : null}
-
-      <div className="announcement-reaction-tray">
-        <div className="announcement-reaction-picker" role="group" aria-label="React to announcement">
-          {announcementReactionMeta.map((item) => {
-            const isSelected = userReaction === item.reaction;
-            const count = reactionCounts[item.reaction] ?? 0;
-
-            return (
-              <button
-                key={item.reaction}
-                type="button"
-                className={`announcement-reaction-btn${isSelected ? " active" : ""}`}
-                onClick={() => handleToggle(item.reaction)}
-                disabled={disabled}
-                aria-pressed={isSelected}
-                aria-label={
-                  isSelected
-                    ? `Remove your ${item.label} reaction`
-                    : count
-                      ? `${item.label}, ${count} reactions`
-                      : `React with ${item.label}`
-                }
-              >
-                <span className="announcement-reaction-btn-emoji" aria-hidden="true">
-                  {item.emoji}
-                </span>
-                {count > 0 ? (
-                  <span className="announcement-reaction-btn-badge">{count}</span>
-                ) : null}
-              </button>
-            );
-          })}
-        </div>
-      </div>
-
-      <div className="announcement-reaction-toolbar">
-        {participants.length > 0 ? (
-          <button
-            type="button"
-            className="announcement-participant-trigger"
-            onClick={() => setShowParticipants((value) => !value)}
-            aria-expanded={showParticipants}
-            aria-label={`${participants.length} members reacted`}
-          >
-            <span className="announcement-avatar-stack" aria-hidden="true">
-              {participants.slice(0, 4).map((participant) => (
-                <MemberAvatar key={participant.id} member={participant.profile} size="tiny" />
-              ))}
-            </span>
-            <span className="announcement-participant-label">
-              {participants.length}
-            </span>
-          </button>
-        ) : (
-          <span className="announcement-participant-label muted">Tap to react</span>
-        )}
-
-        {feedback ? (
-          <span className="announcement-reaction-feedback" role="status">
-            {feedback}
-          </span>
-        ) : null}
-
-        <button
-          type="button"
-          className="announcement-message-shortcut"
-          onClick={onMessageShortcut}
-          aria-label="Open messages"
-        >
-          <span className="announcement-reaction-btn-emoji" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M20 11.5a7.5 7.5 0 0 1-7.5 7.5H6l-3 2v-7.5A7.5 7.5 0 0 1 10.5 6H12"/><path d="M16 3v6m-3-3h6"/></svg></span>
-        </button>
-      </div>
-
-      {showParticipants && participants.length > 0 ? (
-        <div className="announcement-participant-panel" role="dialog" aria-label="Members who reacted">
-          <div className="announcement-participant-panel-header">
-            <strong>{participants.length} reacted</strong>
-            <button
-              type="button"
-              className="ghost-button"
-              onClick={() => setShowParticipants(false)}
-            >
-              Close
-            </button>
-          </div>
-          <ul className="announcement-participant-list">
-            {participants.map((participant) => {
-              const name =
-                participant.profile?.full_name ||
-                participant.profile?.email ||
-                "Member";
-
-              return (
-                <li key={participant.id}>
-                  <MemberAvatar member={participant.profile} size="small" />
-                  <span className="announcement-participant-name">{name}</span>
-                  <span className="announcement-participant-reaction">
-                    <span className="announcement-reaction-btn-emoji" aria-hidden="true">
-                      {getReactionEmoji(participant.reaction)}
-                    </span>
-                  </span>
-                </li>
-              );
-            })}
-          </ul>
-        </div>
-      ) : null}
+      </details>
+      {feedback ? <span className="pulse-reaction-feedback" role="status">{feedback}</span> : null}
     </div>
   );
 }

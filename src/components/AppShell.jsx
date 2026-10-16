@@ -135,6 +135,29 @@ const emptyPasswordForm = {
   confirmPassword: ""
 };
 
+const pulseTextThemes = [
+  { id: "sunrise", label: "Sunrise" },
+  { id: "ocean", label: "Ocean" },
+  { id: "ember", label: "Ember" },
+  { id: "paper", label: "Paper" },
+  { id: "midnight", label: "Midnight" }
+];
+
+const pulseTextFonts = [
+  { id: "default", label: "Default" },
+  { id: "modern", label: "Modern" },
+  { id: "serif", label: "Serif" },
+  { id: "rounded", label: "Rounded" }
+];
+
+const pulseTextColors = [
+  { id: "auto", label: "Auto" },
+  { id: "ivory", label: "Ivory" },
+  { id: "ink", label: "Ink" },
+  { id: "gold", label: "Gold" },
+  { id: "sky", label: "Sky" }
+];
+
 function getInitials(name) {
   if (!name) {
     return "?";
@@ -558,6 +581,92 @@ function EmptyState({ title, description }) {
   );
 }
 
+function PulseMediaCarousel({ attachments, title, onOpen, onLike, initialIndex = 0 }) {
+  const [index, setIndex] = useState(initialIndex);
+  const [heart, setHeart] = useState(null);
+  const tapRef = useRef(null);
+  const openTimerRef = useRef(null);
+  const heartTimerRef = useRef(null);
+  const count = attachments.length;
+  const currentIndex = Math.min(index, Math.max(count - 1, 0));
+  const move = (direction) => setIndex((current) => (current + direction + count) % count);
+
+  useEffect(() => () => {
+    window.clearTimeout(openTimerRef.current);
+    window.clearTimeout(heartTimerRef.current);
+  }, []);
+
+  function handleMediaTap(event) {
+    if (event.pointerType === "mouse" && event.button !== 0) return;
+    const now = Date.now();
+    const target = event.currentTarget.getBoundingClientRect();
+    const point = { x: ((event.clientX - target.left) / target.width) * 100, y: ((event.clientY - target.top) / target.height) * 100 };
+    const previous = tapRef.current;
+    const isDoubleTap = previous && now - previous.time < 300 && Math.hypot(point.x - previous.x, point.y - previous.y) < 15;
+
+    if (isDoubleTap) {
+      window.clearTimeout(openTimerRef.current);
+      tapRef.current = null;
+      setHeart({ ...point, id: now });
+      window.clearTimeout(heartTimerRef.current);
+      heartTimerRef.current = window.setTimeout(() => setHeart(null), 720);
+      onLike?.();
+      return;
+    }
+
+    tapRef.current = { ...point, time: now };
+    window.clearTimeout(openTimerRef.current);
+    openTimerRef.current = window.setTimeout(() => onOpen(currentIndex), 310);
+  }
+
+  if (!count) return null;
+
+  return (
+    <div className="pulse-media-carousel" aria-label={`${count} photo${count === 1 ? "" : "s"}`}>
+      <button type="button" className="pulse-media-stage" onPointerUp={handleMediaTap} onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); onOpen(currentIndex); } }} aria-label={`Open photo ${currentIndex + 1} of ${count}. Double tap to like`}>
+        <img src={attachments[currentIndex]} alt={title ? `${title} · photo ${currentIndex + 1}` : `Community photo ${currentIndex + 1}`} loading="lazy" />
+      </button>
+      {heart ? <span className="pulse-like-heart" style={{ "--heart-x": `${heart.x}%`, "--heart-y": `${heart.y}%` }} aria-hidden="true">♥</span> : null}
+      {count > 1 ? <>
+        <button type="button" className="pulse-media-control previous" onClick={() => move(-1)} aria-label="Previous photo">‹</button>
+        <button type="button" className="pulse-media-control next" onClick={() => move(1)} aria-label="Next photo">›</button>
+        <div className="pulse-media-pagination" aria-hidden="true">{attachments.map((_, itemIndex) => <i key={itemIndex} className={itemIndex === currentIndex ? "active" : ""} />)}</div>
+        <span className="pulse-media-counter">{currentIndex + 1} / {count}</span>
+      </> : null}
+    </div>
+  );
+}
+
+function PulseTextLikeArea({ children, onLike }) {
+  const [heart, setHeart] = useState(null);
+  const tapRef = useRef(null);
+  const heartTimerRef = useRef(null);
+
+  useEffect(() => () => window.clearTimeout(heartTimerRef.current), []);
+
+  function handleTextTap(event) {
+    if (event.pointerType === "mouse" && event.button !== 0) return;
+    const now = Date.now();
+    const target = event.currentTarget.getBoundingClientRect();
+    const point = { x: ((event.clientX - target.left) / target.width) * 100, y: ((event.clientY - target.top) / target.height) * 100 };
+    const previous = tapRef.current;
+    const isDoubleTap = previous && now - previous.time < 300 && Math.hypot(point.x - previous.x, point.y - previous.y) < 18;
+
+    if (!isDoubleTap) {
+      tapRef.current = { ...point, time: now };
+      return;
+    }
+
+    tapRef.current = null;
+    setHeart({ ...point, id: now });
+    window.clearTimeout(heartTimerRef.current);
+    heartTimerRef.current = window.setTimeout(() => setHeart(null), 720);
+    onLike?.();
+  }
+
+  return <p className="community-post-body pulse-text-like-area" onPointerUp={handleTextTap}>{children}{heart ? <span className="pulse-like-heart" style={{ "--heart-x": `${heart.x}%`, "--heart-y": `${heart.y}%` }} aria-hidden="true">♥</span> : null}</p>;
+}
+
 function NavigationItem({ section, activeSection, onSelect, onOpenNotifications, unreadCount, className = "", onAfterSelect }) {
   const isNotificationItem = section.id === "notifications";
   const active = !isNotificationItem && activeSection === section.id;
@@ -823,6 +932,7 @@ export function AppShell() {
   const [announcementReplies, setAnnouncementReplies] = useState([]);
   const [announcementToFocus, setAnnouncementToFocus] = useState("");
   const [announcementRepliesAvailable, setAnnouncementRepliesAvailable] = useState(true);
+  const [textPostThemesAvailable, setTextPostThemesAvailable] = useState(true);
   useEffect(() => {
     if (activeSection !== "announcements" || !announcementToFocus) return undefined;
     const frame = window.requestAnimationFrame(() => {
@@ -877,6 +987,13 @@ export function AppShell() {
   const [pulseEditingMessageId, setPulseEditingMessageId] = useState("");
   const [announcementPhotos, setAnnouncementPhotos] = useState([]);
   const [uploadingAnnouncementPhotos, setUploadingAnnouncementPhotos] = useState(false);
+  const [pulseComposerOpen, setPulseComposerOpen] = useState(false);
+  const [pulseConversationId, setPulseConversationId] = useState("");
+  const [pulseMediaViewer, setPulseMediaViewer] = useState(null);
+  const [announcementTextTheme, setAnnouncementTextTheme] = useState("sunrise");
+  const [announcementTextFont, setAnnouncementTextFont] = useState("default");
+  const [announcementTextColor, setAnnouncementTextColor] = useState("auto");
+  const announcementReactionLocksRef = useRef(new Set());
   const [editingEventId, setEditingEventId] = useState("");
   const [editingTaskId, setEditingTaskId] = useState("");
   const [editingResourceId, setEditingResourceId] = useState("");
@@ -1708,6 +1825,12 @@ export function AppShell() {
       supabase.from("bible_study_partner_streaks").select("*").order("created_at", { ascending: false }),
       supabase.from("announcement_replies").select("*").order("created_at", { ascending: true })
     ]);
+
+    const { error: presentationError } = await supabase
+      .from("announcements")
+      .select("presentation")
+      .limit(1);
+    setTextPostThemesAvailable(!presentationError);
 
     const failingResult = results.find((result, index) => result.error && index !== 34);
 
@@ -3057,9 +3180,21 @@ export function AppShell() {
           uploadedUrls.push(supabase.storage.from("announcement-images").getPublicUrl(path).data.publicUrl);
         }
       const payload = {
+        // The database retains a required title for existing compatibility. `headline`
+        // tells the feed whether this stored fallback is an actual visible headline.
         title: announcementForm.title.trim() || "Community update",
         body: announcementForm.body.trim(),
         pinned: isAdmin ? announcementForm.pinned : false,
+        ...(textPostThemesAvailable ? {
+          presentation: {
+            font: announcementTextFont,
+            color: announcementTextColor,
+            headline: Boolean(announcementForm.title.trim()),
+            ...(uploadedUrls.length || (editingAnnouncementId && announcements.find((item) => item.id === editingAnnouncementId)?.attachments?.length)
+              ? {}
+              : { kind: "text", theme: announcementTextTheme })
+          }
+        } : {}),
         attachments: [
           ...(editingAnnouncementId ? announcements.find((item) => item.id === editingAnnouncementId)?.attachments ?? [] : []),
           ...uploadedUrls
@@ -3078,9 +3213,13 @@ export function AppShell() {
       }
 
       setAnnouncementForm(emptyAnnouncementForm);
+      setAnnouncementTextTheme("sunrise");
+      setAnnouncementTextFont("default");
+      setAnnouncementTextColor("auto");
       setEditingAnnouncementId("");
       announcementPhotos.forEach((photo) => URL.revokeObjectURL(photo.preview));
       setAnnouncementPhotos([]);
+      setPulseComposerOpen(false);
       } catch (error) {
         if (uploadedPaths.length) await supabase.storage.from("announcement-images").remove(uploadedPaths);
         throw error;
@@ -3101,6 +3240,12 @@ export function AppShell() {
       body: announcement.body ?? "",
       pinned: Boolean(announcement.pinned)
     });
+    setAnnouncementTextTheme(
+      announcement.presentation?.kind === "text" ? announcement.presentation.theme || "sunrise" : "sunrise"
+    );
+    setAnnouncementTextFont(announcement.presentation?.font || "default");
+    setAnnouncementTextColor(announcement.presentation?.color || "auto");
+    setPulseComposerOpen(true);
   }
 
   function openCommunityPost(announcementId) {
@@ -3273,6 +3418,8 @@ export function AppShell() {
     const liveEvent = sortedEvents.find((event) => event.ends_at && new Date(event.starts_at) <= liveNow && new Date(event.ends_at) >= liveNow);
     const nextPulseEvent = sortedEvents.find((event) => new Date(event.starts_at) > liveNow);
     const currentPulseActivity = liveEvent || loungeMessages.some((message) => liveNow.getTime() - new Date(message.created_at).getTime() < 30 * 60 * 1000);
+    const conversationPost = announcements.find((announcement) => announcement.id === pulseConversationId);
+    const conversationReplies = announcementReplies.filter((reply) => reply.announcement_id === pulseConversationId);
     return (
       <div className="section-stack community-feed gc-pulse-page">
         <header className="gc-pulse-header">
@@ -3293,8 +3440,12 @@ export function AppShell() {
 
         <div className="gc-pulse-layout">
         <main className="gc-pulse-main-column">
-        <Panel className="gc-pulse-composer-panel" title="Start something" subtitle="Share an update, a moment, or a word of encouragement.">
-          <form className="stack-form announcement-composer" onSubmit={saveAnnouncement}>
+        <Panel className="gc-pulse-composer-panel" title="Share with your people" subtitle="A small moment, an encouragement, or something worth celebrating.">
+          {!pulseComposerOpen ? <button type="button" className="pulse-composer-launcher" onClick={() => setPulseComposerOpen(true)}>
+            <Avatar member={currentMember} size="small" />
+            <span>What's happening with your people?</span>
+            <b aria-hidden="true">+</b>
+          </button> : <form className="stack-form announcement-composer" onSubmit={saveAnnouncement}>
             <label className="field">
               <span>Headline <small>(optional)</small></span>
               <input value={announcementForm.title} maxLength={180} placeholder="A short headline" onChange={(event) => setAnnouncementForm((current) => ({ ...current, title: event.target.value }))} />
@@ -3303,6 +3454,22 @@ export function AppShell() {
               <span>Your update</span>
               <textarea value={announcementForm.body} maxLength={2500} rows={4} placeholder="Share an update with Glory Carriers..." required onChange={(event) => setAnnouncementForm((current) => ({ ...current, body: event.target.value }))} />
             </label>
+            <div className="pulse-font-picker" role="group" aria-label="Post font">
+              <span>Font</span>{pulseTextFonts.map((font) => <button key={font.id} type="button" className={`pulse-font-option pulse-font-${font.id}${announcementTextFont === font.id ? " active" : ""}`} aria-pressed={announcementTextFont === font.id} disabled={!textPostThemesAvailable} onClick={() => setAnnouncementTextFont(font.id)}>{font.label}</button>)}
+            </div>
+            <div className="pulse-color-picker" role="group" aria-label="Post text color">
+              <span>Text color</span>{pulseTextColors.map((color) => <button key={color.id} type="button" className={`pulse-color-option pulse-color-${color.id}${announcementTextColor === color.id ? " active" : ""}`} aria-pressed={announcementTextColor === color.id} disabled={!textPostThemesAvailable} onClick={() => setAnnouncementTextColor(color.id)}><i aria-hidden="true" /><b>{color.label}</b></button>)}
+            </div>
+            {!announcementPhotos.length ? <div className="pulse-text-post-tools">
+              <div><span>Text post style</span><small>{textPostThemesAvailable ? "Choose a background for a beautiful text-only post." : "Apply the text-post migration to save background styles."}</small></div>
+              <div className="pulse-theme-picker" role="group" aria-label="Text post background">
+                {pulseTextThemes.map((theme) => <button key={theme.id} type="button" className={`pulse-theme-swatch ${theme.id}${announcementTextTheme === theme.id ? " active" : ""}`} aria-pressed={announcementTextTheme === theme.id} disabled={!textPostThemesAvailable} onClick={() => setAnnouncementTextTheme(theme.id)}><span aria-hidden="true" /><b>{theme.label}</b></button>)}
+              </div>
+              <div className={`pulse-text-preview pulse-text-theme-${announcementTextTheme} pulse-font-${announcementTextFont} pulse-color-${announcementTextColor}${announcementForm.body.trim().length > 280 ? " is-long" : ""}`}>
+                {announcementForm.title.trim() ? <strong className="pulse-text-preview-headline">{announcementForm.title.trim()}</strong> : null}
+                <p>{announcementForm.body.trim() || "Your words will look beautiful here."}</p>
+              </div>
+            </div> : null}
             <label className="field announcement-photo-field">
               <span>Add photos</span>
               <input type="file" accept="image/jpeg,image/png,image/webp" multiple disabled={uploadingAnnouncementPhotos || !announcementRepliesAvailable} onChange={(event) => {
@@ -3312,14 +3479,14 @@ export function AppShell() {
                 const prepared = valid.map((file) => ({ file, preview: URL.createObjectURL(file) })); const room = Math.max(0, 5 - announcementPhotos.length); prepared.slice(room).forEach((photo) => URL.revokeObjectURL(photo.preview)); setAnnouncementPhotos((current) => [...current, ...prepared.slice(0, room)]);
                 event.target.value = "";
               }} />
-              {announcementPhotos.length ? <div className="announcement-photo-previews">{announcementPhotos.map((photo, index) => <div key={`${photo.file.name}-${index}`}><img src={photo.preview} alt={`Selected photo ${index + 1}`} /><button type="button" className="ghost-button compact" aria-label={`Remove ${photo.file.name}`} onClick={() => { URL.revokeObjectURL(photo.preview); setAnnouncementPhotos((current) => current.filter((_, itemIndex) => itemIndex !== index)); }}>Remove</button></div>)}</div> : null}
+              {announcementPhotos.length ? <div className="announcement-photo-previews">{announcementPhotos.map((photo, index) => <div key={`${photo.file.name}-${index}`}><img src={photo.preview} alt={`Selected photo ${index + 1}`} /><div className="pulse-preview-actions">{index > 0 ? <button type="button" aria-label={`Move ${photo.file.name} earlier`} onClick={() => setAnnouncementPhotos((current) => { const next = [...current]; [next[index - 1], next[index]] = [next[index], next[index - 1]]; return next; })}>←</button> : null}{index < announcementPhotos.length - 1 ? <button type="button" aria-label={`Move ${photo.file.name} later`} onClick={() => setAnnouncementPhotos((current) => { const next = [...current]; [next[index + 1], next[index]] = [next[index], next[index + 1]]; return next; })}>→</button> : null}<button type="button" aria-label={`Remove ${photo.file.name}`} onClick={() => { URL.revokeObjectURL(photo.preview); setAnnouncementPhotos((current) => current.filter((_, itemIndex) => itemIndex !== index)); }}>×</button></div></div>)}</div> : null}
             </label>
             <div className="form-actions">
               {isAdmin ? <label className="inline-checkbox"><input type="checkbox" checked={announcementForm.pinned} onChange={(event) => setAnnouncementForm((current) => ({ ...current, pinned: event.target.checked }))} /> Pin announcement</label> : null}
               <button type="submit" className="primary-button" disabled={!announcementRepliesAvailable || submitting || uploadingAnnouncementPhotos}>{uploadingAnnouncementPhotos ? "Uploading photos…" : submitting ? "Publishing…" : editingAnnouncementId ? "Save changes" : "Publish update"}</button>
-              {editingAnnouncementId ? <button type="button" className="ghost-button" onClick={() => { setEditingAnnouncementId(""); setAnnouncementForm(emptyAnnouncementForm); }}>Cancel</button> : null}
+              <button type="button" className="ghost-button" onClick={() => { announcementPhotos.forEach((photo) => URL.revokeObjectURL(photo.preview)); setAnnouncementPhotos([]); setEditingAnnouncementId(""); setAnnouncementForm(emptyAnnouncementForm); setAnnouncementTextTheme("sunrise"); setAnnouncementTextFont("default"); setAnnouncementTextColor("auto"); setPulseComposerOpen(false); }}>Cancel</button>
             </div>
-          </form>
+          </form>}
         </Panel>
 
         <div className="gc-pulse-feed-heading">
@@ -3332,24 +3499,30 @@ export function AppShell() {
           {feedAnnouncements.length ? feedAnnouncements.map((announcement) => {
             const author = profiles.find((member) => member.id === announcement.created_by);
             const canManage = isAdmin || announcement.created_by === user?.id;
-            return <article key={announcement.id} id={`announcement-${announcement.id}`} tabIndex={-1} className="community-post">
+            const textTheme = announcement.presentation?.kind === "text" && !announcement.attachments?.length
+              ? announcement.presentation.theme || "sunrise"
+              : "";
+            const textFont = pulseTextFonts.some((font) => font.id === announcement.presentation?.font)
+              ? announcement.presentation.font
+              : "default";
+            const textColor = pulseTextColors.some((color) => color.id === announcement.presentation?.color)
+              ? announcement.presentation.color
+              : "auto";
+            const hasLikedPost = reactions.some((row) => row.entity_table === "announcements" && row.entity_id === announcement.id && row.user_id === user?.id && row.reaction === "like");
+            const hasHeadline = announcement.presentation?.headline ?? Boolean(announcement.title && announcement.title !== "Community update");
+            const textPostLayout = textTheme && announcement.body.length > 280 ? " is-long" : "";
+            return <article key={announcement.id} id={`announcement-${announcement.id}`} tabIndex={-1} className={`community-post pulse-font-${textFont} pulse-color-${textColor}${textTheme ? ` pulse-text-post pulse-text-theme-${textTheme}${textPostLayout}` : ""}`}>
               <header className="community-post-header">
                 <Avatar member={author} size="small" />
                 <div className="community-post-author"><strong>{author?.full_name || author?.email || "Community member"}</strong><time dateTime={announcement.created_at}>{formatDateTime(announcement.created_at)}{announcement.updated_at && announcement.updated_at !== announcement.created_at ? " · Edited" : ""}</time></div>
                 {announcement.pinned ? <span className="pill info">Pinned</span> : null}
                 {canManage ? <div className="community-post-actions"><button type="button" className="ghost-button compact" onClick={() => beginAnnouncementEdit(announcement)}>Edit</button><button type="button" className="ghost-button compact danger" onClick={() => deleteAnnouncement(announcement.id)}>Delete</button></div> : null}
               </header>
-              {announcement.title ? <h2>{announcement.title}</h2> : null}
-              <p className="community-post-body">{announcement.body}</p>
-              {Array.isArray(announcement.attachments) && announcement.attachments.length ? <div className={`community-post-gallery count-${Math.min(announcement.attachments.length, 4)}`}>{announcement.attachments.map((url, index) => <img key={`${url}-${index}`} src={url} alt={`Announcement attachment ${index + 1}`} loading="lazy" />)}</div> : null}
+              {hasHeadline ? <h2 className="community-post-title">{announcement.title}</h2> : null}
+              {textTheme ? <PulseTextLikeArea onLike={() => { if (!hasLikedPost) void toggleAnnouncementReaction({ entityTable: "announcements", entityId: announcement.id, reaction: "like" }); }}>{announcement.body}</PulseTextLikeArea> : <p className="community-post-body">{announcement.body}</p>}
+              {Array.isArray(announcement.attachments) && announcement.attachments.length ? <PulseMediaCarousel attachments={announcement.attachments} title={announcement.title} onOpen={(index) => setPulseMediaViewer({ attachments: announcement.attachments, title: announcement.title, index })} onLike={() => { if (!hasLikedPost) void toggleAnnouncementReaction({ entityTable: "announcements", entityId: announcement.id, reaction: "like" }); }} /> : null}
               <AnnouncementReactions announcementId={announcement.id} reactions={reactions} profiles={profiles} userId={user?.id} disabled={submitting} onToggle={toggleAnnouncementReaction} onMessageShortcut={() => setActiveSection("messages")} />
-              <section className="community-replies" aria-label="Replies">
-                {announcementReplies.filter((reply) => reply.announcement_id === announcement.id).map((reply) => {
-                  const replyAuthor = profiles.find((member) => member.id === reply.user_id);
-                  return <article className="community-reply" key={reply.id}><Avatar member={replyAuthor} size="small" /><div className="community-reply-content"><strong>{replyAuthor?.full_name || replyAuthor?.email || "Member"}</strong><p>{reply.body}</p><time dateTime={reply.created_at}>{formatDateTime(reply.created_at)}</time><AnnouncementReplyReactions replyId={reply.id} reactions={reactions} userId={user?.id} disabled={submitting} onToggle={toggleAnnouncementReaction} /></div>{(isAdmin || reply.user_id === user?.id) ? <div className="community-post-actions"><button type="button" className="ghost-button compact" onClick={() => manageAnnouncementReply(reply, "edit")}>Edit</button><button type="button" className="ghost-button compact danger" onClick={() => manageAnnouncementReply(reply, "delete")}>Delete</button></div> : null}</article>;
-                })}
-                <form className="community-reply-form" onSubmit={(event) => submitAnnouncementReply(event, announcement.id)}><input aria-label="Write a reply" maxLength={2000} value={announcementReplyDrafts[announcement.id] ?? ""} onChange={(event) => setAnnouncementReplyDrafts((current) => ({ ...current, [announcement.id]: event.target.value }))} placeholder="Write a reply…" /><button type="submit" className="secondary-button compact" disabled={submitting || !(announcementReplyDrafts[announcement.id] ?? "").trim()}>Reply</button></form>
-              </section>
+              <button type="button" className="pulse-conversation-button" onClick={() => setPulseConversationId(announcement.id)}><span aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M5 18.5 3.5 20V6.5A2.5 2.5 0 0 1 6 4h12a2.5 2.5 0 0 1 2.5 2.5v8A2.5 2.5 0 0 1 18 17H8.5L5 18.5Z" /><path d="M8 9h8M8 12.5h5" /></svg></span>{announcementReplies.filter((reply) => reply.announcement_id === announcement.id).length ? `View ${announcementReplies.filter((reply) => reply.announcement_id === announcement.id).length} conversation${announcementReplies.filter((reply) => reply.announcement_id === announcement.id).length === 1 ? "" : "s"}` : "Start the conversation"}</button>
             </article>;
           }) : <EmptyState title={announcements.length ? "No posts match this view" : "A fresh beginning"} description={announcements.length ? "Try another filter to see more community updates." : "There are no announcements yet. Share the first update with your community."} />}
         </div>
@@ -3376,6 +3549,14 @@ export function AppShell() {
           <section className="gc-pulse-rail-note"><NavIcon name="sparkles" /><p>Make room for encouragement, good questions, and the little moments that bring us together.</p></section>
         </aside>
         </div>
+        {conversationPost ? <div className="pulse-overlay" role="presentation" onMouseDown={() => setPulseConversationId("")}>
+          <section className="pulse-conversation-sheet" role="dialog" aria-modal="true" aria-labelledby="pulse-conversation-title" onMouseDown={(event) => event.stopPropagation()}>
+            <header><div><p className="gc-pulse-kicker">COMMUNITY CONVERSATION</p><h2 id="pulse-conversation-title">Conversation</h2><p>{conversationPost.title || "Reply to this community update"}</p></div><button type="button" aria-label="Close conversation" onClick={() => setPulseConversationId("")}>×</button></header>
+            <div className="pulse-conversation-thread">{conversationReplies.length ? conversationReplies.map((reply) => { const replyAuthor = profiles.find((member) => member.id === reply.user_id); return <article className="community-reply" key={reply.id}><Avatar member={replyAuthor} size="small" /><div className="community-reply-content"><strong>{replyAuthor?.full_name || replyAuthor?.email || "Member"}</strong><p>{reply.body}</p><time dateTime={reply.created_at}>{formatDateTime(reply.created_at)}</time><AnnouncementReplyReactions replyId={reply.id} reactions={reactions} userId={user?.id} disabled={submitting} onToggle={toggleAnnouncementReaction} /></div>{(isAdmin || reply.user_id === user?.id) ? <div className="community-post-actions"><button type="button" className="ghost-button compact" onClick={() => manageAnnouncementReply(reply, "edit")}>Edit</button><button type="button" className="ghost-button compact danger" onClick={() => manageAnnouncementReply(reply, "delete")}>Delete</button></div> : null}</article> }) : <p className="pulse-conversation-empty">No comments yet. Be the first to encourage someone.</p>}</div>
+            <form className="community-reply-form" onSubmit={(event) => submitAnnouncementReply(event, conversationPost.id)}><input autoFocus aria-label="Write a comment" maxLength={2000} value={announcementReplyDrafts[conversationPost.id] ?? ""} onChange={(event) => setAnnouncementReplyDrafts((current) => ({ ...current, [conversationPost.id]: event.target.value }))} placeholder="Write a thoughtful comment…" /><button type="submit" className="primary-button compact" disabled={submitting || !(announcementReplyDrafts[conversationPost.id] ?? "").trim()}>Send</button></form>
+          </section>
+        </div> : null}
+        {pulseMediaViewer ? <div className="pulse-overlay pulse-media-overlay" role="presentation" onMouseDown={() => setPulseMediaViewer(null)}><section className="pulse-lightbox" role="dialog" aria-modal="true" aria-label="Photo viewer" onMouseDown={(event) => event.stopPropagation()}><button type="button" aria-label="Close photo viewer" onClick={() => setPulseMediaViewer(null)}>×</button><PulseMediaCarousel key={`${pulseMediaViewer.title}-${pulseMediaViewer.index}`} attachments={pulseMediaViewer.attachments} title={pulseMediaViewer.title} initialIndex={pulseMediaViewer.index} onOpen={() => {}} /></section></div> : null}
       </div>
     );
   }
@@ -5775,6 +5956,10 @@ export function AppShell() {
     const targetId = entityId ?? announcementId;
     if (!targetId) return false;
 
+    const lockKey = `${entityTable}:${targetId}`;
+    if (announcementReactionLocksRef.current.has(lockKey)) return false;
+    announcementReactionLocksRef.current.add(lockKey);
+
     const userRows = reactions.filter(
       (row) =>
         row.entity_table === entityTable &&
@@ -5867,6 +6052,8 @@ export function AppShell() {
       setReactions(previousReactions);
       setErrorMessage(error.message);
       return false;
+    } finally {
+      announcementReactionLocksRef.current.delete(lockKey);
     }
   }
 

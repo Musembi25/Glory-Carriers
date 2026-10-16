@@ -1,4 +1,5 @@
 import { startTransition, useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { useAuth } from "../context/AuthContext";
 import { computeUserAssignmentStats, getDisplayStatus, isWorkLesson } from "../lib/discipleshipAssignments";
 import { parseNotificationLaunchParams } from "../lib/notificationRouting.js";
@@ -671,13 +672,49 @@ function PulseTextLikeArea({ children, onLike }) {
 }
 
 function PulseCommentsSheet({ post, replies, profiles, reactions, userId, isAdmin, submitting, draft, onDraftChange, onClose, closeButtonRef, onToggleReaction, onManageReply, onSubmit }) {
-  return <div className="pulse-overlay pulse-comments-overlay" role="presentation" onMouseDown={onClose}>
-    <section className="pulse-conversation-sheet pulse-comments-sheet" role="dialog" aria-modal="true" aria-labelledby="pulse-conversation-title" onMouseDown={(event) => event.stopPropagation()}>
-      <header><div><p className="gc-pulse-kicker">COMMUNITY CONVERSATION</p><h2 id="pulse-conversation-title">Comments</h2><p>{replies.length ? `${replies.length} comment${replies.length === 1 ? "" : "s"}` : "Start the conversation"}</p></div><button ref={closeButtonRef} type="button" aria-label="Close comments" onClick={onClose}>×</button></header>
-      <div className="pulse-conversation-thread">{replies.length ? replies.map((reply) => { const replyAuthor = profiles.find((member) => member.id === reply.user_id); return <article className="community-reply" key={reply.id}><Avatar member={replyAuthor} size="small" /><div className="community-reply-content"><strong>{replyAuthor?.full_name || replyAuthor?.email || "Member"}</strong><p>{reply.body}</p><time dateTime={reply.created_at}>{formatDateTime(reply.created_at)}</time><AnnouncementReplyReactions replyId={reply.id} reactions={reactions} userId={userId} disabled={submitting} onToggle={onToggleReaction} /></div>{(isAdmin || reply.user_id === userId) ? <div className="community-post-actions"><button type="button" className="ghost-button compact" onClick={() => onManageReply(reply, "edit")}>Edit</button><button type="button" className="ghost-button compact danger" onClick={() => onManageReply(reply, "delete")}>Delete</button></div> : null}</article> }) : <p className="pulse-conversation-empty">No comments yet. Be the first to encourage someone.</p>}</div>
-      <form className="community-reply-form" onSubmit={(event) => onSubmit(event, post.id)}><textarea autoFocus rows={1} aria-label="Write a comment" maxLength={2000} value={draft} onChange={(event) => onDraftChange(event.target.value)} placeholder="Write a thoughtful comment…" /><button type="submit" className="primary-button compact" disabled={submitting || !draft.trim()}>Send</button></form>
-    </section>
-  </div>;
+  if (typeof document === "undefined") return null;
+
+  return createPortal(
+    <div className="gc-comments-overlay" role="presentation" onMouseDown={onClose}>
+      <section className="gc-comments-sheet" role="dialog" aria-modal="true" aria-labelledby="pulse-conversation-title" onMouseDown={(event) => event.stopPropagation()}>
+        <header className="gc-comments-sheet__header">
+          <div>
+            <p className="gc-pulse-kicker">COMMUNITY CONVERSATION</p>
+            <h2 id="pulse-conversation-title">Comments</h2>
+            <p>{replies.length ? `${replies.length} comment${replies.length === 1 ? "" : "s"}` : "Start the conversation"}</p>
+          </div>
+          <button ref={closeButtonRef} type="button" className="gc-comments-sheet__close" aria-label="Close comments" onClick={onClose}>×</button>
+        </header>
+        <div className="gc-comments-sheet__thread">
+          {replies.length ? replies.map((reply) => {
+            const replyAuthor = profiles.find((member) => member.id === reply.user_id);
+            return (
+              <article className="community-reply" key={reply.id}>
+                <Avatar member={replyAuthor} size="small" />
+                <div className="community-reply-content">
+                  <strong>{replyAuthor?.full_name || replyAuthor?.email || "Member"}</strong>
+                  <p>{reply.body}</p>
+                  <time dateTime={reply.created_at}>{formatDateTime(reply.created_at)}</time>
+                  <AnnouncementReplyReactions replyId={reply.id} reactions={reactions} userId={userId} disabled={submitting} onToggle={onToggleReaction} />
+                </div>
+                {(isAdmin || reply.user_id === userId) ? (
+                  <div className="community-post-actions">
+                    <button type="button" className="ghost-button compact" onClick={() => onManageReply(reply, "edit")}>Edit</button>
+                    <button type="button" className="ghost-button compact danger" onClick={() => onManageReply(reply, "delete")}>Delete</button>
+                  </div>
+                ) : null}
+              </article>
+            );
+          }) : <p className="gc-comments-sheet__empty">No comments yet. Be the first to encourage someone.</p>}
+        </div>
+        <form className="gc-comments-sheet__composer" onSubmit={(event) => onSubmit(event, post.id)}>
+          <textarea autoFocus rows={1} aria-label="Write a comment" maxLength={2000} value={draft} onChange={(event) => onDraftChange(event.target.value)} placeholder="Write a thoughtful comment…" />
+          <button type="submit" className="primary-button compact" disabled={submitting || !draft.trim()}>Send</button>
+        </form>
+      </section>
+    </div>,
+    document.body
+  );
 }
 
 function PulseMediaViewer({ attachments, title, initialIndex = 0, onClose, closeButtonRef }) {
@@ -1057,31 +1094,13 @@ export function AppShell() {
   const announcementReactionLocksRef = useRef(new Set());
   useEffect(() => {
     if (!pulseConversationId) return undefined;
-    const scrollY = window.scrollY;
-    const previous = {
-      overflow: document.body.style.overflow,
-      position: document.body.style.position,
-      top: document.body.style.top,
-      width: document.body.style.width
-    };
-    document.body.style.overflow = "hidden";
-    document.body.style.position = "fixed";
-    document.body.style.top = `-${scrollY}px`;
-    document.body.style.width = "100%";
     window.requestAnimationFrame(() => pulseOverlayCloseRef.current?.focus());
     const handleOverlayEscape = (event) => {
       if (event.key !== "Escape") return;
       setPulseConversationId("");
     };
     window.addEventListener("keydown", handleOverlayEscape);
-    return () => {
-      document.body.style.overflow = previous.overflow;
-      document.body.style.position = previous.position;
-      document.body.style.top = previous.top;
-      document.body.style.width = previous.width;
-      window.removeEventListener("keydown", handleOverlayEscape);
-      window.scrollTo(0, scrollY);
-    };
+    return () => window.removeEventListener("keydown", handleOverlayEscape);
   }, [pulseConversationId]);
   const [editingEventId, setEditingEventId] = useState("");
   const [editingTaskId, setEditingTaskId] = useState("");

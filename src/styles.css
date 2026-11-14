@@ -5279,6 +5279,23 @@ textarea {
   }
 }
 
+@keyframes mobile-tap-response {
+  0%, 100% { transform: scale(1); }
+  45% { transform: scale(.97); }
+}
+
+@media (hover: none) {
+  :where(button:not(:disabled), a[href], [role="button"], summary):active {
+    opacity: .78;
+  }
+}
+
+@media (hover: none) and (prefers-reduced-motion: no-preference) {
+  :where(button:not(:disabled), a[href], [role="button"], summary):active {
+    animation: mobile-tap-response 150ms ease-out;
+  }
+}
+
 /* Product system refinement: shared density, hierarchy and interaction language. */
 .panel,
 .event-card,

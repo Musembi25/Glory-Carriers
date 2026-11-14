@@ -37,7 +37,7 @@ function useScrollReveal() {
         entry.target.classList.add("is-visible");
         observer.unobserve(entry.target);
       }
-    }, { threshold: 0.12, rootMargin: "0px 0px -32px 0px" });
+    }, { threshold: 0, rootMargin: "0px 0px -8% 0px" });
     observer.observe(element);
     return () => observer.disconnect();
   }, []);

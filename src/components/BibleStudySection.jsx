@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { supabase } from "../lib/supabase";
 import { BIBLE_BOOKS, BIBLE_BOOK_CHAPTERS } from "../lib/bibleBooks.js";
 import { addReadingDays, DEFAULT_BIBLE_TIMEZONE, getReadingDateInTimezone, getReadingWeekStart, summarizeGroupConsistency, summarizeGroupMemberActivity } from "../lib/personalBibleStudy.js";
@@ -38,6 +39,9 @@ function MentionComposer({ value, onChange, profiles, placeholder, label }) {
 export function BibleStudySection({ user, profile, profiles, isAdmin, groupId, focusPartnerStreaks = false, onPartnerStreakFocusHandled, onPersonalReadingsChange, onCarryReflectionToPrayer }) {
   const [activeTab, setActiveTab] = useState("read");
   const [activeJourney, setActiveJourney] = useState("personal");
+  const [libraryReaderOpen, setLibraryReaderOpen] = useState(false);
+  const [libraryReaderMounted, setLibraryReaderMounted] = useState(false);
+  const [librarySelection, setLibrarySelection] = useState(null);
   const [state, setState] = useState({ readings:[], completions:[], takeaways:[], reactions:[], replies:[], questions:[], answers:[], dailyContent:[], dailyResponses:[], dailyReactions:[], sessions:[] });
   const [streakSettings, setStreakSettings] = useState(null);
   const [audioUrls, setAudioUrls] = useState({});
@@ -58,7 +62,7 @@ export function BibleStudySection({ user, profile, profiles, isAdmin, groupId, f
   const [editingReadingId, setEditingReadingId] = useState("");
   const [readingAdminError, setReadingAdminError] = useState("");
   const [reader, setReader] = useState(null), [chapter, setChapter] = useState([]), [readerLoading, setReaderLoading] = useState(false), [readerError, setReaderError] = useState(""), [readerProgress, setReaderProgress] = useState(0), [actionError, setActionError] = useState(""), [reactionErrors, setReactionErrors] = useState({}), [selected, setSelected] = useState(""), [takeaway, setTakeaway] = useState(""), [takeawayReference, setTakeawayReference] = useState(""), [question, setQuestion] = useState(""), [replyDrafts, setReplyDrafts] = useState({}), [answerDrafts, setAnswerDrafts] = useState({}), [editing, setEditing] = useState(null), [editDraft, setEditDraft] = useState(""), [actionMenu, setActionMenu] = useState(""), [loading, setLoading] = useState(true), [saving, setSaving] = useState(false);
-  const readerCloseRef = useRef(null), readerContentRef = useRef(null), readerLoadIdRef = useRef(0), activeReadingSessionRef = useRef(""), sessionHeartbeatRef = useRef(null), reactionLocksRef = useRef(new Set());
+  const readerCloseRef = useRef(null), readerOverlayRef = useRef(null), readerContentRef = useRef(null), readerLoadIdRef = useRef(0), activeReadingSessionRef = useRef(""), sessionHeartbeatRef = useRef(null), reactionLocksRef = useRef(new Set());
   const [reactionBusy, setReactionBusy] = useState({});
   useEffect(() => {
     if (!focusPartnerStreaks) return;
@@ -108,6 +112,11 @@ export function BibleStudySection({ user, profile, profiles, isAdmin, groupId, f
   useEffect(()=>{ if(!actionMenu) return undefined; const close=(event)=>{ if(!event.target.closest?.(".bible-actions")) setActionMenu(""); }; document.addEventListener("click",close); return()=>document.removeEventListener("click",close); },[actionMenu]);
   const timezone=streakSettings?.application_timezone||DEFAULT_BIBLE_TIMEZONE;
   const today=getReadingDateInTimezone(new Date(),timezone), visibleReadings=state.readings.filter((item)=>isAdmin||item.status!=="draft"), todayReadings=visibleReadings.filter((item)=>item.reading_date===today&&item.status!=="archived"&&item.status!=="draft"), todayReading=todayReadings[0], current=todayReading||visibleReadings.filter((item)=>item.reading_date<=today&&item.status!=="archived"&&item.status!=="draft").at(-1)||visibleReadings[0], discussion=visibleReadings.find((item)=>item.id===selected)||current;
+  const libraryPassage = librarySelection || { book: current?.book || "Genesis", chapter: current?.chapter || 1 };
+  const handleLibraryChapterChange = useCallback(({ book, chapter }) => {
+    setLibrarySelection((selection) => selection?.book === book && selection?.chapter === chapter ? selection : { book, chapter });
+  }, []);
+  const openLibraryReader = () => { setLibraryReaderMounted(true); setLibraryReaderOpen(true); };
   const dailyContentToday=state.dailyContent.find((item)=>item.content_date===today&&(item.status==="published"||item.status==="closed"))||null;
   const visibleDailyContent=state.dailyContent.filter((item)=>isAdmin||["published","closed","archived"].includes(item.status)).filter((item)=>item.deleted_at==null);
   const upcomingDailyContent=visibleDailyContent.filter((item)=>item.content_date>today&&item.status==="published").sort((left,right)=>left.content_date.localeCompare(right.content_date)).slice(0,4);
@@ -152,11 +161,11 @@ export function BibleStudySection({ user, profile, profiles, isAdmin, groupId, f
   const stopReadingSession=async(readingId=activeReadingSessionRef.current)=>{if(!readingId||!supabase)return;clearInterval(sessionHeartbeatRef.current);sessionHeartbeatRef.current=null;activeReadingSessionRef.current="";const endedAt=new Date().toISOString();const {error}=await supabase.from("bible_study_reading_sessions").update({ended_at:endedAt,last_seen_at:endedAt}).eq("reading_id",readingId).eq("user_id",user.id);if(error)console.error("Bible Study reading session could not end:",error);setState((currentState)=>({...currentState,sessions:currentState.sessions.map((item)=>item.reading_id===readingId&&item.user_id===user.id?{...item,ended_at:endedAt,last_seen_at:endedAt}:item)}));};
   const startReadingSession=async(reading)=>{if(!reading||!supabase)return;if(activeReadingSessionRef.current&&activeReadingSessionRef.current!==reading.id)await stopReadingSession();const now=new Date().toISOString();activeReadingSessionRef.current=reading.id;const {data,error}=await supabase.from("bible_study_reading_sessions").upsert({reading_id:reading.id,group_id:groupId,user_id:user.id,started_at:now,last_seen_at:now,ended_at:null},{onConflict:"reading_id,user_id"}).select().single();if(error){activeReadingSessionRef.current="";console.error("Bible Study reading session could not start:",error);return;}setState((currentState)=>({...currentState,sessions:[...currentState.sessions.filter((item)=>!(item.reading_id===reading.id&&item.user_id===user.id)),data]}));clearInterval(sessionHeartbeatRef.current);sessionHeartbeatRef.current=setInterval(async()=>{const lastSeen=new Date().toISOString();const {error:heartbeatError}=await supabase.from("bible_study_reading_sessions").update({last_seen_at:lastSeen}).eq("reading_id",reading.id).eq("user_id",user.id).is("ended_at",null);if(!heartbeatError)setState((currentState)=>({...currentState,sessions:currentState.sessions.map((item)=>item.reading_id===reading.id&&item.user_id===user.id?{...item,last_seen_at:lastSeen}:item)}));},60000);};
   useEffect(()=>()=>{clearInterval(sessionHeartbeatRef.current);const readingId=activeReadingSessionRef.current;if(readingId&&supabase)void supabase.from("bible_study_reading_sessions").update({ended_at:new Date().toISOString()}).eq("reading_id",readingId).eq("user_id",user.id);},[user.id]);
-  const openReader=async(reading)=>{const requestId=++readerLoadIdRef.current;setReader(reading);setChapter([]);setReaderError("");setActionError("");setReaderLoading(true);setReaderProgress(0);if(activeReadingSessionRef.current&&activeReadingSessionRef.current!==reading.id)await stopReadingSession();try{const response=await fetch(fileFor(reading.book));if(!response.ok)throw new Error("This chapter could not be loaded. Check your connection and try again.");const source=await response.json();const verses=source.filter((verse)=>verse.chapterNumber===reading.chapter&&/text$/.test(verse.type));if(requestId===readerLoadIdRef.current){setChapter(verses);if(verses.length)await startReadingSession(reading);}}catch(error){if(requestId===readerLoadIdRef.current)setReaderError(error.message||"This chapter could not be loaded.");}finally{if(requestId===readerLoadIdRef.current)setReaderLoading(false);}};
+  const openReader=async(reading)=>{const requestId=++readerLoadIdRef.current;if(readerOverlayRef.current)readerOverlayRef.current.scrollTop=0;if(readerContentRef.current)readerContentRef.current.scrollTop=0;setReader(reading);setChapter([]);setReaderError("");setActionError("");setReaderLoading(true);setReaderProgress(0);if(activeReadingSessionRef.current&&activeReadingSessionRef.current!==reading.id)await stopReadingSession();try{const response=await fetch(fileFor(reading.book));if(!response.ok)throw new Error("This chapter could not be loaded. Check your connection and try again.");const source=await response.json();const verses=source.filter((verse)=>verse.chapterNumber===reading.chapter&&/text$/.test(verse.type));if(requestId===readerLoadIdRef.current){setChapter(verses);if(verses.length)await startReadingSession(reading);}}catch(error){if(requestId===readerLoadIdRef.current)setReaderError(error.message||"This chapter could not be loaded.");}finally{if(requestId===readerLoadIdRef.current)setReaderLoading(false);}};
   const closeReader=()=>{readerLoadIdRef.current+=1;void stopReadingSession();setReader(null);setReaderProgress(0);};
   const readerReadingIndex=state.readings.findIndex((item)=>item.id===reader?.id);
   const moveReader=(direction)=>{const next=state.readings[readerReadingIndex+direction];if(next)void openReader(next);};
-  const updateReaderProgress=()=>{const element=readerContentRef.current;if(!element)return;const available=element.scrollHeight-element.clientHeight;setReaderProgress(available>0?Math.round(element.scrollTop/available*100):100);};
+  const updateReaderProgress=(event)=>{const element=event?.currentTarget||readerContentRef.current;if(!element)return;const available=element.scrollHeight-element.clientHeight;setReaderProgress(available>0?Math.round(element.scrollTop/available*100):100);};
   useEffect(()=>{if(!reader)return undefined;const oldOverflow=document.body.style.overflow;document.body.style.overflow="hidden";readerCloseRef.current?.focus({preventScroll:true});const closeOnEscape=(event)=>{if(event.key==="Escape"){event.preventDefault();closeReader();}};document.addEventListener("keydown",closeOnEscape);return()=>{document.body.style.overflow=oldOverflow;document.removeEventListener("keydown",closeOnEscape);};},[Boolean(reader)]);
   const mentions=async(type,id,content)=>{const targets=profiles.filter((item)=>{if(!item.is_active||item.id===user.id||!item.full_name)return false;const escaped=item.full_name.trim().replace(/[.*+?^${}()|[\]\\]/g,"\\$&");return new RegExp(`@${escaped}(?=$|[\\s.,!?])`,"i").test(content);});if(targets.length){const {error}=await supabase.from("bible_study_mentions").insert(targets.map((item)=>({content_type:type,content_id:id,group_id:groupId,mentioned_user_id:item.id,mentioned_by:user.id})));if(error){console.error("Bible Study mentions could not be saved:",error);setActionError("Your contribution was shared, but one or more @mention notifications could not be sent.");}}};
   const completeReading=async(reading)=>{if(!reading||done(reading)||saving)return;const optimistic={id:`pending-${reading.id}`,reading_id:reading.id,user_id:user.id,completed_at:new Date().toISOString()};setActionError("");setState((currentState)=>({...currentState,completions:[...currentState.completions,optimistic]}));setSaving(true);const {data,error}=await supabase.from("bible_study_completions").insert({reading_id:reading.id,user_id:user.id}).select().single();if(error&&error.code!=="23505"){setState((currentState)=>({...currentState,completions:currentState.completions.filter((item)=>item.id!==optimistic.id)}));setActionError(error.message||"Your reading progress could not be saved.");}else if(data){setState((currentState)=>({...currentState,completions:currentState.completions.map((item)=>item.id===optimistic.id?data:item)}));}setSaving(false);if(!error){if(activeReadingSessionRef.current===reading.id)await stopReadingSession(reading.id);await load(false);}};
@@ -360,8 +369,20 @@ export function BibleStudySection({ user, profile, profiles, isAdmin, groupId, f
     </nav>
 
     <section id="bible-panel-read" className="bible-tab-panel" role="tabpanel" aria-labelledby="bible-tab-read" hidden={activeTab !== "read"}>
-      <FullBibleReader embedded initialBook={current?.book} initialChapter={current?.chapter}/>
-      <p className="bible-reader-note">Browsing Scripture does not change your assigned-reading progress. Mark today's reading complete from the prompt above.</p>
+      <section className="bible-panel bible-library-launcher" aria-labelledby="group-bible-reader-title">
+        <div className="bible-library-launcher-heading">
+          <span className="bible-library-launcher-icon" aria-hidden="true"><Book/></span>
+          <div><p className="bible-page-eyebrow">WORLD ENGLISH BIBLE · PUBLIC DOMAIN</p><h2 id="group-bible-reader-title">Bible Reading</h2><p><strong>{libraryPassage.book} {libraryPassage.chapter}</strong><span>{current ? done(current) ? "Today's group reading is complete" : "Your shared reading is ready" : "Choose any book or chapter to begin"}</span></p></div>
+        </div>
+        <div className="bible-library-launcher-progress">
+          <span>Browsing Scripture does not change your assigned-reading progress.</span>
+          <small>Mark today&apos;s assigned chapter complete from its reading prompt.</small>
+        </div>
+        <button type="button" className="bible-btn primary bible-library-launcher-button" onClick={openLibraryReader}>
+          {libraryReaderMounted ? "Continue Reading" : current ? "Start Reading" : "Open Bible Reader"}
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M5 12h14m-7-7 7 7-7 7" /></svg>
+        </button>
+      </section>
     </section>
 
     <section id="bible-panel-group" className="bible-tab-panel" role="tabpanel" aria-labelledby="bible-tab-group" hidden={activeTab !== "group"}>
@@ -528,7 +549,7 @@ export function BibleStudySection({ user, profile, profiles, isAdmin, groupId, f
       </section>
     </section>:null}
 
-    {reader ? <div className="bible-reader-overlay" onMouseDown={(event)=>{if(event.target===event.currentTarget)closeReader();}}><section className="bible-reader" role="dialog" aria-modal="true" aria-labelledby="assigned-reading-title" aria-describedby="assigned-reading-progress">
+    {reader ? <div ref={readerOverlayRef} className="bible-reader-overlay" onScroll={updateReaderProgress} onMouseDown={(event)=>{if(event.target===event.currentTarget)closeReader();}}><section className="bible-reader" role="dialog" aria-modal="true" aria-labelledby="assigned-reading-title" aria-describedby="assigned-reading-progress">
       <header className="bible-reader-heading">
         <div><small>WORLD ENGLISH BIBLE</small><h2 id="assigned-reading-title">{reader.book} {reader.chapter}</h2></div>
         <nav className="bible-reader-navigation" aria-label="Reading plan chapters">
@@ -554,5 +575,16 @@ export function BibleStudySection({ user, profile, profiles, isAdmin, groupId, f
       </footer>
     </section></div> : null}
     </> : null}
+    {libraryReaderMounted && typeof document !== "undefined" ? createPortal(
+      <FullBibleReader
+        initialBook={libraryPassage.book}
+        initialChapter={libraryPassage.chapter}
+        isOpen={libraryReaderOpen}
+        onClose={() => setLibraryReaderOpen(false)}
+        onChapterChange={handleLibraryChapterChange}
+        footerHint="Browse the World English Bible. Complete assigned readings from their group reading prompt."
+      />,
+      document.body
+    ) : null}
   </div>;
 }

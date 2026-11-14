@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { supabase } from "../lib/supabase";
 import { BIBLE_BOOKS, BIBLE_BOOK_CHAPTERS } from "../lib/bibleBooks.js";
 import { BIBLE_STREAK_MILESTONES, DEFAULT_BIBLE_TIMEZONE, getReadingDateInTimezone, summarizePersonalReadings } from "../lib/personalBibleStudy.js";
@@ -22,6 +23,9 @@ function StatusLabel({ status }) {
 }
 
 export function PersonalBibleStudy({ user, onReadingsChange }) {
+  const [readerOpen, setReaderOpen] = useState(false);
+  const [readerNotice, setReaderNotice] = useState("");
+  const [completionSuccess, setCompletionSuccess] = useState(null);
   const [readings, setReadings] = useState([]);
   const [notes, setNotes] = useState([]);
   const [streakSummary, setStreakSummary] = useState(null);
@@ -46,6 +50,7 @@ export function PersonalBibleStudy({ user, onReadingsChange }) {
   const [noteDraft, setNoteDraft] = useState({ note_type: "reflection", verse_reference: "", content: "" });
   const [editingNoteId, setEditingNoteId] = useState("");
   const [saving, setSaving] = useState(false);
+  const completionInFlightRef = useRef(false);
   const timezone = streakSummary?.timezone || DEFAULT_BIBLE_TIMEZONE;
   const today = getReadingDateInTimezone(new Date(), timezone);
 
@@ -115,6 +120,10 @@ export function PersonalBibleStudy({ user, onReadingsChange }) {
   ), [readings]);
   const stats = useMemo(() => summarizePersonalReadings(readings), [readings]);
   const selectedReading = readings.find((row) => row.id === selectedReadingId) || null;
+  const hasReadingProgress = readings.some((row) => row.status === "in_progress" || row.status === "completed");
+  const readingActionLabel = hasReadingProgress ? "Continue Reading" : "Start Reading";
+  const readerCompletedToday = readings.some((row) => row.book === readerSelection.book && row.chapter === readerSelection.chapter && row.reading_date === today && row.status === "completed");
+  const readerInProgress = readings.some((row) => row.book === readerSelection.book && row.chapter === readerSelection.chapter && row.status === "in_progress");
   const selectedNotes = notes.filter((note) => note.book === readerSelection.book && note.chapter === readerSelection.chapter);
   useEffect(() => {
     if (readerSelection.key !== 0 || !readings.length) return;
@@ -128,6 +137,10 @@ export function PersonalBibleStudy({ user, onReadingsChange }) {
     ...readings.filter((row) => row.completed_at).map((row) => ({ id: `reading-${row.id}`, created_at: row.completed_at, label: `Completed ${row.book} ${row.chapter}` })),
     ...notes.map((note) => ({ id: `note-${note.id}`, created_at: note.created_at, label: `${NOTE_TYPES.find(([value]) => value === note.note_type)?.[1] || "Note"} · ${note.book} ${note.chapter}` }))
   ].sort((left, right) => new Date(right.created_at) - new Date(left.created_at)).slice(0, 5), [notes, readings]);
+  const lastReadingActivity = useMemo(() => readings
+    .filter((row) => row.status === "completed" || row.status === "in_progress")
+    .map((row) => ({ ...row, activityAt: row.completed_at || row.updated_at || row.created_at || row.reading_date }))
+    .sort((left, right) => new Date(right.activityAt) - new Date(left.activityAt))[0] || null, [readings]);
   useEffect(() => {
     setPlan((current) => current.book ? current : { ...current, reading_date: today });
   }, [today]);
@@ -149,6 +162,17 @@ export function PersonalBibleStudy({ user, onReadingsChange }) {
     setSelectedReadingId(matching?.id || "");
   }
 
+  function openBibleReader() {
+    setActionError("");
+    setReaderNotice("");
+    setReaderOpen(true);
+  }
+
+  function dismissChapterCompletion() {
+    setCompletionSuccess(null);
+    setCelebration(null);
+  }
+
   async function addReading(event) {
     event.preventDefault();
     const chapter = Number(plan.chapter);
@@ -156,7 +180,7 @@ export function PersonalBibleStudy({ user, onReadingsChange }) {
       setActionError("Choose a valid Bible book, chapter and reading date.");
       return;
     }
-    setSaving(true); setActionError(""); setNotice("");
+    setSaving(true); setActionError(""); setNotice(""); setReaderNotice("");
     const query = editingReadingId
       ? supabase.from("personal_bible_study_readings").update({ book: plan.book, chapter, reading_date: plan.reading_date }).eq("id", editingReadingId).eq("user_id", user.id).neq("status", "completed")
       : supabase.from("personal_bible_study_readings").insert({ user_id: user.id, book: plan.book, chapter, reading_date: plan.reading_date, status: "planned" });
@@ -188,7 +212,7 @@ export function PersonalBibleStudy({ user, onReadingsChange }) {
   async function deletePlannedReading(reading) {
     if (reading.status === "completed" || saving) return;
     if (!window.confirm(`Remove ${reading.book} ${reading.chapter} from your personal plan?`)) return;
-    setSaving(true); setActionError(""); setNotice("");
+    setSaving(true); setActionError(""); setNotice(""); setReaderNotice("");
     const { data, error } = await supabase.from("personal_bible_study_readings")
       .delete().eq("id", reading.id).eq("user_id", user.id).neq("status", "completed").select("id").maybeSingle();
     if (error) setActionError(error.message || "This chapter could not be removed from your plan.");
@@ -212,7 +236,7 @@ export function PersonalBibleStudy({ user, onReadingsChange }) {
   }
 
   async function setReadingStatus(status) {
-    if (saving) return;
+    if (saving || (status === "completed" && completionInFlightRef.current)) return;
     const book = readerSelection.book;
     const chapter = readerSelection.chapter;
     const existingToday = readings.find((row) => row.book === book && row.chapter === chapter && row.reading_date === today) || null;
@@ -222,45 +246,64 @@ export function PersonalBibleStudy({ user, onReadingsChange }) {
       || (selectedReading && selectedReading.book === book && selectedReading.chapter === chapter ? selectedReading : null)
       || null;
     if (status === "completed" && existingToday?.status === "completed") return;
-    setSaving(true); setActionError(""); setNotice("");
-    if (status === "completed") {
-      if (!streakAvailable) {
-        setActionError(streakError || "Bible Streak is not ready yet. Your reading was not marked complete.");
-        setSaving(false);
-        return;
-      }
-      const { data, error } = await supabase.rpc("complete_personal_bible_reading", {
-        target_reading_id: existing?.id || null,
-        target_book: book,
-        target_chapter: chapter
-      });
-      if (error) {
-        setActionError(error.message || "Your reading progress could not be saved.");
-      } else {
+    if (status === "completed") completionInFlightRef.current = true;
+    setSaving(true); setActionError(""); setNotice(""); setReaderNotice("");
+    try {
+      if (status === "completed") {
+        if (!streakAvailable) {
+          setActionError(streakError || "Bible Streak is not ready yet. Your reading was not marked complete.");
+          return;
+        }
+        const { data, error } = await supabase.rpc("complete_personal_bible_reading", {
+          target_reading_id: existing?.id || null,
+          target_book: book,
+          target_chapter: chapter
+        });
+        if (error) {
+          setActionError(error.message || "Your reading progress could not be saved.");
+          return;
+        }
         const completedReading = data?.reading;
         if (completedReading?.id) setSelectedReadingId(completedReading.id);
         if (data?.summary) setStreakSummary(data.summary);
-        await load();
+        const refreshed = await load();
         const milestoneDays = Math.max(0, ...(data?.newly_earned_milestones || []).map(Number));
         const milestone = BIBLE_STREAK_MILESTONES.find((item) => item.days === milestoneDays) || null;
-        setNotice(`${book} ${chapter} completed and saved to your personal reading history.`);
+        const streakValue = Number(data?.summary?.current_streak ?? refreshed?.summary?.current_streak);
+        const message = `${book} ${chapter} completed and saved to your personal reading history.`;
+        setNotice(message);
+        setReaderNotice(message);
+        setCompletionSuccess({
+          book,
+          chapter,
+          streak: Number.isFinite(streakValue) ? streakValue : null,
+          milestone: milestone?.title || null
+        });
         if (data?.completed_now) setCelebration({ milestone });
-      }
-    } else {
-      const payload = { status: "in_progress", completed_at: null, updated_at: new Date().toISOString() };
-      const editableExisting = existing?.status !== "completed" && existing?.reading_date === today ? existing : null;
-      const result = editableExisting
-        ? await supabase.from("personal_bible_study_readings").update(payload).eq("id", editableExisting.id).eq("user_id", user.id).select().single()
-        : await supabase.from("personal_bible_study_readings").upsert({ user_id: user.id, book, chapter, reading_date: today, ...payload }, { onConflict: "user_id,book,chapter,reading_date" }).select().single();
-      if (result.error) {
-        setActionError(result.error.message || "Your reading progress could not be saved.");
       } else {
-        setSelectedReadingId(result.data.id);
-        await load();
-        setNotice(`${book} ${chapter} added to your current reading.`);
+        const payload = { status: "in_progress", completed_at: null, updated_at: new Date().toISOString() };
+        const editableExisting = existing?.status !== "completed" && existing?.reading_date === today ? existing : null;
+        const result = editableExisting
+          ? await supabase.from("personal_bible_study_readings").update(payload).eq("id", editableExisting.id).eq("user_id", user.id).select().single()
+          : await supabase.from("personal_bible_study_readings").upsert({ user_id: user.id, book, chapter, reading_date: today, ...payload }, { onConflict: "user_id,book,chapter,reading_date" }).select().single();
+        if (result.error) {
+          setActionError(result.error.message || "Your reading progress could not be saved.");
+        } else {
+          setSelectedReadingId(result.data.id);
+          await load();
+          const message = `${book} ${chapter} added to your current reading.`;
+          setNotice(message);
+          setReaderNotice(message);
+        }
       }
+    } catch (saveError) {
+      setActionError(saveError instanceof Error && saveError.message
+        ? saveError.message
+        : "Your reading progress could not be saved.");
+    } finally {
+      setSaving(false);
+      if (status === "completed") completionInFlightRef.current = false;
     }
-    setSaving(false);
   }
 
   async function useFreeze(date) {
@@ -344,13 +387,14 @@ export function PersonalBibleStudy({ user, onReadingsChange }) {
 
   if (loading) return <div className="personal-bible-loading" role="status">Opening your personal Bible Study…</div>;
 
-  return <section className="personal-bible-study" aria-labelledby="personal-bible-title">
+  return <>
+    <section className="personal-bible-study" aria-labelledby="personal-bible-title">
     {loadError ? <div className="personal-bible-feedback error" role="alert">{loadError}</div> : null}
     {streakError ? <div className="personal-bible-feedback error" role="alert">{streakError}</div> : null}
     {actionError ? <div className="personal-bible-feedback error" role="alert">{actionError}</div> : null}
     {notice ? <div className="personal-bible-feedback success" role="status">{notice}</div> : null}
     <div className={`bible-streak-connection is-${liveState}`} role="status"><i />{liveState === "live" ? "Your personal progress is live across your signed-in devices." : liveState === "error" ? "Live connection paused. Your saved progress will sync when connection returns." : "Connecting your personal reading progress…"}</div>
-    {streakAvailable ? <BibleStreakCard summary={streakSummary} achievements={achievements} readings={readings} notes={notes} freezeHistory={freezeHistory} onUseFreeze={useFreeze} freezeBusy={freezeBusy} timezone={timezone} celebration={celebration} onCloseCelebration={() => setCelebration(null)} /> : <section className="bible-streak-welcome"><small>YOUR BIBLE STREAK</small><h2>Stay rooted in the Word. Build consistency. Grow every day.</h2><p>Every meaningful journey begins with one day. Your personal reading history remains safely in place while the streak system is prepared.</p></section>}
+    {streakAvailable ? <BibleStreakCard summary={streakSummary} achievements={achievements} readings={readings} notes={notes} freezeHistory={freezeHistory} onUseFreeze={useFreeze} freezeBusy={freezeBusy} timezone={timezone} celebration={completionSuccess ? null : celebration} onCloseCelebration={() => setCelebration(null)} /> : <section className="bible-streak-welcome"><small>YOUR BIBLE STREAK</small><h2>Stay rooted in the Word. Build consistency. Grow every day.</h2><p>Every meaningful journey begins with one day. Your personal reading history remains safely in place while the streak system is prepared.</p></section>}
 
     <div className="personal-bible-overview" aria-label="Your personal Bible Study progress">
       <article className="personal-bible-progress-card"><div className="personal-bible-progress-copy"><span>PERSONAL PLAN</span><strong>{stats.completionPercent}%</strong><small>{stats.completedCount} of {stats.totalCount} planned chapters complete</small></div><div className="personal-bible-progress-track" role="progressbar" aria-label="Personal reading plan completion" aria-valuemin="0" aria-valuemax="100" aria-valuenow={stats.completionPercent}><i style={{ width: `${stats.completionPercent}%` }} /></div></article>
@@ -360,13 +404,35 @@ export function PersonalBibleStudy({ user, onReadingsChange }) {
     </div>
 
     <div className="personal-bible-content-grid">
-      <section className="bible-panel personal-bible-reader-panel">
-        <header className="personal-bible-section-heading"><div><small>YOUR SCRIPTURE READER</small><h2>{readerSelection.book} {readerSelection.chapter}</h2><p>World English Bible · public domain</p></div>{selectedReading ? <StatusLabel status={selectedReading.status} /> : null}</header>
-        <FullBibleReader key={readerSelection.key} embedded initialBook={readerSelection.book} initialChapter={readerSelection.chapter} onChapterChange={changePassage} footerHint="Your personal reading progress is saved separately from the group plan." />
-        <div className="personal-bible-reader-actions">
-          <button type="button" className="bible-btn secondary" onClick={() => void setReadingStatus("in_progress")} disabled={saving || readings.some((row) => row.book === readerSelection.book && row.chapter === readerSelection.chapter && row.reading_date === today && row.status === "completed")}>Start or continue reading</button>
-          <button type="button" className="bible-btn primary" onClick={() => void setReadingStatus("completed")} disabled={saving || !streakAvailable || readings.some((row) => row.book === readerSelection.book && row.chapter === readerSelection.chapter && row.reading_date === today && row.status === "completed")}>{saving ? "Saving…" : readings.some((row) => row.book === readerSelection.book && row.chapter === readerSelection.chapter && row.reading_date === today && row.status === "completed") ? "Completed today" : "Mark this chapter complete"}</button>
+      <section className="bible-panel personal-bible-reader-launcher" aria-labelledby="personal-bible-reader-title">
+        <div className="personal-bible-reader-card-heading">
+          <span className="personal-bible-reader-card-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2Z" />
+              <path d="M8.5 7h8M8.5 10.5h8" />
+            </svg>
+          </span>
+          <div>
+            <small>YOUR SCRIPTURE READER</small>
+            <h2 id="personal-bible-reader-title">Bible Reading</h2>
+            <p><strong>{readerSelection.book} {readerSelection.chapter}</strong><span>World English Bible · public domain</span></p>
+          </div>
+          {selectedReading ? <StatusLabel status={selectedReading.status} /> : null}
         </div>
+        <div className="personal-bible-reader-card-details">
+          {stats.totalCount ? <div className="personal-bible-reader-progress">
+            <div><span>Personal plan progress</span><strong>{stats.completionPercent}%</strong></div>
+            <span className="personal-bible-progress-track" role="progressbar" aria-label="Personal reading plan completion" aria-valuemin="0" aria-valuemax="100" aria-valuenow={stats.completionPercent}><i style={{ width: `${stats.completionPercent}%` }} /></span>
+            <small>{stats.completedCount} of {stats.totalCount} planned chapters complete</small>
+          </div> : <p className="personal-bible-reader-empty-progress">Your personal reading progress will appear here.</p>}
+          {lastReadingActivity ? <p className="personal-bible-reader-last-activity">
+            {lastReadingActivity.status === "completed" ? "Last completed" : "Last continued"} · {lastReadingActivity.book} {lastReadingActivity.chapter} · {new Intl.DateTimeFormat(undefined, { dateStyle: "medium", timeStyle: "short" }).format(new Date(lastReadingActivity.activityAt))}
+          </p> : null}
+        </div>
+        <button type="button" className="bible-btn primary personal-bible-reader-open" onClick={openBibleReader}>
+          {readingActionLabel}
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M5 12h14m-7-7 7 7-7 7" /></svg>
+        </button>
       </section>
 
       <aside className="personal-bible-side-column">
@@ -422,5 +488,31 @@ export function PersonalBibleStudy({ user, onReadingsChange }) {
         {recentActivity.length ? <ul>{recentActivity.map((activity) => <li key={activity.id}><span aria-hidden="true" /><div><strong>{activity.label}</strong><time dateTime={activity.created_at}>{new Intl.DateTimeFormat(undefined, { dateStyle: "medium", timeStyle: "short" }).format(new Date(activity.created_at))}</time></div></li>)}</ul> : <p className="bible-muted">Completed readings and saved notes will appear here.</p>}
       </section>
     </div>
-  </section>;
+    </section>
+    {typeof document !== "undefined" ? createPortal(
+      <FullBibleReader
+        key={readerSelection.key}
+        initialBook={readerSelection.book}
+        initialChapter={readerSelection.chapter}
+        isOpen={readerOpen}
+        onClose={() => setReaderOpen(false)}
+        onChapterChange={changePassage}
+        onStartReading={() => void setReadingStatus("in_progress")}
+        onMarkComplete={() => void setReadingStatus("completed")}
+        isSaving={saving}
+        startDisabled={readerCompletedToday}
+        completeDisabled={readerCompletedToday || !streakAvailable}
+        startLabel={readerInProgress ? "Continue Reading" : "Start Reading"}
+        completeLabel={readerCompletedToday ? "Completed today" : "Mark This Chapter Complete"}
+        readingProgress={stats.completionPercent}
+        progressLabel={stats.totalCount ? `${stats.completedCount} of ${stats.totalCount} chapters complete` : "No planned chapters yet"}
+        successMessage={readerNotice}
+        errorMessage={actionError || streakError}
+        footerHint="Your personal reading progress is saved separately from the group plan."
+        completionSuccess={completionSuccess}
+        onDismissCompletion={dismissChapterCompletion}
+      />,
+      document.body
+    ) : null}
+  </>;
 }

@@ -1,35 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { announcementReactionMeta, getReactionEmoji, getReactionMeta } from "./ReactionIcons.jsx";
+import { MemberInitials as SharedMemberIdentity } from "../MemberInitials.jsx";
 
 const ENTITY_TABLE = "announcements";
 
-function getInitials(label) {
-  return label
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((part) => part[0]?.toUpperCase() ?? "")
-    .join("");
-}
-
-function MemberAvatar({ member, size = "small" }) {
-  const label = member?.full_name || member?.email || "Member";
-
-  if (member?.avatar_url) {
-    return (
-      <img
-        src={member.avatar_url}
-        alt=""
-        className={`announcement-avatar ${size}`}
-      />
-    );
-  }
-
-  return (
-    <span className={`announcement-avatar fallback ${size}`} aria-hidden="true">
-      {getInitials(label)}
-    </span>
-  );
+function MemberIdentity({ member, size = "small" }) {
+  return <SharedMemberIdentity member={member} className={`announcement-identity ${size}`} />;
 }
 
 export function AnnouncementReactions({

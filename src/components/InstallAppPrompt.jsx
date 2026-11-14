@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { APP_NAME } from "../lib/identity";
 
 const DISMISS_KEY = "glory-carriers-pwa-install-dismissed";
 
@@ -196,7 +197,7 @@ export function InstallAppPrompt() {
 
     return (
       <p>
-        Add Glory Carriers to your home screen or desktop for quick access, like a native app.
+        Add {APP_NAME} to your home screen or desktop for quick access, like a native app.
       </p>
     );
   }
@@ -210,10 +211,10 @@ export function InstallAppPrompt() {
         : "Install app";
 
   return (
-    <div className="install-app-prompt" role="region" aria-label="Install Glory Carriers app">
+    <div className="install-app-prompt" role="region" aria-label={`Install ${APP_NAME} app`}>
       <div className="install-app-prompt-inner">
         <div className="install-app-prompt-copy">
-          <strong>Install Glory Carriers</strong>
+          <strong>Install {APP_NAME}</strong>
           {renderInstructions()}
         </div>
         <div className="install-app-prompt-actions">

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { MemberInitials } from "../MemberInitials.jsx";
 import { portalIcons } from "./PortalIcons";
 
 export const NAV_GROUPS = [
@@ -162,6 +163,7 @@ function isBottomNavActive(item, portalPage) {
 
 export function DiscipleshipPortalLayout({
   userName,
+  currentProfile,
   roles,
   portalPage,
   onNavigate,
@@ -178,7 +180,6 @@ export function DiscipleshipPortalLayout({
   onOpenHelp,
   theme = "light",
   onThemeToggle,
-  userAvatarUrl,
   rightRail,
   children
 }) {
@@ -321,12 +322,7 @@ export function DiscipleshipPortalLayout({
         <footer className="dp-sidebar-footer">
           <div className="dp-student-card">
             <div className="dp-student-card-top">
-              <div className="dp-student-avatar">
-                {userAvatarUrl ? (
-                  <img src={userAvatarUrl} alt="" />
-                ) : (
-                  <span>{getInitials(userName)}</span>
-                )}
+              <div className="dp-student-identity"><MemberInitials member={currentProfile} name={userName} className="dp-identity-art" />
               </div>
               <div className="dp-student-info">
                 <strong>{userName}</strong>
@@ -433,15 +429,10 @@ export function DiscipleshipPortalLayout({
             </button>
             <button
               type="button"
-              className="dp-mobile-header-avatar"
+              className="dp-mobile-header-identity"
               onClick={() => navigateFromMobile("profile")}
               aria-label="Open profile"
-            >
-              {userAvatarUrl ? (
-                <img src={userAvatarUrl} alt="" />
-              ) : (
-                <span>{getInitials(userName)}</span>
-              )}
+            ><MemberInitials member={currentProfile} name={userName} className="dp-identity-art" />
             </button>
           </div>
         </header>

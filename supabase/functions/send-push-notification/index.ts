@@ -33,6 +33,7 @@ const DISCIPLESHIP_TYPES = new Set([
 ]);
 
 const BIBLE_STUDY_TYPES = new Set([
+  "bible_study_reminder",
   "bible_study_takeaway_posted",
   "bible_study_takeaway_reply",
   "bible_study_question_posted",
@@ -46,8 +47,8 @@ function getCategory(notificationType: string) {
   if (DISCIPLESHIP_TYPES.has(notificationType)) return "discipleship";
   if (BIBLE_STUDY_TYPES.has(notificationType)) return "bible_study";
   if (notificationType === "prayer_reminder") return "prayer";
+  if (notificationType === "birthday_reminder") return "birthdays";
   if (notificationType === "new_message") return "messages";
-  if (notificationType === "announcement_posted") return "announcements";
   if (notificationType === "task_assigned") return "tasks";
   if (notificationType === "event_reminder") return "attendance";
   return "events";
@@ -57,11 +58,11 @@ function getSection(record: Record<string, unknown>) {
   const entityTable = String(record.entity_table || "");
   const notificationType = String(record.notification_type || "");
 
+  if (entityTable === "cell_group_members" || notificationType === "birthday_reminder") return "birthdays";
   if (entityTable === "virtual_meetings" || MEETING_TYPES.has(notificationType)) return "meetings";
   if (entityTable === "messages") return "messages";
   if (entityTable === "tasks") return "tasks";
   if (entityTable === "prayer_points") return "prayer";
-  if (entityTable === "announcements") return "events";
   if (entityTable.startsWith("bible_study_")) return "bible-study";
   if (entityTable === "discipleship_classes" || entityTable === "discipleship_lessons") {
     return "discipleship";
@@ -217,6 +218,21 @@ serve(async (request) => {
     }
 
     const adminClient = createClient(supabaseUrl, serviceRoleKey);
+
+    if (record.notification_type === "bible_study_reminder") {
+      const { data: reminderPreferences, error: reminderPreferenceError } = await adminClient
+        .from("bible_streak_reminder_preferences")
+        .select("delivery_channel")
+        .eq("user_id", record.user_id)
+        .maybeSingle();
+      if (reminderPreferenceError) throw reminderPreferenceError;
+      if (reminderPreferences?.delivery_channel !== "in_app_and_push") {
+        return new Response(JSON.stringify({ skipped: true, reason: "reminder-channel" }), {
+          status: 200,
+          headers: { ...corsHeaders, "Content-Type": "application/json" }
+        });
+      }
+    }
 
     const { data: preferences } = await adminClient
       .from("notification_preferences")

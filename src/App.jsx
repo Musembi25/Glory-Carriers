@@ -5,10 +5,11 @@ import { AuthScreen } from "./components/AuthScreen";
 import { LoadingScreen } from "./components/LoadingScreen";
 import { SetupScreen } from "./components/SetupScreen";
 import { InstallAppPrompt } from "./components/InstallAppPrompt";
+import { BrandLogo } from "./components/BrandLogo";
 import { isSupabaseConfigured } from "./lib/supabase";
 
 function AppContent() {
-  const { session, initializing, isRecoveryMode } = useAuth();
+  const { session, profile, initializing, isRecoveryMode, authEntryPending, signOut } = useAuth();
 
   useEffect(() => {
     if (initializing) return undefined;
@@ -35,6 +36,25 @@ function AppContent() {
 
   if (initializing) {
     return <LoadingScreen />;
+  }
+
+  if (authEntryPending && !isRecoveryMode) {
+    return <AuthScreen />;
+  }
+
+  if (session && profile?.is_active === false && !isRecoveryMode) {
+    return (
+      <main className="account-paused-screen">
+        <BrandLogo />
+        <section>
+          <span className="account-paused-mark" aria-hidden="true" />
+          <p className="eyebrow">Account access</p>
+          <h1>This account is paused</h1>
+          <p>Workspace access is temporarily unavailable. Please contact an administrator for The City on A Hill if you think this is unexpected.</p>
+          <button type="button" className="primary-button" onClick={() => void signOut()}>Sign out</button>
+        </section>
+      </main>
+    );
   }
 
   return session && !isRecoveryMode ? <AppShell /> : <AuthScreen />;

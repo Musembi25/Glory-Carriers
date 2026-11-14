@@ -3,7 +3,7 @@ import { BIBLE_BOOKS } from "../lib/bibleBooks.js";
 
 const base = import.meta.env.BASE_URL;
 
-export function FullBibleReader({ initialBook, initialChapter, embedded = false, onClose }) {
+export function FullBibleReader({ initialBook, initialChapter, embedded = false, onClose, onChapterChange, footerHint }) {
   const [books] = useState(BIBLE_BOOKS);
   const [bookName, setBookName] = useState(() => BIBLE_BOOKS.some((book) => book.name === initialBook) ? initialBook : "Genesis");
   const [chapterNumber, setChapterNumber] = useState(Number(initialChapter) || 1);
@@ -42,6 +42,10 @@ export function FullBibleReader({ initialBook, initialChapter, embedded = false,
   useEffect(() => {
     if (currentBook && chapterNumber > currentBook.chapters) setChapterNumber(currentBook.chapters);
   }, [chapterNumber, currentBook]);
+
+  useEffect(() => {
+    onChapterChange?.({ book: bookName, chapter: chapterNumber });
+  }, [bookName, chapterNumber, onChapterChange]);
 
   const verses = useMemo(() => bookData.filter((verse) => verse.chapterNumber === chapterNumber), [bookData, chapterNumber]);
   const visibleVerses = useMemo(() => {
@@ -120,7 +124,7 @@ export function FullBibleReader({ initialBook, initialChapter, embedded = false,
         </main>
 
         <footer className="full-bible-footer">
-          <span>Browsing does not change your assigned-reading progress.</span>
+          <span>{footerHint || "Browsing does not change your assigned-reading progress."}</span>
           <a href="https://ebible.org/engwebp/copyright.htm" target="_blank" rel="noreferrer">Text source and public-domain notice</a>
         </footer>
       </section>

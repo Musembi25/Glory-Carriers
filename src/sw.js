@@ -5,7 +5,7 @@ cleanupOutdatedCaches();
 
 self.addEventListener("push", (event) => {
   const payload = event.data?.json?.() ?? {};
-  const title = payload.title || "Glory Carriers";
+  const title = payload.title || "The City on A Hill";
   const options = {
     body: payload.body || "",
     icon: payload.icon || "/icons/icon-192.png",

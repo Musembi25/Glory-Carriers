@@ -1,12 +1,12 @@
 {
-  "name": "GLORY CARRIERS — Daily Bible Study",
-  "short_name": "Glory Carriers",
+  "name": "The City on A Hill",
+  "short_name": "The City on A Hill",
   "description": "One chapter. One day. One Word. Growing together.",
   "start_url": "./index.html#dashboard",
   "scope": "./",
   "display": "standalone",
-  "background_color": "#F8F7F4",
-  "theme_color": "#F97316",
+  "background_color": "#FFFFFF",
+  "theme_color": "#35165C",
   "orientation": "portrait-primary",
   "icons": [
     { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }

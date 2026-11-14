@@ -19,23 +19,26 @@ export default defineConfig({
       includeAssets: [
         "favicon.png",
         "apple-touch-icon.png",
-        "logo.svg",
         "icons/icon-192.png",
         "icons/icon-512.png",
         "icons/icon-maskable-512.png"
       ],
       injectManifest: {
-        globPatterns: ["**/*.{js,css,html,ico,png,svg,woff2,woff}"],
+        globPatterns: [
+          "**/*.{js,css,html,ico,png,svg,woff2,woff}",
+          "community/backgrounds/*.jpeg",
+          "community/fellowship.webp"
+        ],
         maximumFileSizeToCacheInBytes: 4 * 1024 * 1024
       },
       manifest: {
         id: basePath,
-        name: "Glory Carriers",
-        short_name: "Glory Carriers",
+        name: "The City on A Hill",
+        short_name: "The City on A Hill",
         description:
-          "Glory Carriers helps cell groups plan events, coordinate tasks, discipleship, and collaborate in real time.",
-        theme_color: "#111111",
-        background_color: "#f7f8fa",
+          "The City on A Hill helps its community plan, serve, and grow together.",
+        theme_color: "#35165c",
+        background_color: "#ffffff",
         display: "standalone",
         display_override: ["standalone", "minimal-ui", "browser"],
         orientation: "any",

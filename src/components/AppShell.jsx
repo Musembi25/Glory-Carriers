@@ -1,4 +1,4 @@
-import { startTransition, useEffect, useMemo, useRef, useState } from "react";
+import { lazy, Suspense, startTransition, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useAuth } from "../context/AuthContext";
 import { computeUserAssignmentStats, getDisplayStatus, isWorkLesson } from "../lib/discipleshipAssignments";
@@ -21,28 +21,46 @@ import {
   getAnnouncementReactionTotals
 } from "./announcements/AnnouncementReactions.jsx";
 import { BrandLogo } from "./BrandLogo";
-import { GCPulseActivities } from "./GCPulseActivities.jsx";
-import { DiscipleshipAssignments } from "./DiscipleshipAssignments.jsx";
-import { CellGroupManagementSection } from "./management/CellGroupManagementSection";
-import { BibleStudySection } from "./BibleStudySection";
+import { MemberInitials } from "./MemberInitials.jsx";
+const AdminBibleStreakReport = lazy(() => import("./AdminBibleStreakReport.jsx").then((module) => ({ default: module.AdminBibleStreakReport })));
+const AboutPage = lazy(() => import("./AboutFaqPages.jsx").then((module) => ({ default: module.AboutPage })));
+const FAQPage = lazy(() => import("./AboutFaqPages.jsx").then((module) => ({ default: module.FAQPage })));
+const FunZone = lazy(() => import("./FunZone.jsx").then((module) => ({ default: module.FunZone })));
+const DiscipleshipAssignments = lazy(() => import("./DiscipleshipAssignments.jsx").then((module) => ({ default: module.DiscipleshipAssignments })));
+const CellGroupManagementSection = lazy(() => import("./management/CellGroupManagementSection").then((module) => ({ default: module.CellGroupManagementSection })));
+const BirthdayManagementSection = lazy(() => import("./management/BirthdayManagementSection.jsx").then((module) => ({ default: module.BirthdayManagementSection })));
+import "../styles/admin-workspace.css";
+const BibleStudySection = lazy(() => import("./BibleStudySection").then((module) => ({ default: module.BibleStudySection })));
 import { NotificationCenter } from "./NotificationCenter.jsx";
 import { NotificationPreferences } from "./NotificationPreferences.jsx";
 import { PushPermissionPrompt } from "./PushPermissionPrompt.jsx";
-const communityBackgrounds = [
-  `${import.meta.env.BASE_URL}community/a.jpeg`,
-  `${import.meta.env.BASE_URL}community/b.jpeg`,
-  `${import.meta.env.BASE_URL}community/c.jpeg`,
-  `${import.meta.env.BASE_URL}community/d.jpeg`,
-  `${import.meta.env.BASE_URL}community/e.jpeg`,
-  `${import.meta.env.BASE_URL}community/fellowship.webp`
-];
+const SuperAdminArea = lazy(() => import("./SuperAdminArea.jsx").then((module) => ({ default: module.SuperAdminArea })));
+import { APP_NAME, CELL_GROUP_NAME } from "../lib/identity";
+import { BIBLE_STREAK_MILESTONES, getLocalReadingDate, summarizePersonalReadings } from "../lib/personalBibleStudy.js";
+import { formatBirthdayDate, getBirthdayOccurrence, getLocalDateKey } from "../lib/dashboardBirthday.js";
+import { BirthdayCelebration, DashboardCompanion, DashboardGroupAnalytics, DashboardHeroPhotographs, DashboardPersonalJourney, DashboardScriptureHighlight } from "./DashboardExperience.jsx";
+import GlobalBackground from "./GlobalBackground.jsx";
+function privateStoragePath(value, bucket) {
+  if (typeof value !== "string" || !value) return "";
+  const markers = [`/object/public/${bucket}/`, `/object/sign/${bucket}/`, `/object/authenticated/${bucket}/`];
+  for (const marker of markers) {
+    const index = value.indexOf(marker);
+    if (index >= 0) {
+      try { return decodeURIComponent(value.slice(index + marker.length).split("?")[0]); }
+      catch { return value.slice(index + marker.length).split("?")[0]; }
+    }
+  }
+  return value.startsWith("http") ? "" : value;
+}
 
 const sections = [
   { id: "dashboard", label: "Dashboard", shortLabel: "Home", icon: "home" },
-  { id: "announcements", label: "GC Pulse", shortLabel: "Pulse", icon: "activity" },
+  { id: "fun-zone", label: "Fun Zone", shortLabel: "Fun Zone", icon: "gamepad" },
   { id: "events", label: "Events", shortLabel: "Events", icon: "calendar" },
   { id: "prayer", label: "Prayer", shortLabel: "Prayer", icon: "prayer" },
   { id: "resources", label: "Resources", shortLabel: "Files", icon: "book-open" },
+  { id: "faq", label: "Frequently Asked Questions", shortLabel: "FAQ", icon: "circle-help" },
+  { id: "about", label: "About City on a Hill", shortLabel: "About", icon: "landmark" },
   { id: "bible-study", label: "Bible Study", shortLabel: "Bible", icon: "scripture" },
   { id: "assignments", label: "Assignments", shortLabel: "Assignments", icon: "clipboard-list" },
   { id: "meetings", label: "Virtual Meetings", shortLabel: "Meet", icon: "video" },
@@ -50,26 +68,45 @@ const sections = [
   { id: "members", label: "Members", shortLabel: "People", icon: "users" },
   {
     id: "management",
-    label: "Super Admin",
+    label: "Administration",
     shortLabel: "Admin",
     icon: "management",
     adminOnly: true
   },
+  { id: "birthdays", label: "Birthdays", shortLabel: "Birthdays", icon: "calendar", adminOnly: true },
   { id: "settings", label: "Settings", shortLabel: "Settings", icon: "settings" }
 ];
 
 const navigationGroups = [
-  { label: "Main", ids: ["dashboard"] },
-  { label: "Community", ids: ["announcements", "messages", "members", "events", "meetings"] },
-  { label: "Spiritual Growth", ids: ["bible-study", "prayer", "resources"] },
-  { label: "My Activity", ids: ["notifications", "assignments", "settings"] },
-  { label: "Administration", ids: ["management"] }
+  { id: "workspace", label: "Workspace", icon: "home", ids: ["dashboard"] },
+  { id: "community", label: "Community", icon: "messages", ids: ["fun-zone", "messages", "members", "meetings", "notifications"] },
+  { id: "ministry", label: "Ministry", icon: "scripture", ids: ["bible-study", "prayer", "events", "resources"] },
+  { id: "explore", label: "Explore", icon: "compass", ids: ["faq", "about"] },
+  { id: "my-space", label: "My space", icon: "clipboard-list", ids: ["assignments"] },
+  { id: "administration", label: "Administration", icon: "management", ids: ["management", "birthdays"] },
+  { id: "system-oversight", label: "System oversight", icon: "shield", ids: ["super-admin"] }
 ];
-const quickNavigationIds = ["dashboard", "bible-study", "announcements", "messages"];
 
 function getNavigationGroups(availableSections) {
   const sectionById = new Map(availableSections.map((section) => [section.id, section]));
   return navigationGroups.map((group) => ({
+    ...group,
+    items: group.ids.map((id) => id === "notifications"
+      ? { id, label: "Notifications", icon: "bell" }
+      : sectionById.get(id)).filter(Boolean)
+  })).filter((group) => group.items.length);
+}
+
+function getAdministrativeNavigationGroups(availableSections) {
+  const sectionById = new Map(availableSections.map((section) => [section.id, section]));
+  const groups = [
+    { id: "people", label: "People & Membership", icon: "users", ids: ["members", "management", "birthdays"] },
+    { id: "ministry-management", label: "Ministry Management", icon: "scripture", ids: ["bible-study", "prayer", "events", "assignments"] },
+    { id: "content-resources", label: "Content & Resources", icon: "book-open", ids: ["resources", "faq", "about"] },
+    { id: "communication", label: "Communication", icon: "messages", ids: ["messages", "meetings", "fun-zone"] },
+    { id: "system-administration", label: "System Administration", icon: "shield", ids: ["super-admin"] }
+  ];
+  return groups.map((group) => ({
     ...group,
     items: group.ids.map((id) => id === "notifications"
       ? { id, label: "Notifications", icon: "bell" }
@@ -158,24 +195,6 @@ const pulseTextColors = [
   { id: "gold", label: "Gold" },
   { id: "sky", label: "Sky" }
 ];
-
-function getInitials(name) {
-  if (!name) {
-    return "?";
-  }
-
-  return name
-    .trim()
-    .split(/\s+/)
-    .slice(0, 2)
-    .map((part) => part.charAt(0).toUpperCase())
-    .join("");
-}
-
-function getFileExtension(fileName) {
-  const segments = fileName.split(".");
-  return segments.length > 1 ? segments.at(-1).toLowerCase() : "png";
-}
 
 function formatDateTime(value) {
   if (!value) {
@@ -306,18 +325,18 @@ function buildEventCalendarFile(eventRecord) {
       new Date(new Date(eventRecord.starts_at).getTime() + 60 * 60 * 1000).toISOString()
   );
   const nowToken = toUtcDateToken(new Date().toISOString());
-  const uid = `${eventRecord.id}@glory-carriers`;
+  const uid = `${eventRecord.id}@city-on-a-hill`;
 
   return [
     "BEGIN:VCALENDAR",
     "VERSION:2.0",
-    "PRODID:-//Glory Carriers//Events//EN",
+    `PRODID:-//${APP_NAME}//Events//EN`,
     "BEGIN:VEVENT",
     `UID:${uid}`,
     `DTSTAMP:${nowToken}`,
     `DTSTART:${dtStart}`,
     `DTEND:${dtEnd}`,
-    `SUMMARY:${escapeIcsText(eventRecord.title || "Glory Carriers event")}`,
+    `SUMMARY:${escapeIcsText(eventRecord.title || `${CELL_GROUP_NAME} event`)}`,
     `DESCRIPTION:${escapeIcsText(eventRecord.description || "")}`,
     `LOCATION:${escapeIcsText(eventRecord.location || "")}`,
     "END:VEVENT",
@@ -358,24 +377,17 @@ function toIsoString(value) {
   return value ? new Date(value).toISOString() : null;
 }
 
-function Avatar({ member, size = "medium" }) {
-  const label = member?.full_name || member?.email || "Member";
+function IdentityBadge({ member, size = "medium", photoUrl }) {
+  return <MemberInitials member={member} photoUrl={photoUrl} className={`identity identity-fallback ${size}`} />;
+}
 
-  if (member?.avatar_url) {
-    return (
-      <img
-        src={member.avatar_url}
-        alt={`${label} avatar`}
-        className={`avatar ${size}`}
-      />
-    );
+function WorkspaceImage({ src, alt, className = "", fallbackClassName = "workspace-image-fallback", ...imageProps }) {
+  const [imageFailed, setImageFailed] = useState(false);
+  useEffect(() => setImageFailed(false), [src]);
+  if (!src || imageFailed) {
+    return <span className={fallbackClassName} role="img" aria-label={alt || "Image unavailable"}>Photo unavailable</span>;
   }
-
-  return (
-    <div className={`avatar avatar-fallback ${size}`} aria-hidden="true">
-      {getInitials(label)}
-    </div>
-  );
+  return <img src={src} alt={alt} className={className} onError={() => setImageFailed(true)} {...imageProps} />;
 }
 
 function NavIcon({ name }) {
@@ -405,12 +417,45 @@ function NavIcon({ name }) {
           <path d="m16 16 4.2 4.2" />
         </svg>
       );
+    case "compass":
+      return (
+        <svg {...commonProps}>
+          <circle cx="12" cy="12" r="9" />
+          <path d="m14.8 9.2-1.9 4-4 1.9 1.9-4 4-1.9Z" />
+          <path d="M12 3v2m9 7h-2M12 21v-2m-9-7h2" />
+        </svg>
+      );
+    case "circle-help":
+      return (
+        <svg {...commonProps}>
+          <circle cx="12" cy="12" r="9" />
+          <path d="M9.7 9a2.35 2.35 0 1 1 4.5.95c-.75 1.35-2.2 1.45-2.2 3.3" />
+          <circle cx="12" cy="17" r=".65" fill="currentColor" stroke="none" />
+        </svg>
+      );
+    case "landmark":
+      return (
+        <svg {...commonProps}>
+          <path d="M12 3v4m-2-2h4" />
+          <path d="m4 10 8-5 8 5" />
+          <path d="M5 10v8m4-5v5m6-5v5m4-8v8M3.5 20h17" />
+        </svg>
+      );
     case "sparkles":
       return (
         <svg {...commonProps}>
           <path d="m12 3 1.8 4.7L18.5 9.5l-4.7 1.8L12 16l-1.8-4.7L5.5 9.5l4.7-1.8L12 3Z" />
           <path d="m18.5 3 .7 1.8L21 5.5l-1.8.7-.7 1.8-.7-1.8L16 5.5l1.8-.7.7-1.8Z" />
           <path d="m18.5 16 .7 1.8 1.8.7-1.8.7-.7 1.8-.7-1.8-1.8-.7 1.8-.7.7-1.8Z" />
+        </svg>
+      );
+    case "gamepad":
+      return (
+        <svg {...commonProps}>
+          <path d="M6.5 8h11a4 4 0 0 1 3.9 4.8l-.6 2.7a2.5 2.5 0 0 1-4.1 1.3l-2-1.7H9.3l-2 1.7a2.5 2.5 0 0 1-4.1-1.3l-.6-2.7A4 4 0 0 1 6.5 8Z" />
+          <path d="M7.5 10.5v4m-2-2h4" />
+          <circle cx="16" cy="11.5" r=".8" />
+          <circle cx="18.5" cy="14" r=".8" />
         </svg>
       );
     case "activity":
@@ -519,12 +564,25 @@ function NavIcon({ name }) {
           <path d="M10 19a2 2 0 0 0 4 0" />
         </svg>
       );
+    case "shield":
+      return (
+        <svg {...commonProps}>
+          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z" />
+          <path d="m9 12 2 2 4-4" />
+        </svg>
+      );
     case "menu":
       return (
         <svg {...commonProps}>
           <path d="M4 7h16" />
           <path d="M4 12h16" />
           <path d="M4 17h16" />
+        </svg>
+      );
+    case "x":
+      return (
+        <svg {...commonProps}>
+          <path d="m18 6-12 12M6 6l12 12" />
         </svg>
       );
     case "management":
@@ -541,6 +599,33 @@ function NavIcon({ name }) {
         <svg {...commonProps}>
           <circle cx="12" cy="12" r="3.2" />
           <path d="M19.4 15a1 1 0 0 0 .2 1.1l.1.1a1.8 1.8 0 1 1-2.5 2.5l-.1-.1a1 1 0 0 0-1.1-.2 1 1 0 0 0-.6.9V20a1.8 1.8 0 1 1-3.6 0v-.2a1 1 0 0 0-.7-.9 1 1 0 0 0-1.1.2l-.1.1a1.8 1.8 0 1 1-2.5-2.5l.1-.1a1 1 0 0 0 .2-1.1 1 1 0 0 0-.9-.6H4a1.8 1.8 0 1 1 0-3.6h.2a1 1 0 0 0 .9-.7 1 1 0 0 0-.2-1.1l-.1-.1a1.8 1.8 0 1 1 2.5-2.5l.1.1a1 1 0 0 0 1.1.2 1 1 0 0 0 .6-.9V4a1.8 1.8 0 1 1 3.6 0v.2a1 1 0 0 0 .7.9 1 1 0 0 0 1.1-.2l.1-.1a1.8 1.8 0 1 1 2.5 2.5l-.1.1a1 1 0 0 0-.2 1.1 1 1 0 0 0 .9.6h.2a1.8 1.8 0 1 1 0 3.6h-.2a1 1 0 0 0-.9.7Z" />
+        </svg>
+      );
+    case "user":
+      return (
+        <svg {...commonProps}>
+          <circle cx="12" cy="8" r="3.3" />
+          <path d="M5 20c.6-3.7 3-5.6 7-5.6s6.4 1.9 7 5.6" />
+        </svg>
+      );
+    case "moon":
+      return (
+        <svg {...commonProps}>
+          <path d="M20.5 15.2A8.5 8.5 0 0 1 8.8 3.5 8.5 8.5 0 1 0 20.5 15.2Z" />
+        </svg>
+      );
+    case "sun":
+      return (
+        <svg {...commonProps}>
+          <circle cx="12" cy="12" r="3.5" />
+          <path d="M12 2v2m0 16v2M4.9 4.9l1.4 1.4m11.4 11.4 1.4 1.4M2 12h2m16 0h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4" />
+        </svg>
+      );
+    case "logout":
+      return (
+        <svg {...commonProps}>
+          <path d="M10 4H5.5A1.5 1.5 0 0 0 4 5.5v13A1.5 1.5 0 0 0 5.5 20H10" />
+          <path d="M14 8l4 4-4 4M8 12h10" />
         </svg>
       );
     default:
@@ -628,7 +713,7 @@ function PulseMediaCarousel({ attachments, title, onLike, initialIndex = 0 }) {
   return (
     <div className="pulse-media-carousel" aria-label={`${count} photo${count === 1 ? "" : "s"}`}>
       <div className="pulse-media-stage" onPointerDown={(event) => { swipeStartRef.current = { x: event.clientX }; }} onPointerUp={handleMediaTap} onPointerCancel={() => { swipeStartRef.current = null; }} aria-label={`Photo ${currentIndex + 1} of ${count}. Double tap to like`}>
-        <img src={attachments[currentIndex]} alt={title ? `${title} · photo ${currentIndex + 1}` : `Community photo ${currentIndex + 1}`} loading="lazy" decoding="async" />
+        <WorkspaceImage src={attachments[currentIndex]} alt={title ? `${title} · photo ${currentIndex + 1}` : `Community photo ${currentIndex + 1}`} className="pulse-media-image" fallbackClassName="pulse-media-stage-fallback" loading="lazy" decoding="async" />
       </div>
       {heart ? <span className="pulse-like-heart" style={{ "--heart-x": `${heart.x}%`, "--heart-y": `${heart.y}%` }} aria-hidden="true">♥</span> : null}
       {count > 1 ? <>
@@ -690,7 +775,7 @@ function PulseCommentsSheet({ post, replies, profiles, reactions, userId, isAdmi
             const replyAuthor = profiles.find((member) => member.id === reply.user_id);
             return (
               <article className="community-reply" key={reply.id}>
-                <Avatar member={replyAuthor} size="small" />
+                <IdentityBadge member={replyAuthor} size="small" />
                 <div className="community-reply-content">
                   <strong>{replyAuthor?.full_name || replyAuthor?.email || "Member"}</strong>
                   <p>{reply.body}</p>
@@ -757,7 +842,7 @@ function PulseMediaViewer({ attachments, title, initialIndex = 0, onClose, close
   return <section className="pulse-lightbox" role="dialog" aria-modal="true" aria-label="Photo viewer" onMouseDown={(event) => event.stopPropagation()}>
     <button ref={closeButtonRef} type="button" className="pulse-lightbox-close" aria-label="Close photo viewer" onClick={onClose}>×</button>
     <div className={`pulse-viewer-stage${zoomed ? " is-zoomed" : ""}`} onPointerDown={(event) => { swipeStartRef.current = { x: event.clientX }; }} onPointerUp={handlePointerUp}>
-      <img src={attachments[currentIndex]} alt={title ? `${title} · photo ${currentIndex + 1} of ${count}` : `Community photo ${currentIndex + 1} of ${count}`} decoding="async" />
+      <WorkspaceImage src={attachments[currentIndex]} alt={title ? `${title} · photo ${currentIndex + 1} of ${count}` : `Community photo ${currentIndex + 1} of ${count}`} className="pulse-viewer-image" fallbackClassName="pulse-viewer-stage-fallback" decoding="async" />
     </div>
     <span className="pulse-viewer-counter">{currentIndex + 1} / {count}</span>
     {count > 1 ? <><button type="button" className="pulse-viewer-nav previous" aria-label="Previous photo" onClick={() => move(-1)}>‹</button><button type="button" className="pulse-viewer-nav next" aria-label="Next photo" onClick={() => move(1)}>›</button></> : null}
@@ -765,7 +850,7 @@ function PulseMediaViewer({ attachments, title, initialIndex = 0, onClose, close
   </section>;
 }
 
-function NavigationItem({ section, activeSection, onSelect, onOpenNotifications, unreadCount, className = "", onAfterSelect }) {
+function NavigationItem({ section, activeSection, onSelect, onOpenNotifications, unreadCount, className = "", onAfterSelect, style }) {
   const isNotificationItem = section.id === "notifications";
   const active = !isNotificationItem && activeSection === section.id;
   const label = isNotificationItem && unreadCount
@@ -775,6 +860,7 @@ function NavigationItem({ section, activeSection, onSelect, onOpenNotifications,
     <button
       type="button"
       className={"sidebar-link " + className + (active ? " active" : "")}
+      style={style}
       aria-label={label}
       aria-current={active ? "page" : undefined}
       title={section.label}
@@ -791,17 +877,263 @@ function NavigationItem({ section, activeSection, onSelect, onOpenNotifications,
   );
 }
 
-function MobileSectionNav({ sections: navSections, activeSection, onSelect, open, onOpenChange, menuButtonRef, unreadCount, onOpenNotifications }) {
+function DesktopWorkspaceNavigation({ sections: availableSections, activeSection, onSelect, roleLabel, isAdminWorkspace, isSuperAdmin, theme, onThemeToggle, currentMember, unreadCount, onOpenNotifications, onSignOut }) {
+  const [openMenuId, setOpenMenuId] = useState("");
+  const [accountOpen, setAccountOpen] = useState(false);
+  const [isScrolled, setIsScrolled] = useState(false);
+  const navigationRef = useRef(null);
+  const menuTriggerRefs = useRef(new Map());
+  const accountTriggerRef = useRef(null);
+  const sectionById = new Map(availableSections.map((section) => [section.id, section]));
+  const overview = sectionById.get("dashboard");
+  const dropdownGroups = isAdminWorkspace
+    ? getAdministrativeNavigationGroups(availableSections)
+    : [
+        { id: "community", label: "Community", icon: "messages", ids: ["fun-zone", "messages", "members", "meetings"] },
+        { id: "ministry", label: "Ministry", icon: "scripture", ids: ["bible-study", "prayer", "events", "resources"] },
+        { id: "explore", label: "Explore", icon: "compass", ids: ["faq", "about"] },
+        { id: "my-space", label: "My space", icon: "clipboard-list", ids: ["assignments"] },
+        { id: "management", label: "Administration", icon: isSuperAdmin ? "shield" : "management", ids: ["management", "birthdays", "super-admin"] }
+      ].map((group) => ({
+        ...group,
+        items: group.ids.map((id) => id === "notifications"
+          ? { id, label: "Notifications", icon: "bell" }
+          : sectionById.get(id)).filter(Boolean)
+      })).filter((group) => group.items.length);
+  const openNavigationGroup = dropdownGroups.find((group) => group.id === openMenuId);
+  const activeRoute = sectionById.get(activeSection);
+  const showCurrentRoute = isAdminWorkspace && activeRoute && !["dashboard", "members", "events"].includes(activeSection);
+
+  useEffect(() => {
+    const updateScrollState = () => {
+      const next = window.scrollY > 14;
+      setIsScrolled((current) => current === next ? current : next);
+    };
+    window.addEventListener("scroll", updateScrollState, { passive: true });
+    window.addEventListener("resize", updateScrollState, { passive: true });
+    updateScrollState();
+    return () => {
+      window.removeEventListener("scroll", updateScrollState);
+      window.removeEventListener("resize", updateScrollState);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!openMenuId && !accountOpen) return undefined;
+    const closeOutside = (event) => {
+      if (!navigationRef.current?.contains(event.target)) {
+        setOpenMenuId("");
+        setAccountOpen(false);
+      }
+    };
+    const closeOnEscape = (event) => {
+      if (event.key !== "Escape") return;
+      event.preventDefault();
+      if (openMenuId) menuTriggerRefs.current.get(openMenuId)?.focus();
+      else accountTriggerRef.current?.focus();
+      setOpenMenuId("");
+      setAccountOpen(false);
+    };
+    document.addEventListener("pointerdown", closeOutside);
+    document.addEventListener("keydown", closeOnEscape);
+    return () => {
+      document.removeEventListener("pointerdown", closeOutside);
+      document.removeEventListener("keydown", closeOnEscape);
+    };
+  }, [openMenuId, accountOpen]);
+
+  function handleMenuKeys(event) {
+    if (!["ArrowDown", "ArrowUp", "Home", "End"].includes(event.key)) return;
+    const menu = event.currentTarget.matches('[role="menu"]')
+      ? event.currentTarget
+      : event.currentTarget.querySelector('[role="menu"]');
+    const items = [...(menu?.querySelectorAll('[role="menuitem"]') ?? [])];
+    if (!items.length) return;
+    event.preventDefault();
+    const currentIndex = items.indexOf(document.activeElement);
+    if (event.key === "Home") items[0].focus();
+    else if (event.key === "End") items[items.length - 1].focus();
+    else if (event.key === "ArrowDown") items[(currentIndex + 1 + items.length) % items.length].focus();
+    else items[(currentIndex <= 0 ? items.length : currentIndex) - 1].focus();
+  }
+
+  function activate(section, groupId) {
+    if (groupId) menuTriggerRefs.current.get(groupId)?.focus({ preventScroll: true });
+    setOpenMenuId("");
+    setAccountOpen(false);
+    onSelect(section.id);
+  }
+
+  function renderGroupTrigger(group, className = "") {
+    const active = group.items.some((section) => section.id === activeSection);
+    const expanded = openMenuId === group.id;
+    return <div className="workspace-nav-group" key={group.id}>
+      <button
+        ref={(node) => { if (node) menuTriggerRefs.current.set(group.id, node); else menuTriggerRefs.current.delete(group.id); }}
+        type="button"
+        className={`workspace-top-link workspace-nav-group-trigger${active ? " active" : ""}${className ? ` ${className}` : ""}`}
+        aria-haspopup="menu"
+        aria-expanded={expanded}
+        aria-controls={expanded ? `workspace-menu-${group.id}` : undefined}
+        onClick={() => { setOpenMenuId((current) => current === group.id ? "" : group.id); setAccountOpen(false); }}
+        onKeyDown={(event) => {
+          if (!(event.key === "ArrowDown" || event.key === "Enter" || event.key === " ") || expanded) return;
+          event.preventDefault();
+          setOpenMenuId(group.id);
+          window.requestAnimationFrame(() => document.querySelector(`#workspace-menu-${group.id} [role="menuitem"]`)?.focus());
+        }}
+      >
+        <span className="workspace-top-link-icon"><NavIcon name={group.icon} /></span>
+        <span>{group.label}</span>
+        <span className={`workspace-nav-caret${expanded ? " expanded" : ""}`} aria-hidden="true" />
+      </button>
+    </div>;
+  }
+
+  return (
+    <header className={`workspace-top-navigation${isAdminWorkspace ? " is-administration" : " is-member"}${isScrolled ? " is-scrolled" : ""}${openMenuId || accountOpen ? " has-open-menu" : ""}`} ref={navigationRef}>
+      <div className="workspace-top-navigation-inner">
+        <div className="workspace-top-brand">
+          <BrandLogo compact />
+          <span className="workspace-role-badge">{roleLabel}</span>
+        </div>
+        <nav className={`workspace-top-links${isAdminWorkspace ? " workspace-top-links--admin-primary" : ""}`} aria-label="Main navigation">
+          {overview ? <button type="button" className={`workspace-top-link workspace-overview-link${activeSection === overview.id ? " active" : ""}`} aria-current={activeSection === overview.id ? "page" : undefined} onClick={() => activate(overview)}>
+            <span className="workspace-top-link-icon"><NavIcon name="home" /></span><span>Overview</span>
+          </button> : null}
+          {isAdminWorkspace ? ["members", "events"].map((id) => {
+            const section = sectionById.get(id);
+            return section ? <button key={id} type="button" className={`workspace-top-link${activeSection === id ? " active" : ""}`} aria-current={activeSection === id ? "page" : undefined} onClick={() => activate(section)}>
+              <span className="workspace-top-link-icon"><NavIcon name={section.icon} /></span><span>{section.label}</span>
+            </button> : null;
+          }) : dropdownGroups.map((group) => {
+            const active = group.items.some((section) => section.id === activeSection);
+            const expanded = openMenuId === group.id;
+            return <div className="workspace-nav-group" key={group.id} onKeyDown={handleMenuKeys}>
+              <button
+                ref={(node) => { if (node) menuTriggerRefs.current.set(group.id, node); else menuTriggerRefs.current.delete(group.id); }}
+                type="button"
+                className={`workspace-top-link workspace-nav-group-trigger${active ? " active" : ""}`}
+                aria-haspopup="menu"
+                aria-expanded={expanded}
+                aria-controls={expanded ? `workspace-menu-${group.id}` : undefined}
+                onClick={() => { setOpenMenuId((current) => current === group.id ? "" : group.id); setAccountOpen(false); }}
+                onKeyDown={(event) => {
+                  if (!(["ArrowDown", "Enter", " "].includes(event.key)) || expanded) return;
+                  event.preventDefault();
+                  setOpenMenuId(group.id);
+                  window.requestAnimationFrame(() => document.querySelector(`#workspace-menu-${group.id} [role="menuitem"]`)?.focus());
+                }}
+              >
+                <span className="workspace-top-link-icon"><NavIcon name={group.icon} /></span>
+                <span>{group.label}</span>
+                <span className={`workspace-nav-caret${expanded ? " expanded" : ""}`} aria-hidden="true" />
+              </button>
+              {false && expanded ? <div className="workspace-dropdown" id={`workspace-menu-${group.id}`} role="menu" aria-label={`${group.label} navigation`}>
+                {group.items.map((section) => <button key={section.id} type="button" role="menuitem" className={`workspace-dropdown-item${activeSection === section.id ? " active" : ""}`} aria-current={activeSection === section.id ? "page" : undefined} onClick={() => activate(section)}>
+                  <span className="workspace-dropdown-icon"><NavIcon name={section.icon} /></span>
+                  <span>{section.id === "management" ? "Member management" : section.label}</span>
+                  {activeSection === section.id ? <span className="workspace-dropdown-current" aria-hidden="true" /> : null}
+                </button>)}
+              </div> : null}
+            </div>;
+          })}
+          {showCurrentRoute ? <span className="workspace-current-route">
+            <span className="workspace-top-link-icon" aria-hidden="true"><NavIcon name={activeRoute.icon} /></span>
+            <span>{activeRoute.id === "management" ? "Member management" : activeRoute.label}</span>
+          </span> : null}
+        </nav>
+        <div className="workspace-top-actions">
+          <button type="button" className="workspace-notification-button" aria-label={`Open notifications${unreadCount ? `, ${unreadCount} unread` : ""}`} onClick={onOpenNotifications}>
+            <NavIcon name="bell" />{unreadCount ? <span>{unreadCount > 99 ? "99+" : unreadCount}</span> : null}
+          </button>
+          <div className="workspace-account-menu">
+            <button ref={accountTriggerRef} type="button" className="workspace-account-trigger" aria-expanded={accountOpen} aria-haspopup="menu" aria-controls={accountOpen ? "workspace-account-actions" : undefined} onClick={() => { setAccountOpen((current) => !current); setOpenMenuId(""); }} onKeyDown={(event) => {
+              if (!(["ArrowDown", "Enter", " "].includes(event.key)) || accountOpen) return;
+              event.preventDefault();
+              setAccountOpen(true);
+              setOpenMenuId("");
+              window.requestAnimationFrame(() => document.querySelector("#workspace-account-actions [role=\"menuitem\"]")?.focus());
+            }} title="Account menu">
+              <IdentityBadge member={currentMember} size="small" />
+              <span className="workspace-account-copy"><strong>{currentMember?.full_name || "Account"}</strong><small>{roleLabel}</small></span>
+              <span className={`workspace-nav-caret${accountOpen ? " expanded" : ""}`} aria-hidden="true" />
+            </button>
+            {false && accountOpen ? <div className="workspace-dropdown workspace-account-dropdown" id="workspace-account-actions" role="menu" aria-label="Account actions" onKeyDown={handleMenuKeys}>
+              <button type="button" role="menuitem" className="workspace-dropdown-item" aria-current={activeSection === "settings" ? "page" : undefined} onClick={() => { setAccountOpen(false); onSelect("settings"); }}><span className="workspace-dropdown-icon"><NavIcon name="user" /></span><span>Profile &amp; settings</span></button>
+              <button type="button" role="menuitem" className="workspace-dropdown-item" onClick={() => { setAccountOpen(false); onThemeToggle(); }}><span className="workspace-dropdown-icon"><NavIcon name={theme === "light" ? "moon" : "sun"} /></span><span>Switch to {theme === "light" ? "dark" : "light"} theme</span></button>
+              <button type="button" role="menuitem" className="workspace-dropdown-item workspace-signout-item" onClick={() => { setAccountOpen(false); onSignOut(); }}><span className="workspace-dropdown-icon"><NavIcon name="logout" /></span><span>Sign out</span></button>
+            </div> : null}
+          </div>
+        </div>
+      </div>
+      {isAdminWorkspace ? <nav className="admin-secondary-navigation" aria-label={isSuperAdmin ? "Super Admin navigation categories" : "Admin navigation categories"}>
+        {dropdownGroups.map((group) => renderGroupTrigger(group, "admin-secondary-navigation-trigger"))}
+      </nav> : null}
+      {openNavigationGroup ? <div className="workspace-navigation-panel" key={openNavigationGroup.id}>
+        <nav id={`workspace-menu-${openNavigationGroup.id}`} role="menu" aria-label={`${openNavigationGroup.label} navigation`} onKeyDown={handleMenuKeys}>
+          {openNavigationGroup.items.map((section) => <button key={section.id} type="button" role="menuitem" className={`workspace-dropdown-item${activeSection === section.id ? " active" : ""}`} aria-current={activeSection === section.id ? "page" : undefined} onClick={() => activate(section, openNavigationGroup.id)}>
+            <span className="workspace-dropdown-icon"><NavIcon name={section.icon} /></span>
+            <span>{section.id === "management" ? "Member management" : section.label}</span>
+            {activeSection === section.id ? <span className="workspace-dropdown-current" aria-hidden="true" /> : null}
+          </button>)}
+        </nav>
+      </div> : accountOpen ? <div className="workspace-navigation-panel workspace-account-actions-panel">
+        <nav id="workspace-account-actions" role="menu" aria-label="Account actions" onKeyDown={handleMenuKeys}>
+          <button type="button" role="menuitem" className="workspace-dropdown-item" aria-current={activeSection === "settings" ? "page" : undefined} onClick={() => { setAccountOpen(false); onSelect("settings"); }}><span className="workspace-dropdown-icon"><NavIcon name="user" /></span><span>Profile &amp; settings</span></button>
+          <button type="button" role="menuitem" className="workspace-dropdown-item" onClick={() => { setAccountOpen(false); onThemeToggle(); }}><span className="workspace-dropdown-icon"><NavIcon name={theme === "light" ? "moon" : "sun"} /></span><span>Switch to {theme === "light" ? "dark" : "light"} theme</span></button>
+          <button type="button" role="menuitem" className="workspace-dropdown-item workspace-signout-item" onClick={() => { setAccountOpen(false); onSignOut(); }}><span className="workspace-dropdown-icon"><NavIcon name="logout" /></span><span>Sign out</span></button>
+        </nav>
+      </div> : null}
+    </header>
+  );
+}
+
+function MobileSectionNav({ sections: navSections, activeSection, onSelect, open, onOpenChange, menuButtonRef, unreadCount, onOpenNotifications, currentMember, roleLabel, theme, onThemeToggle, onSignOut, isAdminWorkspace }) {
   const drawerRef = useRef(null);
   const wasDrawerOpenRef = useRef(false);
-  const mobilePrimary = quickNavigationIds
-    .map((id) => navSections.find((section) => section.id === id))
-    .filter(Boolean);
-  const groups = getNavigationGroups(navSections);
+  const [panelMounted, setPanelMounted] = useState(false);
+  const [panelVisible, setPanelVisible] = useState(false);
+  const navGroups = useMemo(() => {
+    if (!isAdminWorkspace) return getNavigationGroups(navSections);
+    const overview = navSections.find((section) => section.id === "dashboard");
+    return [
+      ...(overview ? [{ id: "overview", label: "Overview", icon: "home", items: [overview] }] : []),
+      ...getAdministrativeNavigationGroups(navSections)
+    ];
+  }, [isAdminWorkspace, navSections]);
+  const [expandedGroupId, setExpandedGroupId] = useState("");
+  const navItemOrder = new Map(navGroups.flatMap((group) => group.items).map((section, index) => [section.id, index]));
   const closeDrawer = () => {
     onOpenChange(false);
-    menuButtonRef.current?.focus({ preventScroll: true });
   };
+
+  useEffect(() => {
+    const activeGroup = navGroups.find((group) => group.items.some((section) => section.id === activeSection));
+    if (activeGroup) setExpandedGroupId(activeGroup.id);
+  }, [activeSection, navGroups]);
+
+  useEffect(() => {
+    let frameId;
+    let closeTimer;
+    if (open) {
+      setPanelMounted(true);
+      frameId = window.requestAnimationFrame(() => setPanelVisible(true));
+    } else {
+      setPanelVisible(false);
+      closeTimer = window.setTimeout(() => setPanelMounted(false), 210);
+    }
+    return () => {
+      window.cancelAnimationFrame(frameId);
+      window.clearTimeout(closeTimer);
+    };
+  }, [open]);
+
+  useEffect(() => {
+    if (open && panelVisible) {
+      drawerRef.current?.querySelector("button")?.focus({ preventScroll: true });
+    }
+  }, [open, panelVisible]);
 
   useEffect(() => {
     if (!open) {
@@ -814,8 +1146,10 @@ function MobileSectionNav({ sections: navSections, activeSection, onSelect, open
 
     wasDrawerOpenRef.current = true;
     const oldOverflow = document.body.style.overflow;
+    const appShell = document.querySelector(".app-shell");
+    const wasInert = appShell?.inert ?? false;
+    if (appShell) appShell.inert = true;
     document.body.style.overflow = "hidden";
-    drawerRef.current?.querySelector("button")?.focus();
     const handleDrawerKeys = (event) => {
       if (event.key === "Escape") {
         event.preventDefault();
@@ -823,7 +1157,7 @@ function MobileSectionNav({ sections: navSections, activeSection, onSelect, open
         return;
       }
       if (event.key !== "Tab") return;
-      const items = [...(drawerRef.current?.querySelectorAll('button:not([disabled]),a[href],[tabindex]:not([tabindex="-1"])') ?? [])];
+      const items = [...(drawerRef.current?.querySelectorAll('button:not([disabled]),a[href],[tabindex]:not([tabindex="-1"])') ?? [])].filter((item) => item.getClientRects().length > 0);
       if (!items.length) return;
       const first = items[0];
       const last = items[items.length - 1];
@@ -838,115 +1172,86 @@ function MobileSectionNav({ sections: navSections, activeSection, onSelect, open
     document.addEventListener("keydown", handleDrawerKeys);
     return () => {
       document.body.style.overflow = oldOverflow;
+      if (appShell) appShell.inert = wasInert;
       document.removeEventListener("keydown", handleDrawerKeys);
     };
   }, [open, onOpenChange]);
 
   return (
     <>
-      <nav className="mobile-bottom-nav" aria-label="Quick navigation">
-        {mobilePrimary.map((section) => <button
+      <div className="mobile-navigation-anchor">
+        <button
+          ref={menuButtonRef}
           type="button"
-          key={section.id}
-          className={activeSection === section.id ? "mobile-bottom-link active" : "mobile-bottom-link"}
-          aria-current={activeSection === section.id ? "page" : undefined}
-          onClick={() => onSelect(section.id)}
-        ><NavIcon name={section.icon}/><span>{section.shortLabel}</span></button>)}
-      </nav>
-      {open ? <button type="button" className="mobile-drawer-scrim" aria-label="Close navigation menu" onClick={closeDrawer}/> : null}
-      <aside
-        id="mobile-navigation-drawer"
-        ref={drawerRef}
-        className={open ? "mobile-drawer open" : "mobile-drawer"}
-        aria-label="Main navigation"
-        role="dialog"
-        aria-modal={open ? "true" : undefined}
-        aria-hidden={!open}
-        inert={!open}
-      >
-        <div className="mobile-drawer-header">
-          <BrandLogo compact/>
-          <button type="button" className="ghost-button compact mobile-drawer-close" onClick={closeDrawer} aria-label="Close navigation menu">Close</button>
-        </div>
-        <nav className="mobile-drawer-nav" aria-label="Pages">
-          {groups.map((group) => <section className="mobile-drawer-group" key={group.label}>
-            <h2>{group.label}</h2>
-            {group.items.map((section) => <NavigationItem
-              key={section.id}
-              section={section}
-              activeSection={activeSection}
-              onSelect={onSelect}
-              onOpenNotifications={onOpenNotifications}
-              unreadCount={unreadCount}
-              className="mobile-drawer-link"
-              onAfterSelect={closeDrawer}
-            />)}
-          </section>)}
-        </nav>
-      </aside>
-    </>
-  );
-}
-
-function SidebarNav({
-  sections: navSections,
-  activeSection,
-  onSelect,
-  theme,
-  onThemeToggle,
-  roleLabel,
-  currentMember,
-  onSignOut,
-  unreadCount,
-  onOpenNotifications
-}) {
-  const [accountOpen, setAccountOpen] = useState(false);
-  const accountRef = useRef(null);
-  useEffect(() => {
-    if (!accountOpen) return undefined;
-    const close = (event) => { if (!accountRef.current?.contains(event.target)) setAccountOpen(false); };
-    const onKey = (event) => { if (event.key === "Escape") setAccountOpen(false); };
-    document.addEventListener("pointerdown", close);
-    document.addEventListener("keydown", onKey);
-    return () => { document.removeEventListener("pointerdown", close); document.removeEventListener("keydown", onKey); };
-  }, [accountOpen]);
-
-  const groups = getNavigationGroups(navSections);
-
-  return (
-    <aside className="sidebar desktop-nav" aria-label="Main navigation">
-      <div className="desktop-nav-inner">
-        <div className="desktop-nav-left"><BrandLogo compact/></div>
-        <nav className="desktop-nav-links" aria-label="Pages">
-          {groups.map((group) => <section className="desktop-nav-group" key={group.label}>
-            <h2 className="desktop-nav-section-label">{group.label}</h2>
-            {group.items.map((section) => <NavigationItem
-              key={section.id}
-              section={section}
-              activeSection={activeSection}
-              onSelect={onSelect}
-              onOpenNotifications={onOpenNotifications}
-              unreadCount={unreadCount}
-              className="desktop-nav-link"
-            />)}
-          </section>)}
-        </nav>
-        <div className="desktop-nav-right">
-          <div className="desktop-account" ref={accountRef}>
-            <button type="button" className="desktop-profile-trigger" aria-expanded={accountOpen} aria-haspopup="menu" onClick={() => setAccountOpen((open) => !open)} title={currentMember?.full_name || "Account menu"}>
-              <Avatar member={currentMember} size="small"/>
-              <span className="desktop-profile-copy"><strong>{currentMember?.full_name || "Member"}</strong><small>{roleLabel}</small></span>
-              <span className="desktop-account-caret" aria-hidden="true"/>
-            </button>
-            {accountOpen ? <div className="desktop-account-menu" role="menu" aria-label="Account menu">
-              <button type="button" role="menuitem" onClick={() => { onSelect("settings"); setAccountOpen(false); }}>Profile &amp; settings</button>
-              <button type="button" role="menuitem" onClick={() => { onThemeToggle(); setAccountOpen(false); }}>{theme === "light" ? "Switch to dark theme" : "Switch to light theme"}</button>
-              <button type="button" role="menuitem" onClick={() => { setAccountOpen(false); onSignOut(); }}>Sign out</button>
-            </div> : null}
-          </div>
-        </div>
+          className={open ? "mobile-floating-menu open" : "mobile-floating-menu"}
+          aria-label={open ? "Close navigation menu" : "Open navigation menu"}
+          aria-expanded={open}
+          aria-controls={open || panelMounted ? "mobile-navigation-drawer" : undefined}
+          onClick={() => onOpenChange(!open)}
+        >
+          <span className="mobile-hamburger" aria-hidden="true"><i /><i /><i /></span>
+        </button>
       </div>
-    </aside>
+      {panelMounted ? createPortal(
+        <>
+          <button type="button" className={`mobile-drawer-scrim${panelVisible ? " visible" : ""}`} aria-label="Close navigation menu" aria-hidden="true" tabIndex={-1} onClick={closeDrawer}/>
+          <aside
+            id="mobile-navigation-drawer"
+            ref={drawerRef}
+            className={`mobile-drawer mobile-navigation-panel${panelVisible ? " open" : ""}`}
+            aria-label="Main navigation"
+            role="dialog"
+            aria-modal="true"
+            aria-hidden={!open}
+          >
+            <div className="mobile-drawer-header">
+              <BrandLogo compact/>
+              <button type="button" className="mobile-drawer-close" onClick={closeDrawer} aria-label="Close navigation menu"><NavIcon name="x" /></button>
+            </div>
+            <nav className="mobile-drawer-nav" aria-label="Pages">
+              {navGroups.map((group, groupIndex) => {
+                const expanded = expandedGroupId === group.id;
+                const active = group.items.some((section) => section.id === activeSection);
+                const groupPanelId = `mobile-nav-group-${group.id}`;
+                return <section className={`mobile-drawer-group${active ? " has-active-route" : ""}${expanded ? " expanded" : ""}`} key={group.id} style={{ "--nav-group-order": groupIndex }}>
+                  <button type="button" className="mobile-drawer-group-toggle" aria-expanded={expanded} aria-controls={groupPanelId} onClick={() => setExpandedGroupId((current) => current === group.id ? "" : group.id)}>
+                    <span className="mobile-drawer-group-icon" aria-hidden="true"><NavIcon name={group.icon || "folder"} /></span>
+                    <span>{group.label}</span>
+                    {active ? <span className="mobile-drawer-group-active" aria-hidden="true" /> : null}
+                    <span className={`workspace-nav-caret${expanded ? " expanded" : ""}`} aria-hidden="true" />
+                  </button>
+                  <div id={groupPanelId} className="mobile-drawer-group-items" hidden={!expanded}>
+                    {group.items.map((section, itemIndex) => <NavigationItem
+                      key={section.id}
+                      section={section}
+                      activeSection={activeSection}
+                      onSelect={onSelect}
+                      onOpenNotifications={onOpenNotifications}
+                      unreadCount={unreadCount}
+                      className="mobile-drawer-link"
+                      style={{ "--nav-item-order": navItemOrder.get(section.id) ?? itemIndex }}
+                      onAfterSelect={closeDrawer}
+                    />)}
+                  </div>
+                </section>;
+              })}
+            </nav>
+            <section className="mobile-drawer-account" aria-label="Account">
+              <div className="mobile-account-profile">
+                <IdentityBadge member={currentMember} size="small" />
+                <span><strong>{currentMember?.full_name || "Member"}</strong><small>{roleLabel}</small></span>
+              </div>
+              <div>
+                {navSections.some((section) => section.id === "settings") ? <button type="button" onClick={() => { onSelect("settings"); closeDrawer(); }}><NavIcon name="settings" /><span>Profile &amp; settings</span></button> : null}
+                <button type="button" onClick={() => { onThemeToggle(); closeDrawer(); }}><NavIcon name={theme === "light" ? "moon" : "sun"} /><span>{theme === "light" ? "Dark theme" : "Light theme"}</span></button>
+                <button type="button" className="mobile-account-signout" onClick={() => { closeDrawer(); onSignOut(); }}><NavIcon name="logout" /><span>Sign out</span></button>
+              </div>
+            </section>
+          </aside>
+        </>,
+        document.body
+      ) : null}
+    </>
   );
 }
 
@@ -955,18 +1260,20 @@ export function AppShell() {
     user,
     profile,
     signOut,
-    refreshProfile,
     authNotice,
     clearAuthNotice,
     updatePassword
   } = useAuth();
-  const [mobileAccountOpen, setMobileAccountOpen] = useState(false);
-  const mobileAccountMenuRef = useRef(null);
   const [activeSection, setActiveSection] = useState(() => {
     const requested = window.location.hash.replace(/^#\/?/, "");
-    const normalized = requested === "leadership" ? "assignments" : requested;
-    return sections.some((section) => section.id === normalized) && (normalized !== "management" || profile?.role === "admin") ? normalized : "dashboard";
+    const normalized = requested === "leadership" ? "assignments" : requested === "arena" ? "fun-zone" : requested;
+    if (normalized === "super-admin") return normalized;
+    if (normalized === "admin-login") return "management";
+    return sections.some((section) => section.id === normalized) && (normalized !== "management" || !profile || profile.role === "admin") ? normalized : "dashboard";
   });
+  const [birthdayFocusMemberId, setBirthdayFocusMemberId] = useState("");
+  const [focusBiblePartnerStreaks, setFocusBiblePartnerStreaks] = useState(false);
+  const [superAdminStatus, setSuperAdminStatus] = useState("idle");
 
   useEffect(() => {
     const currentSection = window.location.hash.replace(/^#\/?/, "");
@@ -976,26 +1283,23 @@ export function AppShell() {
   }, [activeSection]);
 
   useEffect(() => {
-    if (!mobileAccountOpen) return undefined;
-    const close = (event) => { if (!mobileAccountMenuRef.current?.contains(event.target)) setMobileAccountOpen(false); };
-    const onKey = (event) => { if (event.key === "Escape") setMobileAccountOpen(false); };
-    document.addEventListener("pointerdown", close);
-    document.addEventListener("keydown", onKey);
-    return () => { document.removeEventListener("pointerdown", close); document.removeEventListener("keydown", onKey); };
-  }, [mobileAccountOpen]);
-
-  useEffect(() => {
     function restoreSectionFromHistory() {
       const requested = window.location.hash.replace(/^#\/?/, "");
-      const normalized = requested === "leadership" ? "assignments" : requested;
-      setActiveSection(sections.some((section) => section.id === normalized) ? normalized : "dashboard");
+      const normalized = requested === "leadership" ? "assignments" : requested === "arena" ? "fun-zone" : requested;
+      setActiveSection(normalized === "super-admin" ? normalized : normalized === "admin-login" ? "management" : sections.some((section) => section.id === normalized) ? normalized : "dashboard");
     }
     window.addEventListener("popstate", restoreSectionFromHistory);
     return () => window.removeEventListener("popstate", restoreSectionFromHistory);
   }, []);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const mobileMenuTriggerRef = useRef(null);
-  const [communityBackgroundIndex, setCommunityBackgroundIndex] = useState(0);
+  const previousSectionForScrollRef = useRef(activeSection);
+  useEffect(() => {
+    if (previousSectionForScrollRef.current === activeSection) return;
+    previousSectionForScrollRef.current = activeSection;
+    const behavior = window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth";
+    window.scrollTo({ top: 0, behavior });
+  }, [activeSection]);
   const [theme, setTheme] = useState(() => {
     const storedTheme = window.localStorage.getItem("glory-carriers-theme");
 
@@ -1007,15 +1311,6 @@ export function AppShell() {
       ? "dark"
       : "light";
   });
-  useEffect(() => {
-    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    if (reducedMotion) return undefined;
-    const rotation = window.setInterval(() => {
-      setCommunityBackgroundIndex((current) => (current + 1) % communityBackgrounds.length);
-    }, 14000);
-    return () => window.clearInterval(rotation);
-  }, []);
-  const communityBackdrop = communityBackgrounds[communityBackgroundIndex];
   const [events, setEvents] = useState([]);
   const [ideas, setIdeas] = useState([]);
   const [votes, setVotes] = useState([]);
@@ -1024,6 +1319,12 @@ export function AppShell() {
   const [profiles, setProfiles] = useState([]);
   const [messages, setMessages] = useState([]);
   const [prayerPoints, setPrayerPoints] = useState([]);
+  const [prayerReplies, setPrayerReplies] = useState([]);
+  const [prayerRepliesAvailable, setPrayerRepliesAvailable] = useState(false);
+  const [prayerReplyDrafts, setPrayerReplyDrafts] = useState({});
+  const [prayerReplyBusy, setPrayerReplyBusy] = useState("");
+  const [prayerSubmitting, setPrayerSubmitting] = useState(false);
+  const [prayerBusyIds, setPrayerBusyIds] = useState(() => new Set());
   const [resources, setResources] = useState([]);
   const [notifications, setNotifications] = useState([]);
   const [announcements, setAnnouncements] = useState([]);
@@ -1064,8 +1365,27 @@ export function AppShell() {
   const [bibleStudyQuestions, setBibleStudyQuestions] = useState([]);
   const [bibleStudyAnswers, setBibleStudyAnswers] = useState([]);
   const [bibleStudyCompletions, setBibleStudyCompletions] = useState([]);
+  const [personalBibleReadings, setPersonalBibleReadings] = useState([]);
+  const [personalBibleAvailable, setPersonalBibleAvailable] = useState(true);
+  const [personalBibleStreakSummary, setPersonalBibleStreakSummary] = useState(null);
+  const [personalBibleAchievements, setPersonalBibleAchievements] = useState([]);
+  const [personalBibleStreakAvailable, setPersonalBibleStreakAvailable] = useState(true);
+  const [dashboardGroupCompletionPercent, setDashboardGroupCompletionPercent] = useState(50);
+  const [dashboardGroupCompletionSettingsAvailable, setDashboardGroupCompletionSettingsAvailable] = useState(true);
+  const [dashboardGroupMemberships, setDashboardGroupMemberships] = useState([]);
+  const [dashboardGroupMembershipsAvailable, setDashboardGroupMembershipsAvailable] = useState(false);
+  const [funZoneSummary, setFunZoneSummary] = useState(null);
+  const [funZoneAvailable, setFunZoneAvailable] = useState(true);
   const [biblePartnerStreaks, setBiblePartnerStreaks] = useState([]);
-  const [cellGroup, setCellGroup] = useState(null);
+  const [cellGroups, setCellGroups] = useState([]);
+  const [activeCellGroupId, setActiveCellGroupId] = useState("");
+  const cellGroup = cellGroups.find((group) => group.id === activeCellGroupId) || null;
+  const [dashboardBirthdays, setDashboardBirthdays] = useState([]);
+  const [birthdayBoardLoading, setBirthdayBoardLoading] = useState(true);
+  const [birthdayBoardUnavailable, setBirthdayBoardUnavailable] = useState(false);
+  const [birthdayExperienceOpen, setBirthdayExperienceOpen] = useState(false);
+  const [birthdayExperienceReopened, setBirthdayExperienceReopened] = useState(false);
+  const birthdayClaimPromisesRef = useRef(new Map());
   const [selectedAssignmentClassId, setSelectedAssignmentClassId] = useState("");
   const [icebreaker, setIcebreaker] = useState(null);
   const [selectedEventId, setSelectedEventId] = useState("");
@@ -1073,11 +1393,19 @@ export function AppShell() {
   const [taskForm, setTaskForm] = useState(emptyTaskForm);
   const [messageForm, setMessageForm] = useState(emptyMessageForm);
   const [prayerForm, setPrayerForm] = useState(emptyPrayerForm);
+  const [editingPrayerId, setEditingPrayerId] = useState("");
+  const [prayerSearchQuery, setPrayerSearchQuery] = useState("");
+  const [prayerStatusFilter, setPrayerStatusFilter] = useState("all");
+  const [eventSearchQuery, setEventSearchQuery] = useState("");
+  const [messageSearchQuery, setMessageSearchQuery] = useState("");
+  const [resourceSearchQuery, setResourceSearchQuery] = useState("");
+  const [resourceTypeFilter, setResourceTypeFilter] = useState("all");
   const [resourceForm, setResourceForm] = useState(emptyResourceForm);
   const [leadershipForm, setLeadershipForm] = useState(emptyLeadershipForm);
   const [meetingForm, setMeetingForm] = useState(emptyMeetingForm);
   const [announcementForm, setAnnouncementForm] = useState(emptyAnnouncementForm);
   const [announcementFeedFilter, setAnnouncementFeedFilter] = useState("all");
+  const [pulseTab, setPulseTab] = useState("feed");
   const [pulseSearchQuery, setPulseSearchQuery] = useState("");
   const [announcementReplyDrafts, setAnnouncementReplyDrafts] = useState({});
   const [pulseMessageDraft, setPulseMessageDraft] = useState("");
@@ -1111,17 +1439,21 @@ export function AppShell() {
   const [ideaDraft, setIdeaDraft] = useState("");
   const [memberSearch, setMemberSearch] = useState("");
   const [memberStatusFilter, setMemberStatusFilter] = useState("all");
-  const [profileForm, setProfileForm] = useState({
-    full_name: "",
-    avatar_url: ""
-  });
+  const [profileForm, setProfileForm] = useState({ full_name: "" });
+  const [profilePhotoFile, setProfilePhotoFile] = useState(null);
+  const [profilePhotoPreview, setProfilePhotoPreview] = useState("");
+  const [removeProfilePhotoOnSave, setRemoveProfilePhotoOnSave] = useState(false);
   const [passwordForm, setPasswordForm] = useState(emptyPasswordForm);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
-  const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const [statusMessage, setStatusMessage] = useState("");
   const [liveNow, setLiveNow] = useState(() => new Date());
+  const closeBirthdayExperience = useCallback(() => setBirthdayExperienceOpen(false), []);
+  const reopenBirthdayExperience = useCallback(() => {
+    setBirthdayExperienceReopened(true);
+    setBirthdayExperienceOpen(true);
+  }, []);
   const [replyingToMessageId, setReplyingToMessageId] = useState("");
   const [notificationPermission, setNotificationPermission] = useState(() =>
     getBrowserNotificationPermission()
@@ -1136,8 +1468,6 @@ export function AppShell() {
   const [selectedResourceFile, setSelectedResourceFile] = useState(null);
   const [resourceFileName, setResourceFileName] = useState("");
   const [checkingIn, setCheckingIn] = useState(false);
-  const [avatarFileName, setAvatarFileName] = useState("");
-  const avatarInputRef = useRef(null);
   const resourceFileInputRef = useRef(null);
   const notificationTrayRef = useRef(null);
   const notificationTimeoutsRef = useRef(new Map());
@@ -1148,6 +1478,7 @@ export function AppShell() {
     tasks: new Set(),
     messages: new Set(),
     prayer_points: new Set(),
+    prayer_point_replies: new Set(),
     leadership_assignments: new Set(),
     notifications: new Set(),
     event_check_ins: new Set(),
@@ -1166,14 +1497,41 @@ export function AppShell() {
   const hasSeededRealtimeIdsRef = useRef(false);
 
   const isAdmin = profile?.role === "admin";
+  const isSuperAdmin = superAdminStatus === "authorized";
+  const isAdminWorkspace = isAdmin || isSuperAdmin;
   const canManageCellGroup = isAdmin || cellGroup?.leader_id === user?.id;
   const navSections = useMemo(
-    () => sections.filter((section) => section.adminOnly ? isAdmin : (!section.leaderOnly || canManageCellGroup)),
-    [canManageCellGroup, isAdmin]
+    () => {
+      const visibleSections = sections.filter((section) => section.adminOnly ? isAdmin || isSuperAdmin : (!section.leaderOnly || canManageCellGroup));
+      return isSuperAdmin
+        ? [...visibleSections, { id: "super-admin", label: "Super Admin", shortLabel: "Oversight", icon: "shield" }]
+        : visibleSections;
+    },
+    [canManageCellGroup, isAdmin, isSuperAdmin]
   );
   useEffect(() => {
-    if (activeSection === "management" && !isAdmin) setActiveSection("dashboard");
-  }, [activeSection, isAdmin]);
+    if (["management", "birthdays"].includes(activeSection) && profile && !isAdminWorkspace) {
+      setErrorMessage("Administrator access is restricted to authorized accounts.");
+      setActiveSection("dashboard");
+    }
+  }, [activeSection, isAdminWorkspace, profile]);
+
+  useEffect(() => {
+    if (!user?.id) return undefined;
+    let current = true;
+    setSuperAdminStatus("checking");
+    supabase.rpc("is_super_admin").then(({ data, error }) => {
+      if (!current) return;
+      setSuperAdminStatus(!error && data === true ? "authorized" : "denied");
+    });
+    return () => { current = false; };
+  }, [user?.id]);
+
+  useEffect(() => {
+    if (activeSection !== "super-admin" || superAdminStatus === "idle" || superAdminStatus === "checking" || isSuperAdmin) return;
+    setErrorMessage("Super Admin access is restricted to accounts authorized in the database.");
+    setActiveSection("dashboard");
+  }, [activeSection, isSuperAdmin, superAdminStatus]);
   const sortedEvents = [...events].sort(
     (left, right) => new Date(left.starts_at) - new Date(right.starts_at)
   );
@@ -1224,30 +1582,41 @@ export function AppShell() {
     selectedCheckIns.find((checkIn) => checkIn.user_id === user.id) ?? null;
   const adminCount = profiles.filter((member) => member.role === "admin").length;
   const activeMembers = profiles.filter((member) => member.is_active);
+  const activeMemberIds = new Set(activeMembers.map((member) => member.id));
+  const dashboardActiveMemberships = dashboardGroupMemberships.filter((member) => member.membership_status === "active");
+  const dashboardActiveMemberIds = new Set(dashboardActiveMemberships.map((member) => member.user_id).filter(Boolean));
+  const dashboardActiveMembers = dashboardGroupMembershipsAvailable
+    ? profiles.filter((member) => member.is_active && dashboardActiveMemberIds.has(member.id))
+    : [];
+  const dashboardActiveMemberCount = dashboardGroupMembershipsAvailable ? dashboardActiveMemberships.length : null;
   const pausedMembersCount = profiles.filter((member) => !member.is_active).length;
   const memberUserCount = profiles.filter((member) => member.role === "user").length;
   const unreadNotifications = notifications.filter(
     (notification) => !notification.read_at && !notification.archived_at
   );
   const inboxMessages = [...messages]
-    .filter(
-      (message) =>
-        isAdmin ||
-        message.sender_id === user.id ||
-        message.recipient_id === user.id ||
-        message.recipient_id === null
+    .filter((message) =>
+      Boolean(message.recipient_id) &&
+      (isAdmin || message.sender_id === user.id || message.recipient_id === user.id)
     )
     .sort((left, right) => new Date(right.created_at) - new Date(left.created_at));
   const orderedMessages = [...inboxMessages].sort(
     (left, right) => new Date(left.created_at) - new Date(right.created_at)
   );
   const currentMember = profiles.find((member) => member.id === user.id) ?? profile;
+  const myPersonalBibleReadings = personalBibleReadings.filter((reading) => reading.user_id === user.id);
+  const personalBibleStats = summarizePersonalReadings(myPersonalBibleReadings, liveNow);
+  const ownDashboardBirthday = dashboardBirthdays.find((member) => member.user_id === user.id) || null;
+  const birthdayRecordName = ownDashboardBirthday?.full_name === "Community member" ? "" : ownDashboardBirthday?.full_name;
   const currentDisplayName =
-    currentMember?.full_name ||
+    currentMember?.full_name?.trim() ||
+    birthdayRecordName ||
     currentMember?.email?.split("@")[0] ||
     user.email?.split("@")[0] ||
     "Friend";
-  const greetingMessage = `${getGreeting(liveNow)}, ${currentDisplayName}`;
+  const currentFirstName = currentDisplayName.trim().split(/\s+/)[0] || "Friend";
+  const greetingMessage = `${getGreeting(liveNow)}, ${currentFirstName}`;
+  const isBirthdayToday = Number(ownDashboardBirthday?.days_until) === 0;
   const liveDateLabel = formatFullDate(liveNow);
   const liveTimeLabel = formatClockTime(liveNow);
   const messageRecipients = activeMembers.filter((member) => member.id !== user.id);
@@ -1352,6 +1721,7 @@ export function AppShell() {
       title: eventRecord.title || "Untitled event",
       meta: formatDateTime(eventRecord.starts_at),
       kind: "Event",
+      userId: eventRecord.created_by,
       createdAt: eventRecord.created_at || eventRecord.starts_at,
       action: () => {
         setSelectedEventId(eventRecord.id);
@@ -1363,6 +1733,7 @@ export function AppShell() {
       title: taskRecord.title || "Untitled task",
       meta: taskRecord.assignee_id ? getMemberLabel(taskRecord.assignee_id) : "Unassigned",
       kind: "Task",
+      userId: taskRecord.assignee_id,
       createdAt: taskRecord.created_at,
       action: () => {
         setSelectedEventId(taskRecord.event_id);
@@ -1374,6 +1745,7 @@ export function AppShell() {
       title: message.title || truncateText(message.content, 44) || "New message",
       meta: `From ${getMemberLabel(message.sender_id)}`,
       kind: "Message",
+      userId: message.sender_id,
       createdAt: message.created_at,
       action: () => setActiveSection("messages")
     })),
@@ -1384,6 +1756,7 @@ export function AppShell() {
         ? "Shared anonymously"
         : `Shared by ${getMemberLabel(prayer.created_by)}`,
       kind: "Prayer",
+      userId: prayer.is_anonymous ? null : prayer.created_by,
       createdAt: prayer.created_at,
       action: () => setActiveSection("prayer")
     })),
@@ -1394,6 +1767,7 @@ export function AppShell() {
         ? formatDateTime(classItem.starts_at)
         : "Schedule coming soon",
       kind: "Discipleship",
+      userId: classItem.created_by,
       createdAt: classItem.created_at,
       action: () => {
         setSelectedAssignmentClassId(classItem.id);
@@ -1447,13 +1821,18 @@ export function AppShell() {
       caption: "Class assignments and progress."
     }
   ];
-  const bibleToday = bibleStudyReadings.find((reading) => reading.reading_date === new Date().toISOString().slice(0, 10)) || bibleStudyReadings.filter((reading) => reading.reading_date <= new Date().toISOString().slice(0, 10)).at(-1) || bibleStudyReadings[0];
-  const completedReadingIds = new Set(bibleStudyCompletions.filter((row) => row.user_id === user.id).map((row) => row.reading_id));
-  let myBibleStreak = 0;
-  for (const reading of [...bibleStudyReadings].filter((item) => item.reading_date <= new Date().toISOString().slice(0, 10)).sort((left, right) => right.reading_date.localeCompare(left.reading_date))) {
-    if (!completedReadingIds.has(reading.id)) break;
-    myBibleStreak += 1;
-  }
+  const localToday = getLocalReadingDate(liveNow);
+  const visibleGroupReadings = bibleStudyReadings.filter((reading) => reading.deleted_at == null && !["draft", "archived"].includes(reading.status));
+  const bibleToday = visibleGroupReadings.find((reading) => reading.reading_date === localToday) || visibleGroupReadings.filter((reading) => reading.reading_date <= localToday).at(-1) || visibleGroupReadings[0];
+  const groupReadingsToDate = visibleGroupReadings.filter((reading) => reading.reading_date <= localToday);
+  const groupReadingIdsToDate = new Set(groupReadingsToDate.map((reading) => reading.id));
+  const groupSubmissions = dashboardGroupMembershipsAvailable
+    ? bibleStudyCompletions.filter((row) => groupReadingIdsToDate.has(row.reading_id) && dashboardActiveMemberIds.has(row.user_id)).length
+    : null;
+  const expectedGroupSubmissions = dashboardActiveMemberCount == null ? null : dashboardActiveMemberCount * groupReadingsToDate.length;
+  const groupSubmissionRate = expectedGroupSubmissions == null
+    ? null
+    : expectedGroupSubmissions ? Math.min(100, Math.round(groupSubmissions / expectedGroupSubmissions * 100)) : 0;
   const bibleCommunityActivity = [
     ...bibleStudyTakeaways.map((item) => ({ id: item.id, kind: "Takeaway", content: item.content, userId: item.user_id, createdAt: item.created_at })),
     ...bibleStudyReplies.map((item) => ({ id: item.id, kind: "Reply", content: item.content, userId: item.user_id, createdAt: item.created_at })),
@@ -1479,8 +1858,7 @@ export function AppShell() {
   const replyingToMessage = replyingToMessageId
     ? messages.find((message) => message.id === replyingToMessageId) ?? null
     : null;
-  const activeSectionLabel = sections.find((section) => section.id === activeSection)?.label ?? "Dashboard";
-
+  const activeSectionLabel = activeSection === "super-admin" ? "Super Admin" : sections.find((section) => section.id === activeSection)?.label ?? "Dashboard";
   function getMember(memberId) {
     return profiles.find((member) => member.id === memberId) ?? null;
   }
@@ -1520,10 +1898,6 @@ export function AppShell() {
   }
 
   function getMessageRecipientLabel(message) {
-    if (!message.recipient_id) {
-      return "All members";
-    }
-
     return getMemberLabel(message.recipient_id);
   }
 
@@ -1593,7 +1967,6 @@ export function AppShell() {
 
     const notification = new window.Notification(title, {
       body,
-      icon: currentMember?.avatar_url || undefined
     });
 
     window.setTimeout(() => {
@@ -1655,6 +2028,15 @@ export function AppShell() {
       return;
     }
 
+    if (table === "prayer_point_replies") {
+      announceActivity({
+        title: "New prayer wall encouragement",
+        body: truncateText(record.body, 96),
+        tone: "accent"
+      });
+      return;
+    }
+
     if (table === "notifications") {
       if (record.user_id !== user.id) {
         return;
@@ -1697,6 +2079,13 @@ export function AppShell() {
   }, [theme]);
 
   useEffect(() => {
+    const root = document.documentElement;
+    if (isAdminWorkspace) root.dataset.appWorkspace = "admin";
+    else root.removeAttribute("data-app-workspace");
+    return () => root.removeAttribute("data-app-workspace");
+  }, [isAdminWorkspace]);
+
+  useEffect(() => {
     const hour = liveNow.getHours();
     const timeOfDay = hour >= 6 && hour < 12 ? "morning" : hour >= 12 && hour < 18 ? "day" : "night";
     document.documentElement.dataset.timeOfDay = timeOfDay;
@@ -1721,11 +2110,18 @@ export function AppShell() {
       return;
     }
 
-    setProfileForm({
-      full_name: currentMember.full_name ?? "",
-      avatar_url: currentMember.avatar_url ?? ""
-    });
-  }, [currentMember?.avatar_url, currentMember?.full_name]);
+    setProfileForm({ full_name: currentMember.full_name ?? "" });
+  }, [currentMember?.full_name]);
+
+  useEffect(() => {
+    if (!profilePhotoFile) {
+      setProfilePhotoPreview("");
+      return undefined;
+    }
+    const previewUrl = URL.createObjectURL(profilePhotoFile);
+    setProfilePhotoPreview(previewUrl);
+    return () => URL.revokeObjectURL(previewUrl);
+  }, [profilePhotoFile]);
 
   useEffect(() => {
     setMobileMenuOpen(false);
@@ -1832,6 +2228,7 @@ export function AppShell() {
       tasks: new Set(),
       messages: new Set(),
       prayer_points: new Set(),
+      prayer_point_replies: new Set(),
       leadership_assignments: new Set(),
       notifications: new Set(),
       event_check_ins: new Set(),
@@ -1851,7 +2248,7 @@ export function AppShell() {
   }, [user?.id]);
 
   async function loadAppData(options = {}) {
-    if (!supabase || !user) {
+    if (!supabase || !user || !activeCellGroupId) {
       setLoading(false);
       return;
     }
@@ -1860,93 +2257,84 @@ export function AppShell() {
       setLoading(true);
     }
 
+    const byGroup = (table) => supabase.from(table).select("*").eq("group_id", activeCellGroupId);
     const results = await Promise.all([
-      supabase.from("events").select("*").order("starts_at", { ascending: true }),
-      supabase
-        .from("event_ideas")
-        .select("*")
-        .order("created_at", { ascending: false }),
-      supabase.from("idea_votes").select("*"),
-      supabase.from("tasks").select("*").order("created_at", { ascending: false }),
-      supabase.from("rsvps").select("*"),
+      byGroup("events").order("starts_at", { ascending: true }),
+      byGroup("event_ideas").order("created_at", { ascending: false }),
+      byGroup("idea_votes"),
+      byGroup("tasks").order("created_at", { ascending: false }),
+      byGroup("rsvps"),
       supabase.from("profiles").select("*").order("created_at", { ascending: true }),
-      supabase.from("messages").select("*").order("created_at", { ascending: false }),
-      supabase
-        .from("prayer_points")
-        .select("*")
+      byGroup("messages").order("created_at", { ascending: false }),
+      byGroup("prayer_points").order("created_at", { ascending: false }),
+      byGroup("resources").order("created_at", { ascending: false }),
+      byGroup("notifications")
+        .eq("user_id", user.id)
         .order("created_at", { ascending: false }),
-      supabase.from("resources").select("*").order("created_at", { ascending: false }),
-      supabase
-        .from("notifications")
-        .select("*")
-        .order("created_at", { ascending: false }),
-      supabase
-        .from("leadership_assignments")
-        .select("*")
-        .order("assignment_date", { ascending: true }),
-      supabase
-        .from("event_check_ins")
-        .select("*")
-        .order("checked_in_at", { ascending: false }),
-      supabase.from("announcements").select("*").order("created_at", { ascending: false }),
-      supabase.from("prayer_reminders").select("*").order("created_at", { ascending: false }),
-      supabase
-        .from("virtual_meetings")
-        .select("*")
-        .order("starts_at", { ascending: true }),
-      supabase
-        .from("virtual_meeting_attendance")
-        .select("*")
-        .order("joined_at", { ascending: false }),
-      supabase.from("reactions").select("*").order("created_at", { ascending: false }),
-      supabase
-        .from("discipleship_classes")
-        .select("*")
-        .order("starts_at", { ascending: true }),
-      supabase
-        .from("discipleship_class_sessions")
-        .select("*")
-        .order("starts_at", { ascending: true }),
-      supabase.from("discipleship_enrollments").select("*"),
-      supabase
-        .from("discipleship_lessons")
-        .select("*")
-        .order("sort_order", { ascending: true }),
-      supabase.from("discipleship_lesson_completions").select("*"),
-      supabase.from("discipleship_assignment_submissions").select("*"),
-      supabase
-        .from("discipleship_submission_history")
-        .select("*")
-        .order("created_at", { ascending: false }),
-      supabase.from("discipleship_member_notes").select("*"),
-      supabase.from("discipleship_session_attendance").select("*"),
-      supabase
-        .from("discipleship_discussions")
-        .select("*")
-        .order("created_at", { ascending: true }),
-      supabase.from("bible_study_readings").select("*").order("sort_order"),
-      supabase.from("bible_study_takeaways").select("*").order("created_at", { ascending: false }),
-      supabase.from("bible_study_takeaway_replies").select("*").order("created_at", { ascending: false }),
-      supabase.from("bible_study_questions").select("*").order("created_at", { ascending: false }),
-      supabase.from("bible_study_question_answers").select("*").order("created_at", { ascending: false }),
-      supabase.from("bible_study_completions").select("*"),
-      supabase.from("bible_study_partner_streaks").select("*").order("created_at", { ascending: false }),
-      supabase.from("announcement_replies").select("*").order("created_at", { ascending: true })
+      byGroup("leadership_assignments").order("assignment_date", { ascending: true }),
+      byGroup("event_check_ins").order("checked_in_at", { ascending: false }),
+      Promise.resolve({ data: [], error: null }),
+      byGroup("prayer_reminders").order("created_at", { ascending: false }),
+      byGroup("virtual_meetings").order("starts_at", { ascending: true }),
+      byGroup("virtual_meeting_attendance").order("joined_at", { ascending: false }),
+      byGroup("reactions").order("created_at", { ascending: false }),
+      byGroup("discipleship_classes").order("starts_at", { ascending: true }),
+      byGroup("discipleship_class_sessions").order("starts_at", { ascending: true }),
+      byGroup("discipleship_enrollments"),
+      byGroup("discipleship_lessons").order("sort_order", { ascending: true }),
+      byGroup("discipleship_lesson_completions"),
+      byGroup("discipleship_assignment_submissions"),
+      byGroup("discipleship_submission_history").order("created_at", { ascending: false }),
+      byGroup("discipleship_member_notes"),
+      byGroup("discipleship_session_attendance"),
+      byGroup("discipleship_discussions").order("created_at", { ascending: true }),
+      byGroup("bible_study_readings").order("sort_order"),
+      byGroup("bible_study_takeaways").order("created_at", { ascending: false }),
+      byGroup("bible_study_takeaway_replies").order("created_at", { ascending: false }),
+      byGroup("bible_study_questions").order("created_at", { ascending: false }),
+      byGroup("bible_study_question_answers").order("created_at", { ascending: false }),
+      byGroup("bible_study_completions"),
+      byGroup("bible_study_partner_streaks").order("created_at", { ascending: false }),
+      Promise.resolve({ data: [], error: null }),
+      byGroup("prayer_point_replies").order("created_at", { ascending: true }),
+      supabase.from("personal_bible_study_readings").select("id,user_id,book,chapter,reading_date,status,completed_at,created_at").eq("user_id", user.id).order("reading_date", { ascending: true }),
+      supabase.rpc("fun_zone_my_summary"),
+      supabase.rpc("bible_streak_my_summary"),
+      supabase.from("bible_streak_achievements").select("user_id,milestone_days,earned_on").eq("user_id", user.id).order("milestone_days"),
+      supabase.rpc("bible_streak_get_settings"),
+      isAdminWorkspace
+        ? supabase.from("cell_group_members").select("user_id,membership_status").eq("cell_group_id", activeCellGroupId)
+        : Promise.resolve({ data: [], error: null })
     ]);
 
-    const { error: presentationError } = await supabase
-      .from("announcements")
-      .select("presentation")
-      .limit(1);
-    setTextPostThemesAvailable(!presentationError);
+    setTextPostThemesAvailable(false);
 
-    const failingResult = results.find((result, index) => result.error && index !== 34);
+    setPersonalBibleAvailable(!results[36]?.error);
+    setFunZoneAvailable(!results[37]?.error);
+    setPersonalBibleStreakAvailable(!results[38]?.error && !results[39]?.error);
+    const streakSettings = results[40]?.data;
+    const groupCompletionPercent = Number(streakSettings?.group_completion_percent);
+    setDashboardGroupCompletionSettingsAvailable(!results[40]?.error);
+    setDashboardGroupCompletionPercent(groupCompletionPercent > 0 && groupCompletionPercent <= 100 ? groupCompletionPercent : 50);
+    const failingResult = results.find((result, index) => result.error && index !== 34 && index !== 35 && index !== 36 && index !== 37 && index !== 38 && index !== 39 && index !== 40 && index !== 41);
 
     if (failingResult?.error) {
       setErrorMessage(failingResult.error.message);
       setLoading(false);
       return;
     }
+
+    const scopedAnnouncements = await Promise.all((results[12].data ?? []).map(async (announcement) => {
+      const originalAttachments = Array.isArray(announcement.attachments) ? announcement.attachments : [];
+      const attachmentPaths = originalAttachments.map((attachment) => privateStoragePath(attachment, "announcement-images"));
+      const attachments = await Promise.all(originalAttachments.map(async (attachment, index) => {
+        const path = attachmentPaths[index];
+        if (!path) return attachment;
+        const { data, error } = await supabase.storage.from("announcement-images").createSignedUrl(path, 3600);
+        return error ? "" : data?.signedUrl || "";
+      }));
+      return { ...announcement, attachment_paths: attachmentPaths, attachments: attachments.filter(Boolean) };
+    }));
 
     startTransition(() => {
       setEvents(results[0].data ?? []);
@@ -1957,11 +2345,13 @@ export function AppShell() {
       setProfiles(results[5].data ?? []);
       setMessages(results[6].data ?? []);
       setPrayerPoints(results[7].data ?? []);
+      setPrayerReplies(results[35]?.data ?? []);
+      setPrayerRepliesAvailable(!results[35]?.error);
       setResources(results[8].data ?? []);
       setNotifications(results[9].data ?? []);
       setLeadershipAssignments(results[10].data ?? []);
       setEventCheckIns(results[11].data ?? []);
-      setAnnouncements(results[12].data ?? []);
+      setAnnouncements(scopedAnnouncements);
       setPrayerReminders(results[13].data ?? []);
       setVirtualMeetings(results[14].data ?? []);
       setVirtualMeetingAttendance(results[15].data ?? []);
@@ -1984,7 +2374,13 @@ export function AppShell() {
       setBibleStudyCompletions(results[32].data ?? []);
       setBiblePartnerStreaks(results[33].data ?? []);
       setAnnouncementReplies(results[34]?.data ?? []);
-      setAnnouncementRepliesAvailable(!results[34]?.error);
+      setAnnouncementRepliesAvailable(false);
+      setPersonalBibleReadings(results[36]?.data ?? []);
+      setFunZoneSummary(results[37]?.data?.[0] ?? results[37]?.data ?? null);
+      setPersonalBibleStreakSummary(results[38]?.data?.summary ?? results[38]?.data?.[0] ?? results[38]?.data ?? null);
+      setPersonalBibleAchievements(results[39]?.data ?? []);
+      setDashboardGroupMemberships(results[41]?.data ?? []);
+      setDashboardGroupMembershipsAvailable(isAdminWorkspace && !results[41]?.error);
     });
 
     if (!hasSeededRealtimeIdsRef.current) {
@@ -1994,6 +2390,7 @@ export function AppShell() {
         tasks: new Set((results[3].data ?? []).map((task) => task.id)),
         messages: new Set((results[6].data ?? []).map((message) => message.id)),
         prayer_points: new Set((results[7].data ?? []).map((prayer) => prayer.id)),
+        prayer_point_replies: new Set((results[35]?.data ?? []).map((reply) => reply.id)),
         leadership_assignments: new Set(
           (results[10].data ?? []).map((assignment) => assignment.id)
         ),
@@ -2001,7 +2398,7 @@ export function AppShell() {
           (results[9].data ?? []).map((notification) => notification.id)
         ),
         event_check_ins: new Set((results[11].data ?? []).map((checkIn) => checkIn.id)),
-        announcements: new Set((results[12].data ?? []).map((announcement) => announcement.id)),
+        announcements: new Set(scopedAnnouncements.map((announcement) => announcement.id)),
         prayer_reminders: new Set((results[13].data ?? []).map((reminder) => reminder.id)),
         virtual_meetings: new Set((results[14].data ?? []).map((meeting) => meeting.id)),
         discipleship_classes: new Set(
@@ -2031,29 +2428,186 @@ export function AppShell() {
   }
 
   useEffect(() => {
-    void loadAppData({ showLoader: true });
+    if (!supabase || !user?.id) {
+      setCellGroups([]);
+      setActiveCellGroupId("");
+      return;
+    }
+    let current = true;
+    async function loadCellGroup() {
+      const { error: ensureError } = await supabase.rpc("ensure_default_cell_group");
+      if (ensureError) {
+        if (current) setErrorMessage(ensureError.message);
+        return;
+      }
+      const { data, error } = await supabase
+        .from("cell_groups")
+        .select("id,name,is_primary,management_only,leader_id,timezone,created_at")
+        .eq("is_primary", true)
+        .eq("management_only", false)
+        .is("archived_at", null)
+        .maybeSingle();
+      if (!current) return;
+      if (error) {
+        setErrorMessage(error.message);
+        return;
+      }
+      const availableGroups = data ? [data] : [];
+      setCellGroups(availableGroups);
+      setActiveCellGroupId(availableGroups[0]?.id || "");
+    }
+    void loadCellGroup();
+    return () => { current = false; };
   }, [user?.id]);
 
   useEffect(() => {
-    if (!supabase || !user?.id) {
-      return;
+    if (!supabase || !user?.id || !activeCellGroupId) {
+      setDashboardBirthdays([]);
+      setBirthdayBoardLoading(false);
+      setBirthdayBoardUnavailable(false);
+      return undefined;
     }
 
-    async function loadCellGroup() {
-      await supabase.rpc("ensure_default_cell_group");
-      const { data } = await supabase
-        .from("cell_groups")
-        .select("*")
-        .order("created_at", { ascending: true })
-        .limit(1)
-        .maybeSingle();
+    let current = true;
+    const timeZone = cellGroup?.timezone || "UTC";
+    setBirthdayBoardLoading(true);
 
-      if (data) {
-        setCellGroup(data);
+    async function loadDashboardBirthdays() {
+      let birthdays = [];
+      let unavailable = false;
+      const { data, error } = await supabase.rpc("get_dashboard_birthdays", { p_cell_group_id: activeCellGroupId });
+
+      if (!error && Array.isArray(data)) {
+        birthdays = data.map((member) => {
+          const birthMonth = Number(member.birth_month);
+          const birthDay = Number(member.birth_day);
+          return {
+            ...member,
+            days_until: Number(member.days_until),
+            birth_month: birthMonth,
+            birth_day: birthDay,
+            display_date: formatBirthdayDate(birthMonth, birthDay)
+          };
+        }).filter((member) => member.user_id && member.display_date && Number.isInteger(member.days_until) && member.days_until >= 0 && member.days_until <= 30);
+      } else {
+        unavailable = true;
+        let ownResult = await supabase
+          .from("cell_group_members")
+          .select("user_id,full_name,birth_day,birth_month,date_of_birth")
+          .eq("cell_group_id", activeCellGroupId)
+          .eq("user_id", user.id)
+          .maybeSingle();
+        if (ownResult.error) {
+          ownResult = await supabase
+            .from("cell_group_members")
+            .select("user_id,full_name,date_of_birth")
+            .eq("cell_group_id", activeCellGroupId)
+            .eq("user_id", user.id)
+            .maybeSingle();
+        }
+
+        if (!ownResult.error && ownResult.data) {
+          const occurrence = getBirthdayOccurrence(ownResult.data, new Date(), timeZone);
+          if (occurrence && occurrence.daysUntil <= 30) {
+            birthdays = [{
+              ...ownResult.data,
+              full_name: profile?.full_name || ownResult.data.full_name || "Friend",
+              birth_month: occurrence.month,
+              birth_day: occurrence.day,
+              days_until: occurrence.daysUntil,
+              display_date: formatBirthdayDate(occurrence.month, occurrence.day)
+            }];
+          }
+        }
+      }
+
+      if (!current) return;
+      setDashboardBirthdays(birthdays);
+      setBirthdayBoardUnavailable(unavailable);
+      setBirthdayBoardLoading(false);
+
+      const ownBirthday = birthdays.find((member) => member.user_id === user.id && member.days_until === 0);
+      if (!ownBirthday) {
+        setBirthdayExperienceOpen(false);
+        setBirthdayExperienceReopened(false);
+        return;
+      }
+
+      const claimDate = getLocalDateKey(new Date(), timeZone);
+      const claimKey = `${user.id}:${activeCellGroupId}:${claimDate}`;
+      let claimPromise = birthdayClaimPromisesRef.current.get(claimKey);
+      if (!claimPromise) {
+        claimPromise = (async () => {
+          let result;
+          try {
+            result = await supabase.rpc("claim_my_birthday_celebration");
+          } catch {
+            result = { error: true };
+          }
+          if (!result.error) return result.data === true;
+          try {
+            const localKey = `city-on-a-hill:birthday-celebration:${user.id}:${claimDate}`;
+            if (window.localStorage.getItem(localKey)) return false;
+            window.localStorage.setItem(localKey, "shown");
+            return true;
+          } catch {
+            return true;
+          }
+        })();
+        birthdayClaimPromisesRef.current.set(claimKey, claimPromise);
+        void claimPromise.then(() => {
+          if (birthdayClaimPromisesRef.current.get(claimKey) === claimPromise) {
+            birthdayClaimPromisesRef.current.delete(claimKey);
+          }
+        });
+      }
+
+      const shouldOpen = await claimPromise;
+      if (current && shouldOpen) {
+        setBirthdayExperienceReopened(false);
+        setBirthdayExperienceOpen(true);
       }
     }
 
-    void loadCellGroup();
+    void loadDashboardBirthdays().catch((error) => {
+      if (!current) return;
+      setDashboardBirthdays([]);
+      setBirthdayBoardUnavailable(true);
+      setBirthdayBoardLoading(false);
+      console.error("Could not load the dashboard birthday board", error);
+    });
+
+    return () => { current = false; };
+  }, [activeCellGroupId, cellGroup?.timezone, getLocalDateKey(liveNow, cellGroup?.timezone || "UTC"), profile?.full_name, user?.id]);
+
+  useEffect(() => {
+    if (!supabase || !user?.id || !activeCellGroupId) return;
+    void loadAppData({ showLoader: true });
+  }, [user?.id, activeCellGroupId]);
+
+  useEffect(() => {
+    if (!supabase || !user?.id) return undefined;
+    let current = true;
+    const refreshAccessibleGroups = async () => {
+      const { data, error } = await supabase
+        .from("cell_groups")
+        .select("id,name,is_primary,management_only,leader_id,timezone,created_at")
+        .eq("is_primary", true)
+        .eq("management_only", false)
+        .is("archived_at", null)
+        .maybeSingle();
+      if (!current || error) return;
+      const availableGroups = data ? [data] : [];
+      setCellGroups(availableGroups);
+      setActiveCellGroupId(availableGroups[0]?.id || "");
+    };
+    const channel = supabase.channel(`cell-group-access-${user.id}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "cell_groups" }, () => void refreshAccessibleGroups())
+      .subscribe();
+    return () => {
+      current = false;
+      void supabase.removeChannel(channel);
+    };
   }, [user?.id]);
 
   useEffect(() => {
@@ -2168,7 +2722,6 @@ export function AppShell() {
       "virtual_meeting_attendance",
       "reactions",
       "event_check_ins",
-      "announcements",
       "prayer_reminders",
       "discipleship_classes",
       "discipleship_class_sessions",
@@ -2180,14 +2733,31 @@ export function AppShell() {
       "discipleship_member_notes",
       "discipleship_session_attendance",
       "discipleship_discussions",
+      "bible_study_readings",
+      "bible_study_completions",
       "bible_study_takeaways",
       "bible_study_takeaway_replies",
       "bible_study_questions",
       "bible_study_question_answers"
     ];
-    if (announcementRepliesAvailable) {
-      // Older deployments can continue running until the additive community migration is applied.
-      tables.push("announcement_replies");
+    if (prayerRepliesAvailable) {
+      tables.push("prayer_point_replies");
+    }
+    if (personalBibleAvailable && activeSection !== "bible-study") {
+      tables.push("personal_bible_study_readings");
+    }
+    if (personalBibleStreakAvailable && activeSection !== "bible-study") {
+      tables.push("bible_streak_achievements", "bible_streak_freeze_usage", "bible_streak_settings");
+    }
+    if (funZoneAvailable) {
+      tables.push("fun_zone_point_transactions");
+    }
+    if (isAdminWorkspace) {
+      channel.on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "cell_group_members", filter: `cell_group_id=eq.${activeCellGroupId}` },
+        () => void loadAppData()
+      );
     }
     const notifiableTables = [
       "events",
@@ -2195,11 +2765,11 @@ export function AppShell() {
       "tasks",
       "messages",
       "prayer_points",
+      "prayer_point_replies",
       "notifications",
       "leadership_assignments",
       "virtual_meetings",
       "event_check_ins",
-      "announcements",
       "discipleship_classes",
       "discipleship_lessons",
       "discipleship_discussions",
@@ -2212,7 +2782,11 @@ export function AppShell() {
     tables.forEach((table) => {
       channel.on(
         "postgres_changes",
-        { event: "*", schema: "public", table },
+        { event: "*", schema: "public", table, ...(
+          table === "profiles" || table === "bible_streak_settings" ? {} : ["personal_bible_study_readings", "bible_streak_achievements", "bible_streak_freeze_usage"].includes(table)
+            ? { filter: `user_id=eq.${user.id}` }
+            : { filter: `group_id=eq.${activeCellGroupId}` }
+        ) },
         () => {
           void loadAppData();
         }
@@ -2222,19 +2796,25 @@ export function AppShell() {
     notifiableTables.forEach((table) => {
       channel.on(
         "postgres_changes",
-        { event: "INSERT", schema: "public", table },
+        { event: "INSERT", schema: "public", table, filter: `group_id=eq.${activeCellGroupId}` },
         (payload) => {
           handleRealtimeInsert(table, payload.new);
         }
       );
     });
 
-    channel.subscribe();
+    let liveChannelConnected = false;
+    channel.subscribe((status) => {
+      if (status === "SUBSCRIBED") {
+        if (liveChannelConnected) void loadAppData();
+        liveChannelConnected = true;
+      }
+    });
 
     return () => {
       void supabase.removeChannel(channel);
     };
-  }, [user?.id, profiles, messages, notificationPermission, announcementRepliesAvailable]);
+  }, [user?.id, profiles, messages, notificationPermission, announcementRepliesAvailable, prayerRepliesAvailable, personalBibleAvailable, personalBibleStreakAvailable, funZoneAvailable, activeCellGroupId, activeSection, isAdminWorkspace]);
 
   useEffect(() => {
     if (!events.length) {
@@ -2298,6 +2878,7 @@ export function AppShell() {
         ? supabase.from("events").update(payload).eq("id", editingEventId)
         : supabase.from("events").insert({
             ...payload,
+            group_id: activeCellGroupId,
             created_by: user.id
           });
 
@@ -2518,180 +3099,95 @@ export function AppShell() {
     }, "RSVP updated.");
   }
 
-  async function changeRole(memberId, nextRole) {
-    if (!isAdmin) {
+  function handleProfilePhotoChange(event) {
+    const file = event.currentTarget.files?.[0];
+    event.currentTarget.value = "";
+    if (!file) return;
+    if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) {
+      setErrorMessage("Choose a JPG, PNG, or WebP image.");
       return;
     }
-
-    if (memberId === user.id && nextRole !== "admin" && adminCount === 1) {
-      setErrorMessage("Keep at least one admin account in the system.");
+    if (file.size > 5 * 1024 * 1024) {
+      setErrorMessage("Choose an image smaller than 5 MB.");
       return;
     }
-
-    await runAction(async () => {
-      const { error } = await supabase
-        .from("profiles")
-        .update({ role: nextRole })
-        .eq("id", memberId);
-
-      if (error) {
-        throw error;
-      }
-
-      if (memberId === user.id) {
-        await refreshProfile();
-      }
-    }, nextRole === "admin" ? "Member promoted to admin." : "Admin privileges updated.");
+    clearFeedback();
+    setProfilePhotoFile(file);
+    setRemoveProfilePhotoOnSave(false);
   }
 
-  async function toggleMemberAccess(memberId, nextState) {
-    if (!isAdmin) {
-      return;
-    }
-
-    const member = getMember(memberId);
-
-    if (!member) {
-      return;
-    }
-
-    if (memberId === user.id && !nextState && adminCount === 1) {
-      setErrorMessage("Keep the last admin active so the workspace stays manageable.");
-      return;
-    }
-
-    await runAction(async () => {
-      const { error } = await supabase
-        .from("profiles")
-        .update({ is_active: nextState })
-        .eq("id", memberId);
-
-      if (error) {
-        throw error;
-      }
-    }, nextState ? "Member access restored." : "Member access paused.");
-  }
-
-  async function deleteUser(memberId) {
-    if (!isAdmin) {
-      return;
-    }
-
-    if (memberId === user.id) {
-      setErrorMessage("Use another admin account before deleting your own user.");
-      return;
-    }
-
-    if (!window.confirm("Delete this user from authentication and remove their profile?")) {
-      return;
-    }
-
-    await runAction(async () => {
-      const { error } = await supabase.rpc("admin_delete_user", {
-        target_user_id: memberId
-      });
-
-      if (error) {
-        throw getFriendlyActionError(error, "delete-user");
-      }
-    }, "User deleted.");
+  function stageProfilePhotoRemoval() {
+    setProfilePhotoFile(null);
+    setProfilePhotoPreview("");
+    setRemoveProfilePhotoOnSave(Boolean(currentMember?.profile_photo_path));
+    clearFeedback();
   }
 
   async function saveProfileDetails(event) {
     event.preventDefault();
+    const displayName = profileForm.full_name.trim();
+    if (!displayName) {
+      setErrorMessage("Enter a display name before saving.");
+      return;
+    }
 
     await runAction(async () => {
-      const { error } = await supabase
-        .from("profiles")
-        .update({
-          full_name: profileForm.full_name.trim(),
-          avatar_url: profileForm.avatar_url.trim() || null
-        })
-        .eq("id", user.id);
-
-      if (error) {
-        throw error;
-      }
-
-      await refreshProfile();
-    }, "Profile updated.");
-  }
-
-  async function handleAvatarUpload(event) {
-    const avatarFile = event.target.files?.[0];
-
-    if (!avatarFile) {
-      return;
-    }
-
-    setAvatarFileName(avatarFile.name);
-
-    if (!avatarFile.type.startsWith("image/")) {
-      setErrorMessage("Please choose an image file for the profile picture.");
-      return;
-    }
-
-    if (avatarFile.size > 1024 * 1024) {
-      setErrorMessage("Profile pictures must be 1MB or smaller.");
-      return;
-    }
-
-    setUploadingAvatar(true);
-    clearFeedback();
-
-    try {
-      const filePath = `${user.id}/avatar-${Date.now()}.${getFileExtension(
-        avatarFile.name
-      )}`;
-
-      const { error: uploadError } = await supabase.storage
-        .from("avatars")
-        .upload(filePath, avatarFile, {
+      const oldPhotoPath = currentMember?.profile_photo_path || null;
+      let nextPhotoPath = oldPhotoPath;
+      let uploadedPhotoPath = "";
+      if (profilePhotoFile) {
+        const extension = { "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp" }[profilePhotoFile.type];
+        const uniqueName = globalThis.crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+        uploadedPhotoPath = `${user.id}/${uniqueName}.${extension}`;
+        const { error: uploadError } = await supabase.storage.from("profile-photos").upload(uploadedPhotoPath, profilePhotoFile, {
+          contentType: profilePhotoFile.type,
           cacheControl: "3600",
           upsert: false
         });
-
-      if (uploadError) {
-        const lowerCaseMessage = uploadError.message.toLowerCase();
-
-        if (
-          lowerCaseMessage.includes("policy") ||
-          lowerCaseMessage.includes("row-level security") ||
-          lowerCaseMessage.includes("permission")
-        ) {
-          throw new Error(
-            "Avatar upload is blocked by Supabase Storage permissions. Rerun the latest `supabase/schema.sql` so the avatars bucket policies are applied."
-          );
-        }
-
-        throw uploadError;
+        if (uploadError) throw uploadError;
+        nextPhotoPath = uploadedPhotoPath;
+      } else if (removeProfilePhotoOnSave) {
+        nextPhotoPath = null;
       }
 
-      const { data } = supabase.storage.from("avatars").getPublicUrl(filePath);
-
-      const { error: profileError } = await supabase
+      const profileUpdate = { full_name: displayName };
+      if (profilePhotoFile || removeProfilePhotoOnSave) profileUpdate.profile_photo_path = nextPhotoPath;
+      const { data: savedProfile, error } = await supabase
         .from("profiles")
-        .update({ avatar_url: data.publicUrl })
-        .eq("id", user.id);
+        .update(profileUpdate)
+        .eq("id", user.id)
+        .select("id")
+        .maybeSingle();
 
-      if (profileError) {
-        throw profileError;
+      if (error || !savedProfile) {
+        if (uploadedPhotoPath) {
+          try {
+            const { error: cleanupError } = await supabase.storage.from("profile-photos").remove([uploadedPhotoPath]);
+            if (cleanupError) console.error("An unlinked profile photo could not be removed:", cleanupError);
+          } catch (cleanupError) {
+            console.error("An unlinked profile photo could not be removed:", cleanupError);
+          }
+        }
+        throw error || new Error("Profile changes could not be saved. Check your access and try again.");
       }
 
-      setProfileForm((current) => ({
-        ...current,
-        avatar_url: data.publicUrl
-      }));
+      if (oldPhotoPath && oldPhotoPath !== nextPhotoPath && oldPhotoPath.startsWith(`${user.id}/`)) {
+        try {
+          const { error: removeError } = await supabase.storage.from("profile-photos").remove([oldPhotoPath]);
+          if (removeError) console.error("The previous profile photo could not be removed:", removeError);
+        } catch (removeError) {
+          console.error("The previous profile photo could not be removed:", removeError);
+        }
+      }
+
+      setProfiles((current) => current.map((member) => member.id === user.id
+        ? { ...member, full_name: displayName, profile_photo_path: nextPhotoPath }
+        : member));
+      setProfileForm({ full_name: displayName });
+      setProfilePhotoFile(null);
+      setRemoveProfilePhotoOnSave(false);
       await refreshProfile();
-      await loadAppData();
-      setStatusMessage("Profile picture updated.");
-      setAvatarFileName("");
-    } catch (error) {
-      setErrorMessage(error.message);
-    } finally {
-      setUploadingAvatar(false);
-      event.target.value = "";
-    }
+    }, "Profile updated.");
   }
 
   async function changeMyPassword(event) {
@@ -2735,14 +3231,13 @@ export function AppShell() {
     setReplyingToMessageId(nextReplyingToMessageId);
     setActiveSection("messages");
     clearFeedback();
-    window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
   function replyToMessage(message) {
     const replyTargetId = getReplyTargetId(message);
 
     if (!replyTargetId) {
-      setErrorMessage("Broadcast messages can be read by everyone, but replies go to a person.");
+      setErrorMessage("Choose a direct conversation to reply to.");
       return;
     }
 
@@ -2763,10 +3258,16 @@ export function AppShell() {
       return;
     }
 
+    if (!messageRecipients.some((member) => member.id === messageForm.recipient_id)) {
+      setErrorMessage("Choose an active member to send a direct message.");
+      return;
+    }
+
     await runAction(async () => {
       const { error } = await supabase.from("messages").insert({
+        group_id: activeCellGroupId,
         sender_id: user.id,
-        recipient_id: messageForm.recipient_id || null,
+        recipient_id: messageForm.recipient_id,
         title: messageForm.title.trim(),
         content: messageForm.content.trim(),
         reply_to_message_id: replyingToMessageId || null
@@ -2905,25 +3406,46 @@ export function AppShell() {
 
   async function handlePrayerSubmit(event) {
     event.preventDefault();
+    if (prayerSubmitting) return;
+    setPrayerSubmitting(true);
+    clearFeedback();
+    const prayerIdBeingEdited = editingPrayerId;
+    const prayerPayload = {
+      title: prayerForm.title.trim(),
+      details: prayerForm.details.trim(),
+      is_anonymous: prayerForm.is_anonymous
+    };
+    try {
+      const result = prayerIdBeingEdited
+        ? await supabase.from("prayer_points").update(prayerPayload).eq("id", prayerIdBeingEdited).eq("created_by", user.id).select("*").single()
+        : await supabase.from("prayer_points").insert({
+            group_id: activeCellGroupId,
+            ...prayerPayload,
+            created_by: user.id
+          }).select("*").single();
 
-    await runAction(async () => {
-      const { error } = await supabase.from("prayer_points").insert({
-        title: prayerForm.title.trim(),
-        details: prayerForm.details.trim(),
-        is_anonymous: prayerForm.is_anonymous,
-        created_by: user.id
-      });
-
-      if (error) {
-        throw error;
-      }
-
+      if (result.error) throw result.error;
+      setPrayerPoints((current) => prayerIdBeingEdited
+        ? current.map((item) => item.id === prayerIdBeingEdited ? result.data : item)
+        : [result.data, ...current]);
       setPrayerForm(emptyPrayerForm);
-    }, "Prayer point shared.");
+      setEditingPrayerId("");
+      setStatusMessage(prayerIdBeingEdited ? "Prayer request updated." : "Prayer request shared with the community.");
+    } catch (error) {
+      setErrorMessage(error.message);
+    } finally {
+      setPrayerSubmitting(false);
+    }
   }
 
   async function updatePrayerStatus(prayerPoint, nextStatus) {
-    await runAction(async () => {
+    const actionKey = `status:${prayerPoint.id}`;
+    if (prayerBusyIds.has(actionKey)) return;
+    const previousStatus = prayerPoint.status;
+    setPrayerBusyIds((current) => new Set(current).add(actionKey));
+    setPrayerPoints((current) => current.map((item) => item.id === prayerPoint.id ? { ...item, status: nextStatus } : item));
+    clearFeedback();
+    try {
       const { error } = await supabase
         .from("prayer_points")
         .update({ status: nextStatus })
@@ -2932,7 +3454,40 @@ export function AppShell() {
       if (error) {
         throw error;
       }
-    }, "Prayer status updated.");
+      setStatusMessage(nextStatus === "answered" ? "Marked as answered. Thank you for praying." : nextStatus === "prayed" ? "Marked as prayed for." : "Prayer request reopened.");
+    } catch (error) {
+      setPrayerPoints((current) => current.map((item) => item.id === prayerPoint.id ? { ...item, status: previousStatus } : item));
+      setErrorMessage(error.message);
+    } finally {
+      setPrayerBusyIds((current) => {
+        const next = new Set(current);
+        next.delete(actionKey);
+        return next;
+      });
+    }
+  }
+
+  async function handlePrayerReplySubmit(event, prayerPointId) {
+    event.preventDefault();
+    const body = (prayerReplyDrafts[prayerPointId] ?? "").trim();
+    if (!body || prayerReplyBusy === prayerPointId || !prayerRepliesAvailable) return;
+    setPrayerReplyBusy(prayerPointId);
+    clearFeedback();
+    try {
+      const { data, error } = await supabase.from("prayer_point_replies").insert({
+        prayer_point_id: prayerPointId,
+        user_id: user.id,
+        body
+      }).select("*").single();
+      if (error) throw error;
+      setPrayerReplies((current) => [...current, data]);
+      setPrayerReplyDrafts((current) => ({ ...current, [prayerPointId]: "" }));
+      setStatusMessage("Your encouragement was shared.");
+    } catch (error) {
+      setErrorMessage(error.message);
+    } finally {
+      setPrayerReplyBusy("");
+    }
   }
 
   async function deletePrayerPoint(prayerId) {
@@ -2974,7 +3529,7 @@ export function AppShell() {
       let uploadedFileMeta = null;
 
       if (resourceForm.resource_type === "pdf" && selectedResourceFile) {
-        const filePath = `${user.id}/resource-${Date.now()}-${selectedResourceFile.name.replace(/\s+/g, "-")}`;
+        const filePath = `${activeCellGroupId}/${user.id}/resource-${Date.now()}-${selectedResourceFile.name.replace(/\s+/g, "-")}`;
         const { error: uploadError } = await supabase.storage
           .from("resources")
           .upload(filePath, selectedResourceFile, {
@@ -3017,6 +3572,7 @@ export function AppShell() {
         ? supabase.from("resources").update(payload).eq("id", editingResourceId)
         : supabase.from("resources").insert({
             ...payload,
+            group_id: activeCellGroupId,
             created_by: user.id
           });
 
@@ -3055,10 +3611,14 @@ export function AppShell() {
     }, "Resource deleted.");
   }
 
-  function openResource(resource) {
+  async function openResource(resource) {
     if (resource.resource_type === "pdf" && resource.file_path) {
-      const { data } = supabase.storage.from("resources").getPublicUrl(resource.file_path);
-      window.open(data.publicUrl, "_blank", "noopener,noreferrer");
+      const { data, error } = await supabase.storage.from("resources").createSignedUrl(resource.file_path, 3600);
+      if (error) {
+        setErrorMessage(error.message);
+        return;
+      }
+      window.open(data.signedUrl, "_blank", "noopener,noreferrer");
       return;
     }
 
@@ -3102,6 +3662,7 @@ export function AppShell() {
             .eq("id", editingLeadershipId)
         : supabase.from("leadership_assignments").insert({
             ...payload,
+            group_id: activeCellGroupId,
             created_by: user.id
           });
 
@@ -3167,12 +3728,48 @@ export function AppShell() {
 
   async function deleteNotification(notificationId) {
     await runAction(async () => {
-      const { error } = await supabase.from("notifications").delete().eq("id", notificationId);
+      const { error } = await supabase
+        .from("notifications")
+        .delete()
+        .eq("id", notificationId)
+        .eq("user_id", user.id)
+        .eq("group_id", activeCellGroupId);
 
       if (error) {
         throw error;
       }
     }, "Notification deleted.");
+  }
+
+  async function deleteAllNotifications() {
+    const ownNotificationIds = notifications
+      .filter(
+        (notification) =>
+          notification.user_id === user.id &&
+          notification.group_id === activeCellGroupId
+      )
+      .map((notification) => notification.id);
+
+    if (!ownNotificationIds.length) {
+      return;
+    }
+
+    if (!window.confirm(`Delete all ${ownNotificationIds.length} of your notifications? This cannot be undone.`)) {
+      return;
+    }
+
+    await runAction(async () => {
+      const { error } = await supabase
+        .from("notifications")
+        .delete()
+        .in("id", ownNotificationIds)
+        .eq("user_id", user.id)
+        .eq("group_id", activeCellGroupId);
+
+      if (error) {
+        throw error;
+      }
+    }, "All notifications deleted.");
   }
 
   async function archiveNotification(notificationId, archived) {
@@ -3212,8 +3809,21 @@ export function AppShell() {
 
     const targetTable = notification.entity_table;
     const targetId = notification.entity_id;
+    const bibleStudyNotification = (typeof targetTable === "string" && targetTable.startsWith("bible_study_"))
+      || (typeof notification.notification_type === "string" && notification.notification_type.startsWith("bible_study_"));
+    const partnerStreakNotification = targetTable === "bible_study_partnerships"
+      || (typeof targetTable === "string" && targetTable.startsWith("bible_study_partner_"))
+      || (bibleStudyNotification && /partnership|partner|shared reading milestone|everyone completed/i.test(`${notification.title || ""} ${notification.body || ""}`));
 
-    if (targetTable === "events" && targetId) {
+    if (partnerStreakNotification) {
+      setFocusBiblePartnerStreaks(true);
+      setActiveSection("bible-study");
+    } else if (bibleStudyNotification) {
+      setActiveSection("bible-study");
+    } else if (targetTable === "cell_group_members" && targetId) {
+      setBirthdayFocusMemberId(targetId);
+      setActiveSection("birthdays");
+    } else if (targetTable === "events" && targetId) {
       setSelectedEventId(targetId);
       setActiveSection("events");
     } else if (targetTable === "event_ideas" && targetId) {
@@ -3245,8 +3855,6 @@ export function AppShell() {
       const linkedLesson = discipleshipLessons.find((lesson) => lesson.id === targetId);
       setSelectedAssignmentClassId(linkedLesson?.class_id ?? "");
       setActiveSection("assignments");
-    } else if (targetTable === "announcements") {
-      setActiveSection("announcements");
     } else if (targetTable === "event_check_ins" && targetId) {
       const linkedCheckIn = eventCheckIns.find((checkIn) => checkIn.id === targetId);
       if (linkedCheckIn?.event_id) {
@@ -3281,11 +3889,11 @@ export function AppShell() {
       const uploadedUrls = [];
       try {
         for (const photo of announcementPhotos) {
-          const path = `${user.id}/${crypto.randomUUID()}-${photo.file.name.replace(/[^a-zA-Z0-9._-]/g, "-")}`;
+          const path = `${activeCellGroupId}/${user.id}/${crypto.randomUUID()}-${photo.file.name.replace(/[^a-zA-Z0-9._-]/g, "-")}`;
           const { error: uploadError } = await supabase.storage.from("announcement-images").upload(path, photo.file, { contentType: photo.file.type, upsert: false });
           if (uploadError) throw uploadError;
           uploadedPaths.push(path);
-          uploadedUrls.push(supabase.storage.from("announcement-images").getPublicUrl(path).data.publicUrl);
+          uploadedUrls.push(path);
         }
       const payload = {
         // The database retains a required title for existing compatibility. `headline`
@@ -3304,7 +3912,7 @@ export function AppShell() {
           }
         } : {}),
         attachments: [
-          ...(editingAnnouncementId ? announcements.find((item) => item.id === editingAnnouncementId)?.attachments ?? [] : []),
+          ...(editingAnnouncementId ? announcements.find((item) => item.id === editingAnnouncementId)?.attachment_paths ?? announcements.find((item) => item.id === editingAnnouncementId)?.attachments ?? [] : []),
           ...uploadedUrls
         ]
       };
@@ -3312,6 +3920,7 @@ export function AppShell() {
         ? supabase.from("announcements").update(payload).eq("id", editingAnnouncementId)
         : supabase.from("announcements").insert({
             ...payload,
+            group_id: activeCellGroupId,
             created_by: user.id
           });
       const { error } = await query;
@@ -3494,6 +4103,7 @@ export function AppShell() {
       const query = pulseEditingMessageId
         ? supabase.from("messages").update({ content }).eq("id", pulseEditingMessageId).eq("sender_id", user.id)
         : supabase.from("messages").insert({
+            group_id: activeCellGroupId,
             sender_id: user.id,
             recipient_id: null,
             title: "",
@@ -3509,6 +4119,7 @@ export function AppShell() {
   }
 
   function renderAnnouncementsSection() {
+    const isLoungePage = activeSection === "live-lounge";
     const cutoff = new Date(liveNow).getTime() - 7 * 24 * 60 * 60 * 1000;
     const feedAnnouncements = sortedAnnouncements.filter((announcement) => {
       if (announcementFeedFilter === "mine") return announcement.created_by === user?.id;
@@ -3532,25 +4143,28 @@ export function AppShell() {
       <div className="section-stack community-feed gc-pulse-page">
         <header className="gc-pulse-header">
           <div className="gc-pulse-heading-copy">
-            <p className="gc-pulse-kicker">GLORY CARRIERS · COMMUNITY</p>
-            <h1>GC Pulse</h1>
-            <p>Your live space to share, connect, and grow together.</p>
+            <p className="gc-pulse-kicker">{APP_NAME.toUpperCase()} · {CELL_GROUP_NAME.toUpperCase()}</p>
+            <h1>{isLoungePage ? "Live Lounge" : "GC Pulse"}</h1>
+            <p>{isLoungePage ? "A relaxed place for real-time fellowship and conversation." : "Your community feed for updates, moments, and encouragement."}</p>
           </div>
           <div className="gc-pulse-header-state">
             <span className={currentPulseActivity ? "gc-pulse-live-indicator is-live" : "gc-pulse-live-indicator"}><i />{currentPulseActivity ? "Live now" : "Community space"}</span>
-            <label className="gc-pulse-search"><span className="sr-only">Search GC Pulse posts</span><input type="search" value={pulseSearchQuery} onChange={(event) => setPulseSearchQuery(event.target.value)} placeholder="Search the pulse" /><NavIcon name="search" /></label>
+            {!isLoungePage && pulseTab === "feed" ? <label className="gc-pulse-search"><span className="sr-only">Search GC Pulse posts</span><input type="search" value={pulseSearchQuery} onChange={(event) => setPulseSearchQuery(event.target.value)} placeholder="Search the pulse" /><NavIcon name="search" /></label> : null}
           </div>
         </header>
 
         {!announcementRepliesAvailable ? <div className="banner info">Community posting, replies, and image attachments require the additive announcements migration in <code>supabase/announcements-community-migration.sql</code>.</div> : null}
 
-        <GCPulseActivities user={user} isAdmin={isAdmin} />
+        {!isLoungePage ? <nav className="gc-pulse-experience-nav" aria-label="Community destinations">
+          <button type="button" className={pulseTab==="feed"?"active":""} aria-pressed={pulseTab==="feed"} onClick={()=>setPulseTab("feed")}><NavIcon name="activity"/><span>Community Feed</span></button>
+          <button type="button" onClick={()=>setActiveSection("live-lounge")}><NavIcon name="messages"/><span>Open Live Lounge</span>{loungeMessages.length?<small>{loungeMessages.length>99?"99+":loungeMessages.length}</small>:null}</button>
+        </nav> : null}
 
-        <div className="gc-pulse-layout">
+        {!isLoungePage && pulseTab === "feed" ? <div className="gc-pulse-layout gc-pulse-layout--feed">
         <main className="gc-pulse-main-column">
         <Panel className="gc-pulse-composer-panel" title="Share with your people" subtitle="A small moment, an encouragement, or something worth celebrating.">
           {!pulseComposerOpen ? <button type="button" className="pulse-composer-launcher" onClick={() => setPulseComposerOpen(true)}>
-            <Avatar member={currentMember} size="small" />
+            <IdentityBadge member={currentMember} size="small" />
             <span>What's happening with your people?</span>
             <b aria-hidden="true">+</b>
           </button> : <form className="stack-form announcement-composer" onSubmit={saveAnnouncement}>
@@ -3560,7 +4174,7 @@ export function AppShell() {
             </label>
             <label className="field">
               <span>Your update</span>
-              <textarea value={announcementForm.body} maxLength={2500} rows={4} placeholder="Share an update with Glory Carriers..." required onChange={(event) => setAnnouncementForm((current) => ({ ...current, body: event.target.value }))} />
+          <textarea value={announcementForm.body} maxLength={2500} rows={4} placeholder={`Share an update with ${CELL_GROUP_NAME}...`} required onChange={(event) => setAnnouncementForm((current) => ({ ...current, body: event.target.value }))} />
             </label>
             <div className="pulse-font-picker" role="group" aria-label="Post font">
               <span>Font</span>{pulseTextFonts.map((font) => <button key={font.id} type="button" className={`pulse-font-option pulse-font-${font.id}${announcementTextFont === font.id ? " active" : ""}`} aria-pressed={announcementTextFont === font.id} disabled={!textPostThemesAvailable} onClick={() => setAnnouncementTextFont(font.id)}>{font.label}</button>)}
@@ -3621,7 +4235,7 @@ export function AppShell() {
             const textPostLayout = textTheme && announcement.body.length > 280 ? " is-long" : "";
             return <article key={announcement.id} id={`announcement-${announcement.id}`} tabIndex={-1} className={`community-post pulse-font-${textFont} pulse-color-${textColor}${textTheme ? ` pulse-text-post pulse-text-theme-${textTheme}${textPostLayout}` : ""}`}>
               <header className="community-post-header">
-                <Avatar member={author} size="small" />
+                <IdentityBadge member={author} size="small" />
                 <div className="community-post-author"><strong>{author?.full_name || author?.email || "Community member"}</strong><time dateTime={announcement.created_at}>{formatDateTime(announcement.created_at)}{announcement.updated_at && announcement.updated_at !== announcement.created_at ? " · Edited" : ""}</time></div>
                 {announcement.pinned ? <span className="pill info">Pinned</span> : null}
                 {canManage ? <div className="community-post-actions"><button type="button" className="ghost-button compact" onClick={() => beginAnnouncementEdit(announcement)}>Edit</button><button type="button" className="ghost-button compact danger" onClick={() => deleteAnnouncement(announcement.id)}>Delete</button></div> : null}
@@ -3635,14 +4249,16 @@ export function AppShell() {
           }) : <EmptyState title={announcements.length ? "No posts match this view" : "A fresh beginning"} description={announcements.length ? "Try another filter to see more community updates." : "There are no announcements yet. Share the first update with your community."} />}
         </div>
         </main>
+        </div> : null}
 
+        {(isLoungePage || pulseTab === "lounge") ? <div className="gc-pulse-layout gc-pulse-layout--lounge">
         <aside className="gc-pulse-side-rail" aria-label="Live community">
           <section className="gc-pulse-rail-panel gc-pulse-lounge">
             <div className="gc-pulse-rail-heading"><div><p className="gc-pulse-kicker">SAY HELLO</p><h2>Live Lounge</h2></div><span className={currentPulseActivity ? "gc-pulse-dot is-live" : "gc-pulse-dot"} aria-label={currentPulseActivity ? "Recent activity" : "No recent activity"} /></div>
             {loungeMessages.length ? <div className="gc-pulse-lounge-list">{loungeMessages.map((message) => {
               const author = getMember(message.sender_id);
               const repliedMessage = messages.find((candidate) => candidate.id === message.reply_to_message_id);
-              return <article key={message.id} className="gc-pulse-lounge-message"><Avatar member={author} size="small" /><div><div className="gc-pulse-lounge-meta"><strong>{getMemberLabel(message.sender_id)}</strong><time dateTime={message.created_at}>{formatDateTime(message.created_at)}</time></div>{repliedMessage ? <p className="gc-pulse-lounge-reply">Replying to {getMemberLabel(repliedMessage.sender_id)}</p> : null}<p>{message.content}</p><div className="gc-pulse-lounge-actions"><ReactionBar entityTable="messages" entityId={message.id} /><button type="button" onClick={() => { setPulseEditingMessageId(""); setPulseMessageDraft(""); setPulseReplyTargetId(message.id); }}>Reply</button>{canDeleteMessage(message) ? <><button type="button" onClick={() => { setPulseEditingMessageId(message.id); setPulseReplyTargetId(""); setPulseMessageDraft(message.content); }}>Edit</button><button type="button" onClick={() => void deleteMessage(message)}>Delete</button></> : null}</div></div></article>;
+              return <article key={message.id} className="gc-pulse-lounge-message"><IdentityBadge member={author} size="small" /><div><div className="gc-pulse-lounge-meta"><strong>{getMemberLabel(message.sender_id)}</strong><time dateTime={message.created_at}>{formatDateTime(message.created_at)}</time></div>{repliedMessage ? <p className="gc-pulse-lounge-reply">Replying to {getMemberLabel(repliedMessage.sender_id)}</p> : null}<p>{message.content}</p><div className="gc-pulse-lounge-actions"><ReactionBar entityTable="messages" entityId={message.id} /><button type="button" onClick={() => { setPulseEditingMessageId(""); setPulseMessageDraft(""); setPulseReplyTargetId(message.id); }}>Reply</button>{canDeleteMessage(message) ? <><button type="button" onClick={() => { setPulseEditingMessageId(message.id); setPulseReplyTargetId(""); setPulseMessageDraft(message.content); }}>Edit</button><button type="button" onClick={() => void deleteMessage(message)}>Delete</button></> : null}</div></div></article>;
             })}</div> : <p className="gc-pulse-rail-empty">No group messages yet. Start a friendly conversation.</p>}
             {pulseReplyTargetId || pulseEditingMessageId ? <div className="gc-pulse-replying"><span>{pulseEditingMessageId ? "Editing your message" : `Replying to ${getMemberLabel(messages.find((message) => message.id === pulseReplyTargetId)?.sender_id)}`}</span><button type="button" aria-label="Cancel" onClick={() => { setPulseReplyTargetId(""); setPulseEditingMessageId(""); setPulseMessageDraft(""); }}>×</button></div> : null}
             <form className="gc-pulse-lounge-form" onSubmit={sendPulseLoungeMessage}><input aria-label={pulseEditingMessageId ? "Edit Live Lounge message" : "Write to the Live Lounge"} value={pulseMessageDraft} onChange={(event) => setPulseMessageDraft(event.target.value)} maxLength={2000} placeholder="Say something kind…" /><button type="submit" aria-label={pulseEditingMessageId ? "Save message" : "Send message"} disabled={submitting || !pulseMessageDraft.trim()}>{pulseEditingMessageId ? "Save" : "Send"}</button></form>
@@ -3656,22 +4272,25 @@ export function AppShell() {
 
           <section className="gc-pulse-rail-note"><NavIcon name="sparkles" /><p>Make room for encouragement, good questions, and the little moments that bring us together.</p></section>
         </aside>
-        </div>
+        </div> : null}
         {conversationPost ? <PulseCommentsSheet post={conversationPost} replies={conversationReplies} profiles={profiles} reactions={reactions} userId={user?.id} isAdmin={isAdmin} submitting={submitting} draft={announcementReplyDrafts[conversationPost.id] ?? ""} onDraftChange={(value) => setAnnouncementReplyDrafts((current) => ({ ...current, [conversationPost.id]: value }))} onClose={() => setPulseConversationId("")} closeButtonRef={pulseOverlayCloseRef} onToggleReaction={toggleAnnouncementReaction} onManageReply={manageAnnouncementReply} onSubmit={submitAnnouncementReply} /> : null}
       </div>
     );
   }
 
   function renderEventsDirectorySection() {
-    const upcoming = sortedEvents.filter((item) => new Date(item.starts_at) >= new Date(liveNow));
-    const past = sortedEvents.filter((item) => new Date(item.starts_at) < new Date(liveNow)).reverse();
-    const eventCard = (eventRecord) => <article key={eventRecord.id} className="event-directory-card">
+    const query = eventSearchQuery.trim().toLocaleLowerCase();
+    const matchesEvent = (item) => !query || `${item.title || ""} ${item.description || ""} ${item.location || ""}`.toLocaleLowerCase().includes(query);
+    const upcoming = sortedEvents.filter((item) => new Date(item.starts_at) >= new Date(liveNow) && matchesEvent(item));
+    const past = sortedEvents.filter((item) => new Date(item.starts_at) < new Date(liveNow) && matchesEvent(item)).reverse();
+    const eventCard = (eventRecord) => <article key={eventRecord.id} className={`event-directory-card${selectedEventId === eventRecord.id ? " is-selected" : ""}${new Date(eventRecord.starts_at) >= new Date(liveNow) ? " is-upcoming" : " is-past"}`}>
       <div className="event-date-block"><strong>{new Intl.DateTimeFormat(undefined, { day: "2-digit" }).format(new Date(eventRecord.starts_at))}</strong><span>{new Intl.DateTimeFormat(undefined, { month: "short" }).format(new Date(eventRecord.starts_at))}</span></div>
       <div className="event-directory-copy"><h3>{eventRecord.title}</h3><p>{formatDateTime(eventRecord.starts_at)}{eventRecord.location ? ` · ${eventRecord.location}` : ""}</p>{eventRecord.description ? <p className="muted-text">{eventRecord.description}</p> : null}</div>
       <div className="event-directory-actions"><span className={`pill ${new Date(eventRecord.starts_at) >= new Date(liveNow) ? "success" : ""}`}>{new Date(eventRecord.starts_at) >= new Date(liveNow) ? "Upcoming" : "Past"}</span>{new Date(eventRecord.starts_at) >= new Date(liveNow) ? <button type="button" className={rsvps.some((row) => row.event_id === eventRecord.id && row.user_id === user.id && row.status === "going") ? "accent-button compact" : "secondary-button compact"} onClick={() => void updateRsvp("going", eventRecord.id)}>{rsvps.some((row) => row.event_id === eventRecord.id && row.user_id === user.id && row.status === "going") ? "Going" : "RSVP"}</button> : null}<button type="button" className="ghost-button compact" onClick={() => setSelectedEventId(eventRecord.id)}>Details</button><button type="button" className="ghost-button compact" onClick={() => downloadEventCalendar(eventRecord)}>Calendar</button>{isAdmin ? <><button type="button" className="ghost-button compact" onClick={() => beginEventEdit(eventRecord)}>Edit</button><button type="button" className="ghost-button compact danger" onClick={() => deleteEvent(eventRecord.id)}>Delete</button></> : null}</div>
     </article>;
     return <div className="section-stack">
-      <header className="page-intro page-intro--art"><div><p className="eyebrow">Gather together</p><h1>Events</h1><p>Find the next opportunity to worship, serve, and grow together.</p></div></header>
+      <header className="page-intro page-intro--art"><div><p className="eyebrow">Gather together</p><h1>Events</h1><p>Find the next opportunity to worship, serve, and grow together.</p><div className="prayer-story-stats"><span><strong>{sortedEvents.filter((item) => new Date(item.starts_at) >= new Date(liveNow)).length}</strong> upcoming</span><span><strong>{sortedEvents.filter((item) => new Date(item.starts_at) < new Date(liveNow)).length}</strong> past gatherings</span></div></div></header>
+      <div className="event-library-tools"><label className="feature-search"><span aria-hidden="true">⌕</span><span className="sr-only">Search events</span><input type="search" value={eventSearchQuery} onChange={(event) => setEventSearchQuery(event.target.value)} placeholder="Search events, places, and details" /></label><span className="feature-filter-count" aria-live="polite">{upcoming.length + past.length} matching {upcoming.length + past.length === 1 ? "event" : "events"}{eventSearchQuery ? <button type="button" className="text-button" onClick={() => setEventSearchQuery("")}>Clear search</button> : null}</span></div>
       {isAdmin ? <Panel title={editingEventId ? "Edit event" : "Create an event"} subtitle="Keep your community gatherings in one shared calendar." action={editingEventId ? <button type="button" className="ghost-button" onClick={() => { setEditingEventId(""); setEventForm(emptyEventForm); }}>Cancel</button> : null}>
         <form className="grid-form two-column" onSubmit={handleEventSubmit}>
           <label className="field"><span>Event title</span><input required maxLength={180} value={eventForm.title} onChange={(event) => setEventForm((current) => ({ ...current, title: event.target.value }))} placeholder="Prayer night, outreach, fellowship…" /></label>
@@ -3682,7 +4301,7 @@ export function AppShell() {
           <div className="form-actions wide"><button type="submit" className="primary-button" disabled={submitting}>{editingEventId ? "Save event" : "Create event"}</button></div>
         </form>
       </Panel> : null}
-      <Panel title="Upcoming events" subtitle="Your group's next gatherings.">{upcoming.length ? <div className="event-directory-list">{upcoming.map(eventCard)}</div> : <EmptyState title="Nothing scheduled yet" description="New gatherings will appear here when they're planned." />}</Panel>
+      <Panel title="Upcoming events" subtitle="Your group's next gatherings.">{upcoming.length ? <div className="event-directory-list">{upcoming.map(eventCard)}</div> : <EmptyState title={sortedEvents.length && eventSearchQuery ? "No matching events" : "Nothing scheduled yet"} description={sortedEvents.length && eventSearchQuery ? "Try a different event search." : "New gatherings will appear here when they're planned."} />}</Panel>
       {past.length ? <Panel title="Past events" subtitle="Previous gatherings from your community."><div className="event-directory-list">{past.map(eventCard)}</div></Panel> : null}
       {selectedEvent ? <>
         <Panel title={selectedEvent.title} subtitle={`${formatDateTime(selectedEvent.starts_at)} · ${selectedEvent.location || "Location to be confirmed"}`}>
@@ -3690,8 +4309,8 @@ export function AppShell() {
           <div className="event-detail-actions"><button type="button" className={rsvps.some((row) => row.event_id === selectedEvent.id && row.user_id === user.id && row.status === "going") ? "accent-button" : "primary-button"} onClick={() => void updateRsvp("going", selectedEvent.id)}>{rsvps.some((row) => row.event_id === selectedEvent.id && row.user_id === user.id && row.status === "going") ? "You're going" : "RSVP · Going"}</button><button type="button" className="secondary-button" onClick={() => void updateRsvp("not_going", selectedEvent.id)}>Can't attend</button><button type="button" className={currentUserCheckIn ? "accent-button" : "secondary-button"} disabled={checkingIn} onClick={() => void handleEventCheckIn(selectedEvent.id)}>{checkingIn ? "Checking in…" : currentUserCheckIn ? "Update check-in" : "Check in"}</button><button type="button" className="ghost-button" onClick={() => downloadEventCalendar(selectedEvent)}>Add to calendar</button></div>
           <div className="event-attendance-summary"><span>{attendingMembers.length} attending</span><span>{selectedCheckIns.length} checked in</span></div>
         </Panel>
-        <div className="content-grid"><Panel title="Who's attending" subtitle="Member responses for this gathering.">{attendingMembers.length ? <div className="people-list">{attendingMembers.map((rsvp) => <div key={rsvp.user_id} className="person-row"><Avatar member={getMember(rsvp.user_id)} size="small" /><strong>{getMemberLabel(rsvp.user_id)}</strong><span className="pill success">Going</span></div>)}</div> : <EmptyState title="No RSVPs yet" description="Member responses will appear here." />}</Panel>
-          <Panel title="Arrival check-ins" subtitle="See who has arrived.">{selectedCheckIns.length ? <div className="people-list">{selectedCheckIns.map((checkIn) => <div key={checkIn.id} className="person-row"><Avatar member={getMember(checkIn.user_id)} size="small" /><div><strong>{getMemberLabel(checkIn.user_id)}</strong><p>{formatDateTime(checkIn.checked_in_at)}</p></div><span className="pill success">Checked in</span></div>)}</div> : <EmptyState title="No check-ins yet" description="Members can check in when they arrive." />}</Panel></div>
+        <div className="content-grid"><Panel title="Who's attending" subtitle="Member responses for this gathering.">{attendingMembers.length ? <div className="people-list">{attendingMembers.map((rsvp) => <div key={rsvp.user_id} className="person-row"><IdentityBadge member={getMember(rsvp.user_id)} size="small" /><strong>{getMemberLabel(rsvp.user_id)}</strong><span className="pill success">Going</span></div>)}</div> : <EmptyState title="No RSVPs yet" description="Member responses will appear here." />}</Panel>
+          <Panel title="Arrival check-ins" subtitle="See who has arrived.">{selectedCheckIns.length ? <div className="people-list">{selectedCheckIns.map((checkIn) => <div key={checkIn.id} className="person-row"><IdentityBadge member={getMember(checkIn.user_id)} size="small" /><div><strong>{getMemberLabel(checkIn.user_id)}</strong><p>{formatDateTime(checkIn.checked_in_at)}</p></div><span className="pill success">Checked in</span></div>)}</div> : <EmptyState title="No check-ins yet" description="Members can check in when they arrive." />}</Panel></div>
         <div className="content-grid"><Panel title="Event ideas" subtitle={`Suggestions for ${selectedEvent.title}.`}><form className="community-reply-form" onSubmit={handleIdeaSubmit}><input aria-label="Suggest an event idea" maxLength={1000} value={ideaDraft} onChange={(event) => setIdeaDraft(event.target.value)} placeholder="Share an idea for this gathering…"/><button type="submit" className="secondary-button compact" disabled={submitting || !ideaDraft.trim()}>Suggest</button></form>{selectedIdeas.length ? <div className="event-idea-list">{selectedIdeas.map((idea) => <article key={idea.id}><div><strong>{getMemberLabel(idea.user_id)}</strong><p>{idea.content}</p></div><button type="button" className={hasUserVoted(idea.id) ? "accent-button compact" : "ghost-button compact"} onClick={() => toggleIdeaVote(idea.id)}>{hasUserVoted(idea.id) ? "Voted" : "Support"} · {getIdeaVoteCount(idea.id)}</button></article>)}</div> : <p className="inline-help">Share the first idea for this event.</p>}</Panel>
           <Panel title="Event responsibilities" subtitle="Tasks remain connected to their event.">{isAdmin ? <form className="event-task-form" onSubmit={handleTaskSubmit}><label className="field"><span>{editingTaskId ? "Task title" : "Assign a responsibility"}</span><input required value={taskForm.title} onChange={(event) => setTaskForm((current) => ({ ...current, title: event.target.value }))} placeholder="Prepare the welcome table" /></label><label className="field"><span>Assigned to</span><select value={taskForm.assignee_id} onChange={(event) => setTaskForm((current) => ({ ...current, assignee_id: event.target.value }))}><option value="">Unassigned</option>{activeMembers.map((member) => <option key={member.id} value={member.id}>{member.full_name || member.email}</option>)}</select></label><label className="field"><span>Due date</span><input type="datetime-local" value={taskForm.due_at} onChange={(event) => setTaskForm((current) => ({ ...current, due_at: event.target.value }))} /></label><label className="field"><span>Details</span><textarea rows={2} value={taskForm.details} onChange={(event) => setTaskForm((current) => ({ ...current, details: event.target.value }))} /></label><button type="submit" className="secondary-button compact" disabled={submitting}>{editingTaskId ? "Save task" : "Add task"}</button>{editingTaskId ? <button type="button" className="ghost-button compact" onClick={() => { setEditingTaskId(""); setTaskForm(emptyTaskForm); }}>Cancel</button> : null}</form> : null}{selectedTasks.length ? <div className="event-task-list">{selectedTasks.map((task) => <div key={task.id}><span><strong>{task.title}</strong><small>{task.assignee_id ? getMemberLabel(task.assignee_id) : "Unassigned"}{task.due_at ? ` · Due ${formatDate(task.due_at)}` : ""}</small></span><span className="event-task-actions">{isAdmin ? <><button type="button" className="ghost-button compact" onClick={() => beginTaskEdit(task)}>Edit</button><button type="button" className="ghost-button compact danger" onClick={() => deleteTask(task.id)}>Delete</button></> : null}<button type="button" className={task.status === "completed" ? "accent-button compact" : "secondary-button compact"} disabled={!isAdmin && task.assignee_id !== user.id} onClick={() => void toggleTaskStatus(task)}>{task.status === "completed" ? "Reopen" : "Mark done"}</button></span></div>)}</div> : <EmptyState title="No responsibilities yet" description="There are no tasks linked to this event." />}</Panel></div>
       </> : null}
@@ -3705,7 +4324,8 @@ export function AppShell() {
 
     await runAction(async () => {
       const { data, error } = await supabase.rpc("recommend_next_leader", {
-        target_type: assignmentType
+        target_type: assignmentType,
+        target_group_id: activeCellGroupId
       });
 
       if (error) {
@@ -3837,7 +4457,7 @@ export function AppShell() {
           </div>
           <div className="dashboard-partner-streaks">
             <div><strong>Partner Streaks</strong><span>{pendingPartnerInvites.length ? `${pendingPartnerInvites.length} invitation${pendingPartnerInvites.length === 1 ? "" : "s"} waiting` : myPartnerStreaks.length ? "Stay consistent together" : "Invite someone to study together"}</span></div>
-            {partnerDashboardCards.length ? <div className="dashboard-partner-list">{partnerDashboardCards.map((item) => <button type="button" key={item.id} onClick={() => setActiveSection("bible-study")}><span className="dashboard-partner-mark">◆</span><span className="dashboard-partner-avatar">{item.partner?.avatar_url ? <img src={item.partner.avatar_url} alt=""/> : (item.partner?.full_name || "P").slice(0, 1)}</span><span><strong>You & {item.partner?.full_name || "Partner"}</strong><small>{item.streak} day{item.streak === 1 ? "" : "s"} · {item.mine && item.theirs ? "Completed together" : item.mine ? `Waiting on ${item.partner?.full_name || "partner"}` : "Your reading is waiting"}</small></span><b>Open</b></button>)}</div> : <button type="button" className="dashboard-partner-start" onClick={() => setActiveSection("bible-study")}>Start a Partner Streak</button>}
+            {partnerDashboardCards.length ? <div className="dashboard-partner-list">{partnerDashboardCards.map((item) => <button type="button" key={item.id} onClick={() => { setFocusBiblePartnerStreaks(true); setActiveSection("bible-study"); }}><span className="dashboard-partner-mark">◆</span><span className="dashboard-partner-identity"><IdentityBadge member={item.partner} size="small" /></span><span><strong>You & {item.partner?.full_name || "Partner"}</strong><small>{item.streak} day{item.streak === 1 ? "" : "s"} · {item.mine && item.theirs ? "Completed together" : item.mine ? `Waiting on ${item.partner?.full_name || "partner"}` : "Your reading is waiting"}</small></span><b>Open</b></button>)}</div> : <button type="button" className="dashboard-partner-start" onClick={() => { setFocusBiblePartnerStreaks(true); setActiveSection("bible-study"); }}>Start a Partner Streak</button>}
           </div>
           {bibleCommunityActivity.length ? <div className="dashboard-bible-activity">{bibleCommunityActivity.map((item) => <button type="button" key={`${item.kind}-${item.id}`} onClick={() => setActiveSection("bible-study")}><span className="dashboard-bible-activity-kind">{item.kind}</span><div><small>{item.kind} · {getMemberLabel(item.userId)}</small><strong>{truncateText(item.content, 110)}</strong></div><b>View <span aria-hidden="true">→</span></b></button>)}</div> : <div className="dashboard-bible-empty">Be the first to share a Bible Study takeaway or question.</div>}
         </Panel>
@@ -4056,7 +4676,7 @@ export function AppShell() {
             </div>
           </Panel>
 
-          <Panel
+          {false && <Panel
             title="Announcements"
             subtitle="Pinned updates stay visible so everyone stays aligned."
           >
@@ -4118,7 +4738,7 @@ export function AppShell() {
                 description="Admins can post reminders and pinned updates for everyone."
               />
             )}
-          </Panel>
+          </Panel>}
         </div>
 
         {isAdmin ? (
@@ -4142,19 +4762,11 @@ export function AppShell() {
                 <strong>{participationRate}% active</strong>
                 <p>{activeParticipantIds.size} members interacted in current workspace activity.</p>
               </article>
-              <article className="insight-card">
-                <span>Announcement reactions</span>
-                <strong>{announcementEngagement.total}</strong>
-                <p>
-                  {announcementEngagement.uniqueReactors} members reacted across{" "}
-                  {announcements.length} announcements.
-                </p>
-              </article>
             </div>
           </Panel>
         ) : null}
 
-        {isAdmin ? (
+        {false ? (
           <Panel
             title={editingAnnouncementId ? "Edit announcement" : "Post announcement"}
             subtitle="Share important updates and pin what should stay at the top."
@@ -4556,34 +5168,201 @@ export function AppShell() {
 
   function renderDashboardSection() {
     const latestAnnouncements = [...announcements]
-      .sort((left, right) => new Date(right.created_at) - new Date(left.created_at))
-      .slice(0, 4);
+      .sort((left, right) => Number(Boolean(right.pinned)) - Number(Boolean(left.pinned)) || new Date(right.created_at) - new Date(left.created_at))
+      .slice(0, 3);
     const nextEvents = sortedEvents.filter((item) => new Date(item.starts_at) >= new Date(liveNow)).slice(0, 2);
-    return <div className="section-stack dashboard-overview">
-      <section className="dashboard-welcome-card"><BrandLogo compact /><p className="eyebrow">{liveDateLabel}</p><h1>{greetingMessage}</h1><p>Make room for fellowship, Scripture, and the people God has placed around you.</p><div><button type="button" className="primary-button" onClick={() => setActiveSection("bible-study")}>Continue Bible Study</button><button type="button" className="secondary-button" onClick={() => setActiveSection("events")}>Explore events</button><button type="button" className="ghost-button dashboard-notifications-button" onClick={() => setShowNotificationCenter(true)}><NavIcon name="bell" />Notifications {unreadNotifications.length ? <span className="notification-count">{unreadNotifications.length}</span> : null}</button></div></section>
-      <div className="dashboard-overview-grid">
-        <Panel title="Today's focus" subtitle={bibleToday ? `Today's reading · ${bibleToday.book} ${bibleToday.chapter}` : "Your shared Scripture reading plan."} action={<button type="button" className="text-button" onClick={() => setActiveSection("bible-study")}>Open Bible Study</button>}>
-          <div className="dashboard-focus-reading"><span><NavIcon name="scripture" /></span><div><strong>{bibleToday ? `${bibleToday.book} ${bibleToday.chapter}` : "No reading scheduled"}</strong><p>{bibleToday ? `${bibleToday.reading_date} · ${bibleStudyTakeaways.length} community reflections` : "Visit Bible Study to see the reading plan."}</p></div></div>
-          <p className="dashboard-personal-progress">Your current reading streak: <strong>{myBibleStreak} day{myBibleStreak === 1 ? "" : "s"}</strong></p>
-        </Panel>
-        <Panel title="Coming up" subtitle="Gather with the community." action={<button type="button" className="text-button" onClick={() => setActiveSection("events")}>All events</button>}>
-          {nextEvents.length ? <div className="dashboard-compact-list">{nextEvents.map((eventRecord) => <button type="button" key={eventRecord.id} onClick={() => setActiveSection("events")}><span className="event-date-block"><strong>{new Intl.DateTimeFormat(undefined, { day: "2-digit" }).format(new Date(eventRecord.starts_at))}</strong><span>{new Intl.DateTimeFormat(undefined, { month: "short" }).format(new Date(eventRecord.starts_at))}</span></span><span><strong>{eventRecord.title}</strong><small>{formatDateTime(eventRecord.starts_at)} · {eventRecord.location || "Location to be confirmed"}</small></span></button>)}</div> : <EmptyState title="No upcoming gatherings" description="New group events will appear here when scheduled." />}
-        </Panel>
-        <Panel title="Announcements" subtitle="Recent words and moments from your community. Open a post to see its full conversation." action={<button type="button" className="text-button" onClick={() => setActiveSection("announcements")}>Open GC Pulse</button>}>
-          {latestAnnouncements.length ? <div className="dashboard-community-photos">{latestAnnouncements.map((item) => {
-            const author = profiles.find((member) => member.id === item.created_by);
-            const photos = Array.isArray(item.attachments) ? item.attachments.slice(0, 3) : [];
-            return <button type="button" className="dashboard-community-photo-card" key={item.id} onClick={() => openCommunityPost(item.id)} aria-label={`Open post by ${author?.full_name || "a community member"} to view reactions and replies`}>
-              {photos.length ? <span className={`dashboard-community-photo-gallery photo-count-${Math.min(photos.length, 3)}`}>{photos.map((photo, index) => <img key={`${photo}-${index}`} src={photo} alt={`Community photo ${index + 1}`} loading="lazy" />)}{item.attachments.length > photos.length ? <span className="dashboard-community-photo-more">+{item.attachments.length - photos.length}</span> : null}</span> : <span className="dashboard-community-text-mark" aria-hidden="true"><NavIcon name="chat" /></span>}
-              <span className="dashboard-community-photo-copy"><strong>{item.title || "Community update"}</strong><small>{author?.full_name || "Community member"} · {formatDateTime(item.created_at)}</small><span>{truncateText(item.body, 110)}</span><b>View post &amp; responses <span aria-hidden="true">→</span></b></span>
-            </button>;
-          })}</div> : <EmptyState title="No announcements yet" description="Updates and photos shared in GC Pulse will appear here." />}
-        </Panel>
-        <Panel title="Your activity" subtitle="A quick look at what is waiting for you.">
-          <div className="dashboard-activity-summary"><div><span>Unread notifications</span><strong>{unreadNotifications.length}</strong><button type="button" className="text-button" onClick={() => setShowNotificationCenter(true)}>Review notifications</button></div><div><span>Pending tasks</span><strong>{myPendingTasks}</strong><small>Event responsibilities assigned to you</small></div></div>
-          <div className="dashboard-shortcuts"><button type="button" onClick={() => setActiveSection("prayer")}><NavIcon name="prayer" />Prayer</button><button type="button" onClick={() => setActiveSection("members")}><NavIcon name="users" />Meet members</button><button type="button" onClick={() => setActiveSection("messages")}><NavIcon name="chat" />Messages</button></div>
-        </Panel>
+    const upcomingBirthdays = dashboardBirthdays.slice(0, 4);
+    const recentPrayerPoints = sortedPrayerPoints.slice(0, 3);
+    const recentSharedTakeaways = bibleCommunityActivity.filter((item) => item.kind === "Takeaway").slice(0, 2);
+    const recentDashboardNotifications = notifications
+      .filter((notification) => !notification.archived_at)
+      .sort((left, right) => new Date(right.created_at) - new Date(left.created_at))
+      .slice(0, 2);
+    const readingById = new Map(bibleStudyReadings.map((reading) => [reading.id, reading]));
+    const recentGroupActivity = [
+      ...recentActivity
+        .filter((item) => ["Event", "Discipleship"].includes(item.kind))
+        .map((item) => ({ id: item.id, title: item.title, kind: item.kind, meta: item.meta, createdAt: item.createdAt, userId: item.userId, section: item.kind === "Event" ? "events" : "assignments" })),
+      ...bibleCommunityActivity
+        .map((item) => ({ id: `${item.kind}-${item.id}`, title: truncateText(item.content, 76), kind: item.kind === "Takeaway" ? "Shared takeaway" : item.kind, meta: getMemberLabel(item.userId), createdAt: item.createdAt, userId: item.userId, section: "bible-study" })),
+      ...[...bibleStudyCompletions]
+        .sort((left, right) => new Date(right.completed_at) - new Date(left.completed_at))
+        .slice(0, 8)
+        .map((completion) => {
+          const reading = readingById.get(completion.reading_id);
+          return { id: `reading-${completion.id}`, title: `${getMemberLabel(completion.user_id)} completed a Bible reading`, kind: "Bible reading", meta: reading ? `${reading.book} ${reading.chapter}` : "Group reading", createdAt: completion.completed_at, userId: completion.user_id, section: "bible-study" };
+        }),
+      ...prayerPoints.slice(0, 6).map((point) => ({ id: `prayer-${point.id}`, title: `${point.is_anonymous ? "A member" : getMemberLabel(point.created_by)} shared a prayer update`, kind: "Prayer", meta: point.title || "Prayer request", createdAt: point.created_at, userId: point.is_anonymous ? null : point.created_by, section: "prayer" })),
+      ...announcements.slice(0, 6).map((item) => ({ id: `announcement-${item.id}`, title: `${getMemberLabel(item.created_by)} shared an announcement`, kind: "Announcement", meta: item.title || truncateText(item.body, 56), createdAt: item.created_at, userId: item.created_by, section: "announcements" }))
+    ].sort((left, right) => new Date(right.createdAt) - new Date(left.createdAt)).slice(0, 4);
+    const todayPersonalReading = myPersonalBibleReadings.find((reading) => reading.reading_date === localToday);
+    const todayGroupReading = visibleGroupReadings.find((reading) => reading.reading_date === localToday);
+    const groupReadingForDisplay = todayGroupReading || bibleToday;
+    const groupReadingMemberIds = new Set(groupReadingForDisplay && dashboardGroupMembershipsAvailable
+      ? bibleStudyCompletions.filter((row) => row.reading_id === groupReadingForDisplay.id && dashboardActiveMemberIds.has(row.user_id)).map((row) => row.user_id)
+      : []);
+    const groupReadingMembers = dashboardActiveMembers.filter((member) => groupReadingMemberIds.has(member.id));
+    const groupReadingParticipants = dashboardGroupMembershipsAvailable ? groupReadingMemberIds.size : null;
+    const groupTodayPercent = dashboardGroupMembershipsAvailable && dashboardActiveMemberCount
+      ? Math.min(100, Math.round(groupReadingMemberIds.size / dashboardActiveMemberCount * 100))
+      : dashboardGroupMembershipsAvailable ? 0 : null;
+    const personalTodayComplete = Boolean(personalBibleStreakSummary?.today_complete || (todayPersonalReading?.status === "completed" && todayPersonalReading.completed_at));
+    const personalTodayInProgress = !personalTodayComplete && Boolean(personalBibleStreakSummary?.today_status === "in_progress" || todayPersonalReading?.status === "in_progress");
+    const personalReadingTitle = todayPersonalReading
+      ? `${todayPersonalReading.book} ${todayPersonalReading.chapter}`
+      : personalBibleStats.nextReading
+        ? `${personalBibleStats.nextReading.book} ${personalBibleStats.nextReading.chapter}`
+        : personalBibleStats.totalCount
+          ? "Personal plan complete"
+          : "No personal reading plan yet";
+    const personalReadingCaption = loading
+      ? "Loading your personal reading progress…"
+      : todayPersonalReading
+        ? personalTodayComplete ? "Today’s reading is complete" : personalTodayInProgress ? "You have started today’s reading" : "Your reading is ready when you are"
+        : personalBibleStats.nextReading
+          ? "Next in your personal plan"
+          : personalBibleStats.totalCount
+            ? "You have completed every chapter in this plan"
+            : personalBibleAvailable
+              ? "Choose a personal reading plan in Bible Study"
+              : "Personal reading progress is unavailable right now";
+    const personalReadingStatus = loading
+      ? "Loading"
+      : personalTodayComplete
+        ? "Completed"
+        : personalTodayInProgress
+          ? "In progress"
+          : personalBibleStats.totalCount || personalBibleStreakSummary
+            ? "Not started"
+            : "No plan";
+    const quickActions = [
+      { label: "Bible Study", section: "bible-study", icon: "scripture", note: "Continue in the Word" },
+      { label: "Prayer", section: "prayer", icon: "prayer", note: "Share and pray together" },
+      { label: "Announcements", section: "announcements", icon: "messages", note: "Community news and encouragement" },
+      { label: "Events", section: "events", icon: "calendar", note: "Gather with the community" },
+      { label: "Partner progress", section: "bible-study", icon: "users", note: "Read and grow side by side", focusPartner: true },
+      { label: "Group activity", section: "bible-study", icon: "scripture", note: "See your community’s reading rhythm" },
+      ...(isAdminWorkspace ? [{ label: "Administration", section: "management", icon: "management", note: "Manage your cell group" }] : []),
+      ...(isSuperAdmin ? [{ label: "System oversight", section: "super-admin", icon: "shield", note: "Platform administration" }] : [])
+    ];
+
+    return <div className="section-stack dashboard-overview dashboard-overview--premium" data-dashboard-role={isSuperAdmin ? "super-admin" : isAdmin ? "admin" : "member"}>
+      <section className="dashboard-hero-premium" aria-labelledby="dashboard-welcome-heading">
+        <DashboardHeroPhotographs />
+        <div className="dashboard-hero-premium-copy">
+          <div className="dashboard-hero-topline">
+            <span className="dashboard-brandline"><NavIcon name="home" /> The City On A Hill</span>
+            <time dateTime={liveNow.toISOString()}>{liveDateLabel}</time>
+          </div>
+          <p className="dashboard-hero-greeting">{getGreeting(liveNow)}</p>
+          <h1 id="dashboard-welcome-heading"><span>Welcome back,</span><strong title={currentDisplayName}>{currentDisplayName}</strong></h1>
+          <p className="dashboard-hero-message">There is purpose in every small step. Make room for Scripture, fellowship, and the good work God is growing in you.</p>
+          <p className="dashboard-hero-verse"><NavIcon name="scripture" /><span>“Let your light shine before others.”</span><strong>MATTHEW 5:16</strong></p>
+          <div className="dashboard-hero-actions">
+            <button type="button" className="primary-button" onClick={() => setActiveSection("bible-study")}>Continue Bible Study <span aria-hidden="true">→</span></button>
+            <button type="button" className="secondary-button" onClick={() => setShowNotificationCenter(true)}><NavIcon name="bell" />Notifications {unreadNotifications.length ? <span className="notification-count">{unreadNotifications.length}</span> : null}</button>
+          </div>
+        </div>
+        <DashboardCompanion />
+      </section>
+
+      {isAdminWorkspace ? <section className="dashboard-admin-glance" aria-label={`${isSuperAdmin ? "Super Admin" : "Administrator"} group overview`}>
+        <div className="dashboard-admin-glance-intro"><span>{isSuperAdmin ? "OVERSIGHT" : "MINISTRY PULSE"}</span><strong>{cellGroup?.name || "Your community"}</strong><small>Live figures from this workspace</small></div>
+        <div><NavIcon name="users" /><span>Active members</span><strong>{dashboardActiveMemberCount ?? "—"}</strong></div>
+        <div><NavIcon name="scripture" /><span>Today’s readers</span><strong>{todayGroupReading && dashboardGroupMembershipsAvailable ? `${groupReadingParticipants} / ${dashboardActiveMemberCount}` : "—"}</strong></div>
+        <div><NavIcon name="bell" /><span>Unread alerts</span><strong>{unreadNotifications.length}</strong></div>
+      </section> : null}
+
+      <div className="dashboard-section-heading dashboard-growth-heading">
+        <div><span>YOUR SPIRITUAL GROWTH</span><h2>A steady life in the Word</h2><p>Your personal reading journey, daily rhythm and partner encouragement.</p></div>
+        <span className="dashboard-section-mark"><NavIcon name="scripture" /></span>
       </div>
+
+      <section className="dashboard-personal-today" aria-label="Today’s personal Bible reading">
+        <span className="dashboard-personal-today-icon"><NavIcon name="book-open" /></span>
+        <div className="dashboard-personal-today-copy"><small>YOUR PERSONAL READING · {liveDateLabel}</small><strong>{personalReadingTitle}</strong><span>{personalReadingCaption}</span></div>
+        <div className="dashboard-personal-today-progress"><div><span>{personalBibleAvailable && !loading ? `${personalBibleStats.completionPercent}% of your plan` : "Plan progress"}</span><b>{personalBibleAvailable && !loading ? `${personalBibleStats.completedCount} / ${personalBibleStats.totalCount}` : "—"}</b></div><span className="dashboard-meter" role="progressbar" aria-label="Personal Bible reading plan progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow={personalBibleAvailable && !loading ? personalBibleStats.completionPercent : 0}><i style={{ width: `${personalBibleAvailable && !loading ? personalBibleStats.completionPercent : 0}%` }} /></span></div>
+        <span className={`dashboard-reading-status${personalTodayComplete ? " is-complete" : personalTodayInProgress ? " is-in-progress" : ""}`}><i />{personalReadingStatus}</span>
+        <button type="button" className="dashboard-inline-action" onClick={() => setActiveSection("bible-study")}>Open plan <span aria-hidden="true">→</span></button>
+      </section>
+
+      <DashboardPersonalJourney
+        summary={personalBibleStreakSummary}
+        streakAvailable={personalBibleStreakAvailable}
+        planStats={personalBibleStats}
+        planAvailable={personalBibleAvailable}
+        achievements={personalBibleAchievements}
+        userId={user.id}
+        groupId={activeCellGroupId}
+        profiles={profiles}
+        readings={bibleStudyReadings}
+        onOpenStudy={() => setActiveSection("bible-study")}
+        onOpenPartnerProgress={() => { setFocusBiblePartnerStreaks(true); setActiveSection("bible-study"); }}
+      />
+
+      <div className="dashboard-section-heading dashboard-community-heading">
+        <div><span>GROWING TOGETHER</span><h2>Life in community</h2><p>Shared progress and the moments that bring your group together.</p></div>
+        <span className="dashboard-section-mark"><NavIcon name="users" /></span>
+      </div>
+
+      <div className="dashboard-premium-grid">
+        <section className="dashboard-redesign-card dashboard-group-card" aria-labelledby="dashboard-group-progress-heading">
+          <div className="dashboard-card-heading"><div><span className="dashboard-card-kicker">GROUP BIBLE STUDY</span><h2 id="dashboard-group-progress-heading">Growing in Scripture, together</h2><p>Participation from your active group members.</p></div><button type="button" className="dashboard-text-action" onClick={() => setActiveSection("bible-study")}>Full study <span aria-hidden="true">→</span></button></div>
+          {loading ? <div className="dashboard-inline-skeleton" role="status">Loading group reading activity…</div> : groupReadingForDisplay ? <>
+            <div className="dashboard-group-reading"><span className="dashboard-group-book"><NavIcon name="scripture" /></span><div><small>{todayGroupReading ? "TODAY’S SHARED READING" : "MOST RECENT GROUP READING"}</small><strong>{groupReadingForDisplay.book} {groupReadingForDisplay.chapter}</strong><span>{groupReadingForDisplay.reading_date}</span></div><span className="dashboard-group-participation"><strong>{groupReadingParticipants ?? "—"}</strong><small>{dashboardActiveMemberCount == null ? "member totals unavailable" : `of ${dashboardActiveMemberCount} readers`}</small></span></div>
+            <div className="dashboard-group-meter-row"><div><span>Today’s participation</span><strong>{todayGroupReading && groupTodayPercent != null ? `${groupTodayPercent}%` : "—"}</strong></div><span className="dashboard-meter" role="progressbar" aria-label="Group members completing the current shared reading" aria-valuemin="0" aria-valuemax="100" aria-valuenow={todayGroupReading && groupTodayPercent != null ? groupTodayPercent : 0}><i style={{ width: `${todayGroupReading && groupTodayPercent != null ? groupTodayPercent : 0}%` }} /></span></div>
+            {todayGroupReading ? <div className="dashboard-group-readers"><small>MEMBERS WHO COMPLETED TODAY</small>{!dashboardGroupMembershipsAvailable ? <span className="dashboard-group-readers-empty">Member-level reading totals are available to group leaders.</span> : groupReadingMembers.length ? <div>{groupReadingMembers.slice(0, 4).map((member) => <span className="dashboard-group-reader" key={member.id}><MemberInitials member={member} className="dashboard-group-reader-avatar"/><strong>{member.full_name || "Community member"}</strong></span>)}{groupReadingParticipants > 4 ? <span className="dashboard-group-reader-more">+{groupReadingParticipants - 4} more</span> : null}</div> : <span className="dashboard-group-readers-empty">{groupReadingParticipants ? "Completions are recorded; member profiles are unavailable." : "No completed readings have been recorded yet."}</span>}</div> : null}
+            <div className="dashboard-group-footnote"><span>{groupSubmissions ?? "—"} completed readings</span><span>{groupSubmissionRate == null ? "—" : `${groupSubmissionRate}%`} overall plan participation</span></div>
+          </> : <div className="dashboard-empty-note"><strong>No shared reading is scheduled yet.</strong><span>When your group begins a plan, its progress will appear here.</span></div>}
+          {recentSharedTakeaways.length ? <div className="dashboard-takeaways"><small>RECENT SHARED TAKEAWAYS</small>{recentSharedTakeaways.map((item) => <button type="button" key={`${item.kind}-${item.id}`} onClick={() => setActiveSection("bible-study")}><span><b>{item.kind}</b><small>{getMemberLabel(item.userId)} · {formatDateTime(item.createdAt)}</small><strong>{truncateText(item.content, 100)}</strong></span><span aria-hidden="true">↗</span></button>)}</div> : null}
+        </section>
+
+        <DashboardScriptureHighlight reading={groupReadingForDisplay} onOpenStudy={() => setActiveSection("bible-study")} />
+        <DashboardGroupAnalytics readings={bibleStudyReadings} completions={bibleStudyCompletions} activeMembers={dashboardActiveMembers} activeMemberCount={dashboardActiveMemberCount ?? 0} membershipAvailable={dashboardGroupMembershipsAvailable} today={localToday} completionPercent={dashboardGroupCompletionPercent} settingsAvailable={dashboardGroupCompletionSettingsAvailable} />
+
+        <section className="dashboard-redesign-card" aria-labelledby="dashboard-events-heading">
+          <div className="dashboard-card-heading"><div><span className="dashboard-card-kicker">MAKE ROOM TO GATHER</span><h2 id="dashboard-events-heading">Upcoming events</h2><p>Time set aside for fellowship.</p></div><button type="button" className="dashboard-text-action" onClick={() => setActiveSection("events")}>All events <span aria-hidden="true">→</span></button></div>
+          {loading ? <div className="dashboard-inline-skeleton" role="status">Loading gatherings…</div> : nextEvents.length ? <div className="dashboard-event-list">{nextEvents.map((eventRecord) => <button type="button" key={eventRecord.id} onClick={() => setActiveSection("events")}><span className="dashboard-date-tile"><strong>{new Intl.DateTimeFormat(undefined, { day: "2-digit" }).format(new Date(eventRecord.starts_at))}</strong><small>{new Intl.DateTimeFormat(undefined, { month: "short" }).format(new Date(eventRecord.starts_at))}</small></span><span><strong>{eventRecord.title}</strong><small>{formatDateTime(eventRecord.starts_at)}</small><small>{eventRecord.location || "Location to be confirmed"}</small></span><span className="dashboard-list-arrow" aria-hidden="true">→</span></button>)}</div> : <div className="dashboard-empty-note"><strong>No upcoming gatherings.</strong><span>New community events will show up here as they are scheduled.</span></div>}
+        </section>
+
+        <section className="dashboard-redesign-card" aria-labelledby="dashboard-birthdays-heading">
+          <div className="dashboard-card-heading"><div><span className="dashboard-card-kicker">CELEBRATE ONE ANOTHER</span><h2 id="dashboard-birthdays-heading">Upcoming birthdays</h2><p>Remembering the people in your community.</p></div><button type="button" className="dashboard-text-action" onClick={() => setActiveSection(isAdminWorkspace ? "birthdays" : "members")}>View people <span aria-hidden="true">→</span></button></div>
+          {birthdayBoardLoading ? <div className="dashboard-inline-skeleton" role="status">Loading birthdays…</div> : upcomingBirthdays.length ? <div className="dashboard-birthday-list dashboard-birthday-list--compact">{upcomingBirthdays.map((member) => {
+            const person = profiles.find((candidate) => candidate.id === member.user_id);
+            return <div className="dashboard-birthday-row" key={member.user_id}><MemberInitials member={{ ...person, ...member }} className="dashboard-birthday-identity"/><span><strong>{member.full_name || "Community member"}</strong><small>{Number(member.days_until) === 0 ? "Celebrating today" : `In ${member.days_until} day${Number(member.days_until) === 1 ? "" : "s"}`} · {member.display_date || "Coming up"}</small></span>{Number(member.days_until) === 0 ? <b>Today</b> : null}</div>;
+          })}</div> : <div className="dashboard-empty-note"><strong>{birthdayBoardUnavailable ? "Birthday details are unavailable right now." : "No birthdays in the next 30 days."}</strong><span>Upcoming celebrations will appear here when available.</span></div>}
+        </section>
+
+        <section className="dashboard-redesign-card" aria-labelledby="dashboard-prayer-heading">
+          <div className="dashboard-card-heading"><div><span className="dashboard-card-kicker">CARE IN COMMUNITY</span><h2 id="dashboard-prayer-heading">Prayer updates</h2><p>Keep one another in your prayers.</p></div><button type="button" className="dashboard-text-action" onClick={() => setActiveSection("prayer")}>Prayer wall <span aria-hidden="true">→</span></button></div>
+          {loading ? <div className="dashboard-inline-skeleton" role="status">Loading prayer updates…</div> : recentPrayerPoints.length ? <div className="dashboard-prayer-list">{recentPrayerPoints.map((prayerPoint) => <button type="button" key={prayerPoint.id} onClick={() => setActiveSection("prayer")}><span className="dashboard-prayer-icon"><NavIcon name="prayer" /></span><span><strong>{prayerPoint.title || "Prayer request"}</strong><small>{truncateText(prayerPoint.details || "A member has shared a prayer request.", 84)}</small><small>{prayerPoint.is_anonymous ? "Shared anonymously" : getMemberLabel(prayerPoint.created_by)} · {formatDateTime(prayerPoint.created_at)}</small></span><b className={`dashboard-prayer-status is-${prayerPoint.status || "open"}`}>{prayerPoint.status === "answered" ? "Answered" : prayerPoint.status === "prayed" ? "Prayed for" : "Open"}</b></button>)}</div> : <div className="dashboard-empty-note"><strong>No prayer updates yet.</strong><span>Requests shared with your community will appear here.</span></div>}
+        </section>
+
+        <section className="dashboard-redesign-card dashboard-announcements-card" aria-labelledby="dashboard-announcements-heading">
+          <div className="dashboard-card-heading"><div><span className="dashboard-card-kicker">FROM YOUR COMMUNITY</span><h2 id="dashboard-announcements-heading">Recent announcements</h2><p>News, encouragement and moments from your group.</p></div><button type="button" className="dashboard-text-action" onClick={() => setActiveSection("announcements")}>Open GC Pulse <span aria-hidden="true">→</span></button></div>
+          {loading ? <div className="dashboard-inline-skeleton" role="status">Loading announcements…</div> : latestAnnouncements.length ? <div className="dashboard-announcement-rows">{latestAnnouncements.map((item) => {
+            const author = profiles.find((member) => member.id === item.created_by);
+            const reactionCount = reactions.filter((reaction) => reaction.entity_table === "announcements" && reaction.entity_id === item.id).length;
+            return <button type="button" key={item.id} onClick={() => openCommunityPost(item.id)}><MemberInitials member={author || { full_name: "Community member" }} className="dashboard-announcement-avatar"/><span><strong>{item.title || "Community update"}</strong><small>{author?.full_name || "Community member"} · {formatDateTime(item.created_at)}</small><span>{truncateText(item.body, 125)}</span><small>{reactionCount} {reactionCount === 1 ? "reaction" : "reactions"}</small></span><span className="dashboard-list-arrow" aria-hidden="true">→</span></button>;
+          })}</div> : <div className="dashboard-empty-note"><strong>No announcements yet.</strong><span>Updates shared through GC Pulse will appear here.</span></div>}
+        </section>
+
+        <section className="dashboard-redesign-card dashboard-activity-card" aria-labelledby="dashboard-activity-heading">
+          <div className="dashboard-card-heading"><div><span className="dashboard-card-kicker">A LITTLE CLOSER</span><h2 id="dashboard-activity-heading">Your activity</h2><p>Recent community activity and personal notifications.</p></div><button type="button" className="dashboard-text-action" onClick={() => setShowNotificationCenter(true)}>All notifications <span aria-hidden="true">→</span></button></div>
+          <div className="dashboard-activity-pair"><button type="button" onClick={() => setShowNotificationCenter(true)}><span>Unread notifications</span><strong>{unreadNotifications.length}</strong></button><div><span>{isAdminWorkspace ? "Open group tasks" : "Your pending tasks"}</span><strong>{isAdminWorkspace ? tasks.filter((task) => task.status === "pending").length : myPendingTasks}</strong></div></div>
+          <div className="dashboard-notification-feed"><small>RECENT NOTIFICATIONS</small>{loading ? <div className="dashboard-inline-skeleton" role="status">Loading notifications…</div> : recentDashboardNotifications.length ? recentDashboardNotifications.map((notification) => <button type="button" key={`dashboard-notification-${notification.id}`} onClick={() => openNotificationTarget(notification)}><span className="dashboard-notification-icon"><NavIcon name="bell" /></span><span><strong>{notification.title || "Community notification"}</strong><small>{truncateText(notification.body || "Open this notification for details.", 90)}</small></span><time dateTime={notification.created_at}>{formatDateTime(notification.created_at)}</time></button>) : <div className="dashboard-empty-note"><strong>You’re all caught up.</strong><span>New notifications will appear here.</span></div>}</div>
+          <span className="dashboard-community-feed-label">RECENT COMMUNITY ACTIVITY</span>
+          <div className="dashboard-activity-feed">{loading ? <div className="dashboard-inline-skeleton" role="status">Loading recent activity…</div> : recentGroupActivity.length ? recentGroupActivity.slice(0, 2).map((item) => {
+            const activityMember = item.userId ? profiles.find((member) => member.id === item.userId) : null;
+            return <button type="button" key={`recent-${item.kind}-${item.id}`} onClick={() => setActiveSection(item.section)}>{item.userId ? <MemberInitials member={activityMember || { full_name: "Community member" }} className="dashboard-activity-avatar"/> : <span className="dashboard-activity-dot"/>}<span><strong>{item.title}</strong><small>{item.kind} · {item.meta} · {formatDateTime(item.createdAt)}</small></span><span aria-hidden="true">↗</span></button>;
+          }) : <div className="dashboard-empty-note"><strong>Your community is just getting started.</strong><span>New group activity will appear here.</span></div>}</div>
+        </section>
+      </div>
+
+      <section className="dashboard-quick-access" aria-labelledby="dashboard-quick-heading">
+        <div className="dashboard-section-heading"><div><span>YOUR EVERYDAY SPACES</span><h2 id="dashboard-quick-heading">Quick access</h2><p>Go directly to the places you visit most.</p></div></div>
+        <div className="dashboard-quick-grid">{quickActions.map((action, index) => <button type="button" key={`${action.section}-${action.label}-${index}`} onClick={() => { if (action.focusPartner) setFocusBiblePartnerStreaks(true); setActiveSection(action.section); }}><span className="dashboard-quick-icon"><NavIcon name={action.icon}/></span><span><strong>{action.label}</strong><small>{action.note}</small></span><b aria-hidden="true">→</b></button>)}</div>
+      </section>
     </div>;
   }
 
@@ -5015,20 +5794,27 @@ export function AppShell() {
   }
 
   function renderMessagesSection() {
+    const query = messageSearchQuery.trim().toLocaleLowerCase();
+    const visibleMessages = orderedMessages.filter((message) => {
+      const text = `${message.title || ""} ${message.content || ""} ${getMemberLabel(message.sender_id)} ${getMessageRecipientLabel(message)}`.toLocaleLowerCase();
+      return !query || text.includes(query);
+    });
     return (
       <div className="section-stack">
+        <header className="messages-story-hero"><div className="page-story-copy"><p className="story-kicker">Keep in touch</p><h1>Messages</h1><p>A thoughtful space for private conversations and replies.</p></div><span className="page-story-mark" aria-hidden="true"><NavIcon name="messages" /></span></header>
+        <div className="message-library-tools"><label className="feature-search"><span aria-hidden="true">⌕</span><span className="sr-only">Search messages</span><input type="search" value={messageSearchQuery} onChange={(event) => setMessageSearchQuery(event.target.value)} placeholder="Search people or messages" /></label><span className="feature-filter-count" aria-live="polite">{visibleMessages.length} of {orderedMessages.length} direct messages</span></div>
         <div className="messages-layout">
           <Panel
             title="Conversation Thread"
             subtitle={
               orderedMessages.length
-                ? "A clean live thread for direct messages, replies, and group broadcasts."
+                ? "Your direct conversations, together in one live thread."
                 : "Your conversations will appear here in real time."
             }
           >
-            {orderedMessages.length ? (
+            {visibleMessages.length ? (
               <div className="message-thread">
-                {orderedMessages.map((message) => {
+                {visibleMessages.map((message) => {
                   const isOwnMessage = message.sender_id === user.id;
                   const replySource = getMessageReplySource(message);
 
@@ -5038,7 +5824,7 @@ export function AppShell() {
                       className={isOwnMessage ? "message-row own" : "message-row"}
                     >
                       {!isOwnMessage ? (
-                        <Avatar member={getMember(message.sender_id)} size="small" />
+                        <IdentityBadge member={getMember(message.sender_id)} size="small" />
                       ) : null}
 
                       <div className="message-stack">
@@ -5049,11 +5835,7 @@ export function AppShell() {
 
                         <div
                           className={
-                            isOwnMessage
-                              ? "message-bubble own"
-                              : message.recipient_id
-                                ? "message-bubble direct"
-                                : "message-bubble broadcast"
+                          isOwnMessage ? "message-bubble own" : "message-bubble direct"
                           }
                         >
                           {replySource ? (
@@ -5072,13 +5854,7 @@ export function AppShell() {
 
                         <div className="message-footer">
                           <div className="member-pills">
-                            <span
-                              className={
-                                message.recipient_id ? "pill info" : "pill success"
-                              }
-                            >
-                              {message.recipient_id ? "Direct message" : "Broadcast"}
-                            </span>
+                            <span className="pill info">Direct message</span>
                             <span className="pill">To {getMessageRecipientLabel(message)}</span>
                           </div>
 
@@ -5110,7 +5886,7 @@ export function AppShell() {
                       </div>
 
                       {isOwnMessage ? (
-                        <Avatar member={currentMember} size="small" />
+                        <IdentityBadge member={currentMember} size="small" />
                       ) : null}
                     </article>
                   );
@@ -5118,23 +5894,15 @@ export function AppShell() {
               </div>
             ) : (
               <EmptyState
-                title="No messages yet"
-                description={
-                  isAdmin
-                    ? "Start a conversation with a member or send a broadcast to the whole group."
-                    : "When someone sends you a message, your thread will appear here beautifully."
-                }
+                title={orderedMessages.length ? "No matching messages" : "No messages yet"}
+                description={orderedMessages.length ? "Try another search." : "When someone sends you a message, your thread will appear here."}
               />
             )}
           </Panel>
 
           <Panel
             title={replyingToMessage ? "Reply & Send" : "New Message"}
-            subtitle={
-              isAdmin
-                ? "Send direct messages or group broadcasts from a cleaner compose area."
-                : "Choose a member, write clearly, and send your note instantly."
-            }
+            subtitle="Choose a member, write clearly, and send your note privately."
             action={
               messageForm.recipient_id ||
               messageForm.title ||
@@ -5174,6 +5942,7 @@ export function AppShell() {
                 <label className="field">
                   <span>Send to</span>
                   <select
+                    required
                     value={messageForm.recipient_id}
                     onChange={(event) =>
                       setMessageForm((current) => ({
@@ -5182,9 +5951,7 @@ export function AppShell() {
                       }))
                     }
                   >
-                    <option value="">
-                      All members (broadcast)
-                    </option>
+                    <option value="" disabled>Select a member</option>
                     {messageRecipients.map((member) => (
                       <option key={member.id} value={member.id}>
                         {member.full_name || member.email}
@@ -5228,9 +5995,7 @@ export function AppShell() {
                   <button type="submit" className="primary-button" disabled={submitting}>
                     {replyingToMessage ? "Send reply" : "Send message"}
                   </button>
-                  <span className="inline-help">
-                    Leave recipient empty when you want to broadcast to everyone.
-                  </span>
+                  <span className="inline-help">Only the selected member can see your message.</span>
                 </div>
               </form>
 
@@ -5243,7 +6008,7 @@ export function AppShell() {
                       className="recipient-chip"
                       onClick={() => openMessageComposer(member.id, "", "")}
                     >
-                      <Avatar member={member} />
+                      <IdentityBadge member={member} />
                       <span>{member.full_name || member.email}</span>
                     </button>
                   ))
@@ -5261,16 +6026,28 @@ export function AppShell() {
   }
 
   function renderPrayerSection() {
+    const query = prayerSearchQuery.trim().toLocaleLowerCase();
+    const visiblePrayerPoints = sortedPrayerPoints.filter((prayerPoint) => {
+      const statusMatches = prayerStatusFilter === "all" || prayerPoint.status === prayerStatusFilter;
+      const text = `${prayerPoint.title || ""} ${prayerPoint.details || ""}`.toLocaleLowerCase();
+      return statusMatches && (!query || text.includes(query));
+    });
+    const prayerCount = (status) => sortedPrayerPoints.filter((prayerPoint) => prayerPoint.status === status).length;
     return (
-      <div className="content-grid">
+      <div className="content-grid prayer-layout">
+        <header className="prayer-story-hero"><div className="page-story-copy"><p className="story-kicker">Gentle care, shared in faith</p><h1>Prayer, held in community.</h1><p>Bring what is on your heart. Encourage one another through every season, and give thanks together.</p><div className="prayer-story-stats"><span><strong>{sortedPrayerPoints.length}</strong> shared requests</span><span><strong>{prayerCount("prayed")}</strong> being prayed for</span><span><strong>{prayerCount("answered")}</strong> answered</span></div></div><span className="page-story-mark" aria-hidden="true">♡</span></header>
+        <div className="prayer-library-tools"><label className="feature-search"><span aria-hidden="true">⌕</span><span className="sr-only">Search prayer requests</span><input type="search" value={prayerSearchQuery} onChange={(event) => setPrayerSearchQuery(event.target.value)} placeholder="Search prayer requests" /></label><div className="feature-filter-row" role="group" aria-label="Filter prayer requests">{[["all", "All requests"], ["open", "Open"], ["prayed", "Prayed for"], ["answered", "Answered"]].map(([status, label]) => <button key={status} type="button" className={prayerStatusFilter === status ? "is-active" : ""} aria-pressed={prayerStatusFilter === status} onClick={() => setPrayerStatusFilter(status)}>{label}{status !== "all" ? ` · ${prayerCount(status)}` : ""}</button>)}<span className="feature-filter-count" aria-live="polite">{visiblePrayerPoints.length} requests</span></div></div>
         <Panel
-          title="Prayer Wall"
+          className="prayer-composer-panel"
+          title={editingPrayerId ? "Edit your prayer request" : "Share a prayer request"}
           subtitle="Share prayer needs gently, anonymously if needed, and update each request as the group prays together."
+          action={editingPrayerId ? <button type="button" className="ghost-button compact" onClick={() => { setEditingPrayerId(""); setPrayerForm(emptyPrayerForm); }}>Cancel edit</button> : null}
         >
           <form className="stack-form" onSubmit={handlePrayerSubmit}>
             <label className="field">
               <span>Prayer title</span>
               <input
+                id="prayer-title"
                 type="text"
                 value={prayerForm.title}
                 onChange={(event) =>
@@ -5314,8 +6091,8 @@ export function AppShell() {
             </label>
 
             <div className="form-actions">
-              <button type="submit" className="primary-button" disabled={submitting}>
-                Share prayer point
+              <button type="submit" className="primary-button" disabled={prayerSubmitting || !prayerForm.title.trim()}>
+                {prayerSubmitting ? (editingPrayerId ? "Saving…" : "Sharing prayer…") : editingPrayerId ? "Save changes" : "Share prayer request"}
               </button>
             </div>
           </form>
@@ -5325,15 +6102,15 @@ export function AppShell() {
           title="Shared Prayer Requests"
           subtitle="Every request updates instantly so the group can stay in step together."
         >
-          {sortedPrayerPoints.length ? (
+          {visiblePrayerPoints.length ? (
             <div className="card-list">
-              {sortedPrayerPoints.map((prayerPoint) => {
+              {visiblePrayerPoints.map((prayerPoint) => {
                 const canDelete = isAdmin || prayerPoint.created_by === user.id;
                 const reminder = prayerReminders.find(
                   (item) => item.user_id === user.id && item.prayer_point_id === prayerPoint.id
                 );
                 return (
-                  <article key={prayerPoint.id} className="idea-card prayer-card">
+                  <article key={prayerPoint.id} className={`idea-card prayer-card${prayerPoint.status === "answered" ? " is-answered" : ""}`}>
                     <div className="idea-header">
                       <div>
                         <h3>{prayerPoint.title}</h3>
@@ -5364,7 +6141,43 @@ export function AppShell() {
 
                     <ReactionBar entityTable="prayer_points" entityId={prayerPoint.id} />
 
+                    <details className="prayer-replies">
+                      <summary>
+                        Encouragement <span>{prayerReplies.filter((reply) => reply.prayer_point_id === prayerPoint.id).length}</span>
+                      </summary>
+                      {prayerRepliesAvailable ? (
+                        <div className="prayer-replies-content">
+                          <div className="prayer-reply-list">
+                            {prayerReplies.filter((reply) => reply.prayer_point_id === prayerPoint.id).map((reply) => (
+                              <article className="prayer-reply" key={reply.id}>
+                                <strong>{getMemberLabel(reply.user_id)}</strong>
+                                <time dateTime={reply.created_at}>{formatDateTime(reply.created_at)}</time>
+                                <p>{reply.body}</p>
+                              </article>
+                            ))}
+                          </div>
+                          <form className="prayer-reply-form" onSubmit={(event) => void handlePrayerReplySubmit(event, prayerPoint.id)}>
+                            <label className="sr-only" htmlFor={`prayer-reply-${prayerPoint.id}`}>Write encouragement</label>
+                            <textarea
+                              id={`prayer-reply-${prayerPoint.id}`}
+                              rows={2}
+                              maxLength={1200}
+                              value={prayerReplyDrafts[prayerPoint.id] ?? ""}
+                              onChange={(event) => setPrayerReplyDrafts((current) => ({ ...current, [prayerPoint.id]: event.target.value }))}
+                              placeholder="Offer a kind word or let them know you’re praying…"
+                            />
+                            <button type="submit" className="secondary-button compact" disabled={prayerReplyBusy === prayerPoint.id || !(prayerReplyDrafts[prayerPoint.id] ?? "").trim()}>
+                              {prayerReplyBusy === prayerPoint.id ? "Sending…" : "Send encouragement"}
+                            </button>
+                          </form>
+                        </div>
+                      ) : (
+                        <p className="prayer-replies-unavailable">Written encouragement will be available after the Prayer replies migration is applied.</p>
+                      )}
+                    </details>
+
                     <div className="inline-actions">
+                      {prayerPoint.created_by === user.id ? <button type="button" className="ghost-button" onClick={() => { setEditingPrayerId(prayerPoint.id); setPrayerForm({ title: prayerPoint.title || "", details: prayerPoint.details || "", is_anonymous: Boolean(prayerPoint.is_anonymous) }); window.requestAnimationFrame(() => { document.querySelector(".prayer-composer-panel")?.scrollIntoView({ behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "center" }); document.getElementById("prayer-title")?.focus({ preventScroll: true }); }); }}>Edit</button> : null}
                       <button
                         type="button"
                         className={reminder ? "secondary-button" : "ghost-button"}
@@ -5386,8 +6199,9 @@ export function AppShell() {
                           type="button"
                           className="ghost-button"
                           onClick={() => updatePrayerStatus(prayerPoint, "prayed")}
+                          disabled={prayerBusyIds.has(`status:${prayerPoint.id}`)}
                         >
-                          Mark prayed
+                          {prayerBusyIds.has(`status:${prayerPoint.id}`) ? "Saving…" : "Mark prayed"}
                         </button>
                       ) : null}
                       {prayerPoint.status !== "answered" ? (
@@ -5395,6 +6209,7 @@ export function AppShell() {
                           type="button"
                           className="secondary-button"
                           onClick={() => updatePrayerStatus(prayerPoint, "answered")}
+                          disabled={prayerBusyIds.has(`status:${prayerPoint.id}`)}
                         >
                           Mark answered
                         </button>
@@ -5404,6 +6219,7 @@ export function AppShell() {
                           type="button"
                           className="ghost-button"
                           onClick={() => updatePrayerStatus(prayerPoint, "open")}
+                          disabled={prayerBusyIds.has(`status:${prayerPoint.id}`)}
                         >
                           Reopen
                         </button>
@@ -5424,8 +6240,8 @@ export function AppShell() {
             </div>
           ) : (
             <EmptyState
-              title="No prayer points yet"
-              description="The prayer wall begins empty and fills in as members share requests."
+              title={sortedPrayerPoints.length ? "No matching prayer requests" : "No prayer points yet"}
+              description={sortedPrayerPoints.length ? "Try another search or request status." : "The prayer wall begins empty and fills in as members share requests."}
             />
           )}
         </Panel>
@@ -5434,8 +6250,17 @@ export function AppShell() {
   }
 
   function renderResourcesSection() {
+    const query = resourceSearchQuery.trim().toLocaleLowerCase();
+    const visibleResources = sortedResources.filter((resource) => {
+      const typeMatches = resourceTypeFilter === "all" || resource.resource_type === resourceTypeFilter;
+      const text = `${resource.title || ""} ${resource.description || ""} ${resource.note_content || ""}`.toLocaleLowerCase();
+      return typeMatches && (!query || text.includes(query));
+    });
+    const resourceCount = (type) => type === "all" ? sortedResources.length : sortedResources.filter((resource) => resource.resource_type === type).length;
     return (
-      <div className="content-grid">
+      <div className="content-grid resource-page-layout">
+        <header className="resources-story-hero"><div className="page-story-copy"><p className="story-kicker">Learn, keep, return</p><h1>Resources</h1><p>Shared notes, study materials, PDF handouts, and trusted links for your journey.</p></div><span className="page-story-mark" aria-hidden="true"><NavIcon name="book-open" /></span></header>
+        <div className="resource-library-tools"><label className="feature-search"><span aria-hidden="true">⌕</span><span className="sr-only">Search shared resources</span><input type="search" value={resourceSearchQuery} onChange={(event) => setResourceSearchQuery(event.target.value)} placeholder="Search titles, notes, and topics" /></label><div className="feature-filter-row" role="group" aria-label="Filter resources">{[["all", "All resources"], ["note", "Notes"], ["pdf", "PDFs"], ["link", "Links"]].map(([type, label]) => <button key={type} type="button" className={resourceTypeFilter === type ? "is-active" : ""} aria-pressed={resourceTypeFilter === type} onClick={() => setResourceTypeFilter(type)}>{label} · {resourceCount(type)}</button>)}<span className="feature-filter-count" aria-live="polite">{visibleResources.length} shown</span></div></div>
         {isAdmin ? (
           <Panel
             title={editingResourceId ? "Edit Resource" : "Add Resource"}
@@ -5584,9 +6409,9 @@ export function AppShell() {
           title="Shared Resources"
           subtitle="Notes, handouts, and links stay available from any device."
         >
-          {sortedResources.length ? (
+          {visibleResources.length ? (
             <div className="card-list">
-              {sortedResources.map((resource) => (
+              {visibleResources.map((resource) => (
                 <article key={resource.id} className="task-card resource-card">
                   <div className="task-header">
                     <div>
@@ -5644,8 +6469,8 @@ export function AppShell() {
             </div>
           ) : (
             <EmptyState
-              title="No resources yet"
-              description="Admins can upload notes, PDFs, and links for the whole group here."
+              title={sortedResources.length ? "No matching resources" : "No resources yet"}
+              description={sortedResources.length ? "Try another search or resource type." : "Admins can upload notes, PDFs, and links for the whole group here."}
             />
           )}
         </Panel>
@@ -5891,20 +6716,22 @@ export function AppShell() {
             })()}
           </Panel>
         ) : selectedClass ? (
-          <DiscipleshipAssignments
-            user={user}
-            profiles={profiles}
-            selectedClass={selectedClass}
-            lessons={discipleshipLessons}
-            submissions={discipleshipAssignmentSubmissions}
-            submissionHistory={discipleshipSubmissionHistory}
-            enrollments={discipleshipEnrollments}
-            runAction={runAction}
-            submitting={submitting}
-            manageMode={manageMode}
-            isApprovedEnrolled={isApprovedEnrolled}
-            liveNow={liveNow}
-          />
+          <Suspense fallback={<div className="loading-inline" role="status"><div className="spinner" aria-hidden="true" />Loading class assignments…</div>}>
+            <DiscipleshipAssignments
+              user={user}
+              profiles={profiles}
+              selectedClass={selectedClass}
+              lessons={discipleshipLessons}
+              submissions={discipleshipAssignmentSubmissions}
+              submissionHistory={discipleshipSubmissionHistory}
+              enrollments={discipleshipEnrollments}
+              runAction={runAction}
+              submitting={submitting}
+              manageMode={manageMode}
+              isApprovedEnrolled={isApprovedEnrolled}
+              liveNow={liveNow}
+            />
+          </Suspense>
         ) : (
           <Panel title="No class assignments yet" subtitle="Assignments appear here when you are enrolled in a class or lead one.">
             <EmptyState title="Nothing to work on yet" description="Your class assignments and feedback will be available here once a class is active." />
@@ -6251,7 +7078,7 @@ export function AppShell() {
       } else {
         const { error } = await supabase
           .from("virtual_meetings")
-          .insert([{ ...payload, created_by: user.id }]);
+          .insert([{ ...payload, group_id: activeCellGroupId, created_by: user.id }]);
 
         if (error) {
           throw error;
@@ -6359,11 +7186,11 @@ export function AppShell() {
           subtitle="Presence updates live while members keep the app open."
         >
           {onlineMembers.length ? (
-            <div className="avatar-stack-row">
-              <div className="avatar-stack">
+            <div className="identity-stack-row">
+              <div className="identity-stack">
                 {onlineMembers.slice(0, 12).map((member) => (
-                  <div key={member.id} className="avatar-online" title={member.full_name || member.email}>
-                    <Avatar member={member} size="small" />
+                  <div key={member.id} className="identity-online" title={member.full_name || member.email}>
+                    <IdentityBadge member={member} size="small" />
                     <span className="online-dot" aria-hidden="true" />
                   </div>
                 ))}
@@ -6639,7 +7466,7 @@ export function AppShell() {
     });
     return (
       <div className="section-stack">
-        <header className="page-intro"><div><p className="eyebrow">Our community</p><h1>Members</h1><p>{activeMembers.length} active member{activeMembers.length === 1 ? "" : "s"} in Glory Carriers.</p></div></header>
+        <header className="page-intro"><div><p className="eyebrow">{CELL_GROUP_NAME}</p><h1>Members</h1><p>{activeMembers.length} active member{activeMembers.length === 1 ? "" : "s"} in {CELL_GROUP_NAME}.</p></div></header>
         {isAdmin ? (
           <div className="member-overview-grid">
             <StatCard
@@ -6661,7 +7488,7 @@ export function AppShell() {
             <StatCard
               label="Paused Accounts"
               value={pausedMembersCount}
-              caption="Paused users stay in the system until you restore or delete them."
+              caption="Paused accounts remain in the member record for authorized review."
               accent="orange"
             />
           </div>
@@ -6671,7 +7498,7 @@ export function AppShell() {
           title={isAdmin ? "Member Management" : "Members"}
           subtitle={
             isAdmin
-              ? "Promote members to admin, pause access, delete users, or message people from one clean control center."
+              ? "Review member profiles and connect with the community. Privileged account changes are handled in the dedicated Super Admin area."
               : "See who is part of the planning space and start a conversation with any active member."
           }
         >
@@ -6682,7 +7509,7 @@ export function AppShell() {
                 <article key={member.id} className="member-card">
                   <div className="member-card-top">
                     <div className="member-summary">
-                      <Avatar member={member} />
+                      <IdentityBadge member={member} />
                       <div>
                         <strong>{member.full_name || "Unnamed member"}</strong>
                         <p>{member.email}</p>
@@ -6719,7 +7546,7 @@ export function AppShell() {
                       ? "This is your account profile."
                       : member.role === "admin"
                         ? "This account already has admin privileges and can manage the workspace."
-                        : "This member can collaborate normally and can be promoted by an admin."}
+                        : "This member can collaborate normally and may be promoted by an authorized Super Admin."}
                   </p>
 
                   <div className="member-actions">
@@ -6733,41 +7560,6 @@ export function AppShell() {
                       </button>
                     ) : null}
 
-                    {isAdmin ? (
-                      <>
-                        <button
-                          type="button"
-                          className={member.role === "admin" ? "secondary-button" : "primary-button"}
-                          onClick={() =>
-                            changeRole(member.id, member.role === "admin" ? "user" : "admin")
-                          }
-                        >
-                          {member.role === "admin" ? "Set as member" : "Promote to admin"}
-                        </button>
-
-                        <button
-                          type="button"
-                          className="secondary-button"
-                          onClick={() => toggleMemberAccess(member.id, !member.is_active)}
-                        >
-                          {member.is_active ? "Pause access" : "Restore access"}
-                        </button>
-
-                        {member.id !== user.id ? (
-                          <button
-                            type="button"
-                            className="ghost-button danger"
-                            onClick={() => deleteUser(member.id)}
-                          >
-                            Delete user
-                          </button>
-                        ) : (
-                          <span className="inline-help">
-                            Your own account cannot be deleted here.
-                          </span>
-                        )}
-                      </>
-                    ) : null}
                   </div>
                 </article>
               ))}
@@ -6779,12 +7571,6 @@ export function AppShell() {
             />
           )}
 
-          {isAdmin ? (
-            <p className="inline-help member-footnote">
-              Account deletion, role promotion, and access control all apply instantly
-              through realtime updates.
-            </p>
-          ) : null}
         </Panel>
       </div>
     );
@@ -6796,11 +7582,11 @@ export function AppShell() {
         <div className="content-grid">
           <Panel
             title="Profile Settings"
-            subtitle="Keep your name, photo, and profile details up to date."
+            subtitle="Keep your name and profile details up to date."
           >
             <div className="profile-panel">
               <div className="profile-hero settings-hero-card">
-                <Avatar member={currentMember} size="large" />
+                <IdentityBadge member={{ ...currentMember, profile_photo_path: removeProfilePhotoOnSave ? null : currentMember?.profile_photo_path }} photoUrl={removeProfilePhotoOnSave ? "" : profilePhotoPreview || undefined} size="large" />
                 <div>
                   <h3>{currentMember?.full_name || "Unnamed member"}</h3>
                   <p>{currentMember?.email || user.email}</p>
@@ -6814,11 +7600,37 @@ export function AppShell() {
               </div>
 
               <form className="stack-form" onSubmit={saveProfileDetails}>
+                <div className="profile-photo-setting">
+                  <MemberInitials
+                    member={currentMember}
+                    photoUrl={removeProfilePhotoOnSave ? "" : profilePhotoPreview || undefined}
+                    className="profile-photo-setting-preview"
+                  />
+                  <div className="profile-photo-setting-copy">
+                    <strong>Profile photo <span>Optional</span></strong>
+                    <p>Choose a photo from your device. It appears with your name around the community.</p>
+                    <input
+                      id="profile-photo-input"
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp"
+                      aria-label="Choose an optional profile photo"
+                      aria-describedby="profile-photo-help"
+                      disabled={submitting}
+                      onChange={handleProfilePhotoChange}
+                    />
+                    <small id="profile-photo-help">JPG, PNG, or WebP · up to 5 MB</small>
+                    {profilePhotoFile ? <small>Selected: {profilePhotoFile.name}</small> : null}
+                    {removeProfilePhotoOnSave ? <small>Your photo will be removed when you save.</small> : null}
+                    {currentMember?.profile_photo_path || profilePhotoFile ? <button type="button" className="ghost-button compact" onClick={stageProfilePhotoRemoval} disabled={submitting}>Remove photo</button> : null}
+                  </div>
+                </div>
+
                 <label className="field">
                   <span>Display name</span>
                   <input
                     type="text"
                     value={profileForm.full_name}
+                    maxLength={80}
                     onChange={(event) =>
                       setProfileForm((current) => ({
                         ...current,
@@ -6826,61 +7638,22 @@ export function AppShell() {
                       }))
                     }
                     placeholder="How your name should appear"
+                    autoComplete="name"
                     required
                   />
-                </label>
-
-                <label className="field">
-                  <span>Profile picture</span>
-                  <input
-                    ref={avatarInputRef}
-                    className="hidden-file-input"
-                    type="file"
-                    accept="image/png,image/jpeg,image/jpg,image/webp,image/gif"
-                    onChange={handleAvatarUpload}
-                    disabled={uploadingAvatar}
-                  />
-                  <div className="upload-row">
-                    <button
-                      type="button"
-                      className="secondary-button"
-                      onClick={() => avatarInputRef.current?.click()}
-                      disabled={uploadingAvatar}
-                    >
-                      {uploadingAvatar ? "Uploading..." : "Choose image"}
-                    </button>
-                    <span className="file-chip">
-                      {avatarFileName || "PNG, JPG, WEBP, or GIF up to 1MB"}
-                    </span>
-                  </div>
-                </label>
-
-                <label className="field">
-                  <span>Profile picture URL</span>
-                  <input
-                    type="url"
-                    value={profileForm.avatar_url}
-                    onChange={(event) =>
-                      setProfileForm((current) => ({
-                        ...current,
-                        avatar_url: event.target.value
-                      }))
-                    }
-                    placeholder="Optional public image URL"
-                  />
+                  <small className="inline-help">This is the name members see in messages, Bible Study, and the member directory.</small>
                 </label>
 
                 <div className="form-actions">
                   <button type="submit" className="primary-button" disabled={submitting}>
                     Save profile
                   </button>
-                  <span className="inline-help">
-                    {uploadingAvatar
-                      ? "Uploading avatar..."
-                      : "Image uploads use the Supabase avatars bucket."}
-                  </span>
                 </div>
               </form>
+              <section className="profile-bible-achievements" aria-labelledby="profile-bible-achievements-title">
+                <div><p className="eyebrow">PERSONAL BIBLE STUDY</p><h3 id="profile-bible-achievements-title">Bible consistency achievements</h3><p>Your Bible milestones belong to your personal reading history.</p></div>
+                {personalBibleStreakAvailable ? <div className="profile-bible-achievement-list">{BIBLE_STREAK_MILESTONES.filter((milestone)=>personalBibleAchievements.some((item)=>Number(item.milestone_days)===milestone.days)).map((milestone)=>{const earned=personalBibleAchievements.find((item)=>Number(item.milestone_days)===milestone.days);return <article key={milestone.days}><span aria-hidden="true">✦</span><div><strong>{milestone.title}</strong><small>{milestone.description}</small></div><time dateTime={earned.earned_on}>{new Intl.DateTimeFormat(undefined,{dateStyle:"medium",timeZone:"UTC"}).format(new Date(`${earned.earned_on}T12:00:00Z`))}</time></article>;})}{!personalBibleAchievements.length?<p className="inline-help">Your first Bible consistency achievement will appear here as your reading rhythm grows.</p>:null}</div>:<p className="inline-help">Achievements will appear when the Bible streak migration is applied.</p>}
+              </section>
             </div>
           </Panel>
 
@@ -6889,7 +7662,7 @@ export function AppShell() {
             subtitle="Manage your password, theme, and account view from one place."
           >
             <div className="section-stack">
-              <div className="settings-grid">
+            <div className="settings-grid">
                 <div className="setting-tile">
                   <span>Signed in as</span>
                   <strong>{currentMember?.email || user.email}</strong>
@@ -6902,7 +7675,7 @@ export function AppShell() {
                 <div className="setting-tile">
                   <span>Theme</span>
                   <strong>{theme === "light" ? "Light mode" : "Dark mode"}</strong>
-                  <p>Blue and orange stay consistent while the workspace adapts.</p>
+                  <p>Royal Purple styling adapts to your preferred theme.</p>
                   <button
                     type="button"
                     className="secondary-button"
@@ -6978,23 +7751,36 @@ export function AppShell() {
     );
   }
 
-  const selfManagedSections = new Set(["management", "bible-study"]);
+  const selfManagedSections = new Set(["management", "birthdays", "bible-study", "super-admin", "fun-zone"]);
   const isManagementSection = activeSection === "management";
   const deferSectionForGlobalLoad = loading && !selfManagedSections.has(activeSection);
-  const showDashboardChrome = activeSection !== "dashboard" && !selfManagedSections.has(activeSection);
+  const showDashboardChrome = activeSection !== "dashboard" && !selfManagedSections.has(activeSection) && !isAdminWorkspace;
 
   const sectionContent = deferSectionForGlobalLoad ? null : activeSection === "dashboard"
     ? renderDashboardSection()
-    : activeSection === "announcements"
-      ? renderAnnouncementsSection()
+      : activeSection === "faq"
+        ? <Suspense fallback={<div className="loading-inline" role="status">Opening frequently asked questions…</div>}><FAQPage /></Suspense>
+        : activeSection === "about"
+          ? <Suspense fallback={<div className="loading-inline" role="status">Opening About…</div>}><AboutPage onNavigate={setActiveSection} /></Suspense>
+      : activeSection === "fun-zone"
+        ? <Suspense fallback={<div className="loading-inline" role="status"><div className="spinner" aria-hidden="true" />Opening Fun Zone…</div>}><FunZone key={activeCellGroupId} user={user} isAdmin={isAdmin} isSuperAdmin={isSuperAdmin} groupId={activeCellGroupId} profiles={profiles} /></Suspense>
       : activeSection === "events"
         ? renderEventsDirectorySection()
+      : activeSection === "birthdays"
+        ? <Suspense fallback={<div className="loading-inline" role="status"><div className="spinner" aria-hidden="true" />Opening birthday management…</div>}><BirthdayManagementSection
+            key={activeCellGroupId}
+            profiles={profiles}
+            isAdmin={isAdmin}
+            groupId={activeCellGroupId}
+            focusMemberId={birthdayFocusMemberId}
+            onFocusHandled={() => setBirthdayFocusMemberId("")}
+          /></Suspense>
       : activeSection === "prayer"
         ? renderPrayerSection()
           : activeSection === "resources"
             ? renderResourcesSection()
             : activeSection === "bible-study"
-              ? <BibleStudySection user={user} profile={profile} profiles={profiles} isAdmin={isAdmin} />
+              ? <Suspense fallback={<div className="loading-inline" role="status"><div className="spinner" aria-hidden="true" />Opening Bible Study…</div>}><BibleStudySection key={activeCellGroupId} user={user} profile={profile} profiles={profiles} isAdmin={isAdminWorkspace} groupId={activeCellGroupId} focusPartnerStreaks={focusBiblePartnerStreaks} onPartnerStreakFocusHandled={() => setFocusBiblePartnerStreaks(false)} onPersonalReadingsChange={setPersonalBibleReadings} onCarryReflectionToPrayer={(reflection) => { const reference = reflection.reference?.trim(); setPrayerForm({ ...emptyPrayerForm, title: reference ? `Prayer from ${reference}` : "Bible Study reflection", details: `${reflection.content}${reference ? `\n\nScripture: ${reference}` : ""}` }); setActiveSection("prayer"); }} /></Suspense>
             : activeSection === "assignments"
               ? renderAssignmentsSection()
               : activeSection === "meetings"
@@ -7005,61 +7791,85 @@ export function AppShell() {
                   ? renderMembersSection()
                   : activeSection === "management"
                     ? (
-                      isAdmin ? <CellGroupManagementSection
+                      isAdminWorkspace ? <Suspense fallback={<div className="loading-inline" role="status"><div className="spinner" aria-hidden="true" />Opening administration…</div>}><CellGroupManagementSection
+                        key={activeCellGroupId}
                         user={user}
                         isAdmin={isAdmin}
+                        isSuperAdmin={isSuperAdmin}
+                        groupId={activeCellGroupId}
                         profiles={profiles}
-                        onNavigateSection={setActiveSection}
-                      />
+                      /></Suspense>
                       : <EmptyState title="Access restricted" description="This control center is available to authorized administrators." />
                     )
+                  : activeSection === "super-admin"
+                    ? isSuperAdmin
+                      ? <Suspense fallback={<div className="loading-inline" role="status"><div className="spinner" aria-hidden="true" />Opening system oversight…</div>}><SuperAdminArea
+                        user={user}
+                        profiles={profiles}
+                        platformOverview={{
+                          upcomingEvents: events.filter((eventRecord) => new Date(eventRecord.starts_at) >= liveNow).length,
+                          prayerRequests: prayerPoints.length,
+                          bibleStudyConversations: bibleStudyTakeaways.length + bibleStudyReplies.length + bibleStudyQuestions.length + bibleStudyAnswers.length,
+                        }}
+                        workspaceLoading={loading}
+                        workspaceError={errorMessage}
+                        onNavigateSection={setActiveSection}
+                        onRefresh={() => loadAppData()}
+                        onLeave={() => setActiveSection("dashboard")}
+                      /></Suspense>
+                      : <Panel title="Verifying access" subtitle="Checking your account authorization with the database."><div className="loading-inline"><div className="spinner" aria-hidden="true" /></div></Panel>
                   : activeSection === "settings"
                     ? renderSettingsSection()
                     : null;
 
   return (
-    <div className="app-shell">
-      <SidebarNav
+    <div className={"app-shell" + (isAdminWorkspace ? " admin-workspace" : "")} data-active-section={activeSection}>
+      <GlobalBackground activeSection={activeSection} />
+      <DesktopWorkspaceNavigation
         sections={navSections}
         activeSection={activeSection}
         onSelect={setActiveSection}
         theme={theme}
-        onThemeToggle={() =>
-          setTheme((current) => (current === "light" ? "dark" : "light"))
-        }
-        roleLabel={isAdmin ? "Admin access" : "Member access"}
+        onThemeToggle={() => setTheme((current) => (current === "light" ? "dark" : "light"))}
+        roleLabel={isSuperAdmin ? "Super Admin" : isAdmin ? "Admin" : "Member"}
+        isAdminWorkspace={isAdminWorkspace}
+        isSuperAdmin={isSuperAdmin}
         currentMember={currentMember}
         unreadCount={unreadNotifications.length}
         onOpenNotifications={() => setShowNotificationCenter(true)}
-        onSignOut={() => signOut()}
+        onSignOut={() => void signOut()}
       />
 
       <main className={`main-content${isManagementSection ? " main-content--management" : ""}`}>
+      <MobileSectionNav
+        sections={navSections}
+        activeSection={activeSection}
+        onSelect={setActiveSection}
+        open={mobileMenuOpen}
+        onOpenChange={setMobileMenuOpen}
+        menuButtonRef={mobileMenuTriggerRef}
+        unreadCount={unreadNotifications.length}
+        onOpenNotifications={() => setShowNotificationCenter(true)}
+        currentMember={currentMember}
+        roleLabel={isSuperAdmin ? "Super Admin" : isAdmin ? "Admin" : "Member"}
+        theme={theme}
+        onThemeToggle={() => setTheme((current) => current === "light" ? "dark" : "light")}
+        onSignOut={() => void signOut()}
+        isAdminWorkspace={isAdminWorkspace}
+      />
+
         <header className="mobile-app-header">
           <BrandLogo compact />
           <span className="mobile-app-page-title">{activeSectionLabel}</span>
-          <button ref={mobileMenuTriggerRef} type="button" className={"mobile-app-menu-trigger" + (mobileMenuOpen || !quickNavigationIds.includes(activeSection) ? " active" : "")} aria-label={mobileMenuOpen ? "Close navigation menu" : "Open navigation menu"} aria-expanded={mobileMenuOpen} aria-controls="mobile-navigation-drawer" onClick={() => setMobileMenuOpen((open) => !open)}>
-            <NavIcon name="menu" />
-          </button>
           <button type="button" className="mobile-app-icon-button" aria-label={`Notifications${unreadNotifications.length ? `, ${unreadNotifications.length} unread` : ""}`} onClick={() => setShowNotificationCenter(true)}>
             <NavIcon name="bell" />{unreadNotifications.length ? <span>{unreadNotifications.length > 99 ? "99+" : unreadNotifications.length}</span> : null}
           </button>
-          <div className="mobile-account-menu-wrap" ref={mobileAccountMenuRef}>
-            <button type="button" className="mobile-profile-button" aria-label="Open profile menu" aria-expanded={mobileAccountOpen} aria-haspopup="menu" onClick={() => setMobileAccountOpen((open) => !open)}><Avatar member={currentMember} size="small" /></button>
-            {mobileAccountOpen ? <div className="mobile-profile-menu" role="menu" aria-label="Profile menu">
-              <strong>{currentMember?.full_name || "Member"}</strong><small>{isAdmin ? "Admin access" : "Member access"}</small>
-              <button type="button" role="menuitem" onClick={() => { setActiveSection("settings"); setMobileAccountOpen(false); }}>Profile &amp; settings</button>
-              {notificationPermission !== "granted" && notificationPermission !== "unsupported" && isPushSupported() ? <button type="button" role="menuitem" onClick={() => { setShowPushPrompt(true); setMobileAccountOpen(false); }}>Enable notifications</button> : null}
-              <button type="button" role="menuitem" onClick={() => { setTheme((current) => current === "light" ? "dark" : "light"); setMobileAccountOpen(false); }}>{theme === "light" ? "Switch to dark theme" : "Switch to light theme"}</button>
-              <button type="button" role="menuitem" onClick={() => { setMobileAccountOpen(false); void signOut(); }}>Sign out</button>
-            </div> : null}
-          </div>
         </header>
         {showDashboardChrome ? <header className="topbar">
           <div className="mobile-brand"><BrandLogo compact /></div>
           <div className="topbar-hero">
-            <div className="avatar-orb">
-              <Avatar member={currentMember} size="large" />
+            <div className="identity-orb">
+              <IdentityBadge member={currentMember} size="large" />
               <span className="presence-dot" aria-hidden="true" />
             </div>
 
@@ -7206,22 +8016,20 @@ export function AppShell() {
             className={`section-stage${[
               "dashboard",
               "events",
-              "announcements",
+              "fun-zone",
               "prayer",
               "resources",
               "assignments",
               "meetings",
               "messages",
               "members",
-              "settings"
+              "settings",
+              "faq",
+              "about"
             ].includes(activeSection) ? ` workspace-page workspace-page--${activeSection}` : ""}`}
-            style={{
-              "--dashboard-art": `url("${communityBackdrop}")`,
-              "--page-art": `url("${communityBackdrop}")`
-            }}
             key={activeSection}
           >
-            {!(["dashboard", "events", "announcements"].includes(activeSection)) ? (
+            {!(["dashboard", "events", "announcements", "fun-zone", "faq", "about"].includes(activeSection)) ? (
               <div className="section-art-strip" aria-hidden="true" />
             ) : null}
             {sectionContent}
@@ -7230,8 +8038,16 @@ export function AppShell() {
       </main>
 
       <footer className="app-footer">
-        <span>Glory Carries 2026 &copy;</span>
+        <span>{APP_NAME} &copy; 2026</span>
       </footer>
+
+      {birthdayExperienceOpen && isBirthdayToday ? <BirthdayCelebration
+        firstName={currentFirstName}
+        fullName={currentDisplayName}
+        dateLabel={ownDashboardBirthday?.display_date || liveDateLabel}
+        reopened={birthdayExperienceReopened}
+        onDismiss={closeBirthdayExperience}
+      /> : null}
 
       <NotificationCenter
         notifications={notifications}
@@ -7246,6 +8062,9 @@ export function AppShell() {
         }}
         onDelete={(notificationId) => {
           void deleteNotification(notificationId);
+        }}
+        onDeleteAll={() => {
+          void deleteAllNotifications();
         }}
         onArchive={(notificationId, archived) => {
           void archiveNotification(notificationId, archived);
@@ -7264,16 +8083,6 @@ export function AppShell() {
         }}
       />
 
-      <MobileSectionNav
-        sections={navSections}
-        activeSection={activeSection}
-        onSelect={setActiveSection}
-        open={mobileMenuOpen}
-        onOpenChange={setMobileMenuOpen}
-        menuButtonRef={mobileMenuTriggerRef}
-        unreadCount={unreadNotifications.length}
-        onOpenNotifications={() => setShowNotificationCenter(true)}
-      />
     </div>
   );
 }

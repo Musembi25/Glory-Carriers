@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "../context/AuthContext";
+import { supabase } from "../lib/supabase";
 import { BrandLogo } from "./BrandLogo";
+import wowBackground from "../../wow.png";
 
 const initialForm = {
   fullName: "",
@@ -36,15 +38,33 @@ function formatCountdown(seconds) {
   return `${remainingSeconds}s`;
 }
 
+function passwordStrength(password) {
+  if (!password) return { score: 0, label: "Add a password" };
+  const score = [
+    password.length >= 8,
+    password.length >= 12,
+    /[a-z]/.test(password) && /[A-Z]/.test(password),
+    /\d/.test(password),
+    /[^A-Za-z0-9]/.test(password)
+  ].filter(Boolean).length;
+  return {
+    score: Math.min(4, score),
+    label: score <= 1 ? "Needs strengthening" : score <= 2 ? "Fair" : score <= 3 ? "Good" : "Strong"
+  };
+}
+
 export function AuthScreen() {
   const {
     signIn,
     signUp,
+    signOut,
+    setAuthEntryPending,
     sendPasswordResetEmail,
     updatePassword,
     isRecoveryMode,
     clearRecoveryMode
   } = useAuth();
+  const [selectedAccess, setSelectedAccess] = useState(null);
   const [mode, setMode] = useState("login");
   const [form, setForm] = useState(initialForm);
   const [submitting, setSubmitting] = useState(false);
@@ -68,6 +88,7 @@ export function AuthScreen() {
   });
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmation, setShowConfirmation] = useState(false);
+  const [emailSent, setEmailSent] = useState(null);
 
   const themeLabel = useMemo(() => (theme === "dark" ? "Dark" : "Light"), [theme]);
 
@@ -134,12 +155,37 @@ export function AuthScreen() {
   }
 
   function switchMode(nextMode) {
+    if (nextMode === "signup") {
+      setSelectedAccess(null);
+      window.history.replaceState({}, document.title, `${window.location.pathname}${window.location.search}`);
+    }
     setMode(nextMode);
     setMessage("");
     setError("");
+    setEmailSent(null);
     setPasswordUpdated(false);
     setShowPassword(false);
     setShowConfirmation(false);
+  }
+
+  function chooseAccess(nextAccess) {
+    setSelectedAccess(nextAccess);
+    setMode("login");
+    setMessage("");
+    setError("");
+    setEmailSent(null);
+    const nextHash = nextAccess === "super-admin" ? "#super-admin" : nextAccess === "admin" ? "#admin-login" : "";
+    window.history.replaceState({}, document.title, `${window.location.pathname}${window.location.search}${nextHash}`);
+  }
+
+  function backToAccessOptions() {
+    setSelectedAccess(null);
+    setMode("login");
+    setMessage("");
+    setError("");
+    setEmailSent(null);
+    setForm((current) => ({ ...current, password: "", confirmPassword: "" }));
+    window.history.replaceState({}, document.title, `${window.location.pathname}${window.location.search}`);
   }
 
   function startEmailCooldown(seconds = 90) {
@@ -176,24 +222,77 @@ export function AuthScreen() {
       }
 
       if (mode === "login") {
-        await signIn(form.email, form.password);
+        setAuthEntryPending(true);
+        try {
+          await signIn(form.email, form.password);
+          const profileResult = await supabase.rpc("ensure_current_user_profile");
+          if (profileResult.error) {
+            try { await signOut(); } catch {}
+            throw new Error("We couldn't verify your account permissions. Please try again shortly.");
+          }
+
+          const roleResult = await supabase.rpc("current_user_role");
+          if (roleResult.error) {
+            try { await signOut(); } catch {}
+            throw new Error("We couldn't verify your account permissions. Please try again shortly.");
+          }
+
+          const activeResult = await supabase.rpc("is_active_user");
+          if (activeResult.error) {
+            try { await signOut(); } catch {}
+            throw new Error("We couldn't verify your account permissions. Please try again shortly.");
+          }
+
+          const expectedRole = selectedAccess === "member" ? "user" : "admin";
+          let permissionGranted = false;
+          if (activeResult.data !== true) {
+            permissionGranted = roleResult.data === "user" || roleResult.data === "admin";
+          } else if (selectedAccess === "member") {
+            permissionGranted = roleResult.data === expectedRole;
+          } else {
+            const accessCheck = await supabase.rpc(selectedAccess === "super-admin" ? "is_super_admin" : "is_admin");
+            if (accessCheck.error) {
+              try { await signOut(); } catch {}
+              throw new Error("We couldn't verify your account permissions. Please try again shortly.");
+            }
+            permissionGranted = roleResult.data === expectedRole && accessCheck.data === true;
+          }
+
+          const isAuthorized = permissionGranted;
+          if (!isAuthorized) {
+            try { await signOut(); } catch {}
+            throw new Error(selectedAccess === "super-admin"
+              ? "This account is not authorized for Super Admin access. Please choose the correct login or contact an administrator."
+              : selectedAccess === "admin"
+                ? "This account does not have administrator access. Please choose Member Login or contact an administrator."
+                : "This account is assigned to a different login type. Please choose its authorized login option.");
+          }
+          const nextHash = selectedAccess === "super-admin" ? "#super-admin" : selectedAccess === "admin" ? "#dashboard" : "";
+          window.history.replaceState({}, document.title, `${window.location.pathname}${window.location.search}${nextHash}`);
+        } finally {
+          setAuthEntryPending(false);
+        }
       } else if (mode === "signup") {
-        const data = await signUp(form.email, form.password, form.fullName);
+        if (!form.fullName.trim()) {
+          throw new Error("Enter your full name to create your member account.");
+        }
+        if (form.password !== form.confirmPassword) {
+          throw new Error("Your passwords do not match. Please check and try again.");
+        }
+        const data = await signUp(form.email, form.password, form.fullName.trim());
 
         if (!data.session) {
           startEmailCooldown();
-          setMessage(
-            "Account created. Check your inbox if email confirmation is enabled. For smoother testing, disable Confirm email or connect custom SMTP in Supabase."
-          );
+          setEmailSent({ kind: "signup", email: form.email });
+          setForm((current) => ({ ...current, password: "", confirmPassword: "" }));
+          return;
         } else {
           setMessage("Account created successfully. You can start planning now.");
         }
       } else {
         await sendPasswordResetEmail(form.email);
         startEmailCooldown();
-        setMessage(
-          "Password reset link sent. Open the email, then return here to set your new password."
-        );
+        setEmailSent({ kind: "reset", email: form.email });
       }
 
       setPasswordUpdated(false);
@@ -213,38 +312,18 @@ export function AuthScreen() {
     Math.ceil((emailCooldownUntil - currentTime) / 1000)
   );
   const isForgotPasswordMode = mode === "forgot";
+  const isAccessChooser = !isRecoveryMode && !emailSent && mode === "login" && selectedAccess === null;
   const passwordType = showPassword ? "text" : "password";
   const confirmationType = showConfirmation ? "text" : "password";
-  const switcherMode = mode === "signup" ? "signup" : "login";
-
   return (
     <main
       className="auth-layout polished-auth-layout premium-auth-layout"
       data-auth-mode={mode === "signup" ? "signup" : "login"}
+      data-auth-access={selectedAccess}
+      style={{
+        "--auth-backdrop-image": `url("${wowBackground}")`
+      }}
     >
-      <div className="auth-atmosphere" aria-hidden="true">
-        <span className="auth-orb auth-orb-one" />
-        <span className="auth-orb auth-orb-two" />
-        <span className="auth-orb auth-orb-three" />
-        <span className="auth-light-veil" />
-        <span className="auth-geometry" />
-        <ChristianArtBackdrop />
-        <div className="auth-particles">
-          <span className="auth-particle" />
-          <span className="auth-particle" />
-          <span className="auth-particle" />
-          <span className="auth-particle" />
-          <span className="auth-particle" />
-          <span className="auth-particle" />
-          <span className="auth-particle" />
-          <span className="auth-particle" />
-          <span className="auth-particle" />
-          <span className="auth-particle" />
-          <span className="auth-particle" />
-          <span className="auth-particle" />
-        </div>
-      </div>
-
       <header className="auth-chrome">
         <BrandLogo compact />
         <div className="auth-theme-control">
@@ -263,58 +342,69 @@ export function AuthScreen() {
       </header>
 
       <section className="hero-panel auth-hero-panel auth-showcase-panel premium-auth-showcase">
-        <div className="auth-brand-lockup">
-          <BrandLogo />
-          <span className="auth-brand-line" aria-hidden="true" />
-        </div>
         <div className="hero-copy premium-auth-copy">
-          <p className="eyebrow">A place to belong</p>
+          <p className="eyebrow">City on a Hill</p>
           <h1>
-            Grow in the Word.
+            Faith grows
             <br />
-            Walk together.
+            in community.
           </h1>
           <p className="muted-text">
-            A thoughtful community space to connect, serve, and carry the glory together.
+            A shared place for fellowship, Scripture, and serving one another.
           </p>
-        </div>
-        <div className="auth-verse" aria-label="Glory Carriers community values">
-          <span className="auth-verse-mark" aria-hidden="true" />
-          <p>Faith in motion, community at heart.</p>
         </div>
       </section>
 
+      {isAccessChooser ? (
+      <section className="auth-entry-stage" aria-labelledby="auth-entry-title">
+        <div className="auth-entry-heading">
+          <p className="eyebrow">Welcome</p>
+          <h2 id="auth-entry-title">Come in and make yourself at home.</h2>
+          <p>Choose your secure sign-in to continue with City on a Hill.</p>
+        </div>
+        <div className="auth-entry-options" role="group" aria-label="Choose a login type">
+          {[
+            { id: "member", title: "Member", detail: "Community access", icon: "member" },
+            { id: "admin", title: "Admin", detail: "Group administration", icon: "admin" },
+            { id: "super-admin", title: "Super Admin", detail: "System oversight", icon: "super-admin" }
+          ].map((option) => (
+            <button key={option.id} type="button" className={`auth-entry-option auth-entry-option--${option.id}`} onClick={() => chooseAccess(option.id)} aria-label={`${option.title} login`}>
+              <span className="auth-entry-icon"><AuthEntryIcon name={option.icon}/></span>
+              <span className="auth-entry-copy"><strong>{option.title}</strong><small>{option.detail}</small></span>
+              <span className="auth-entry-arrow" aria-hidden="true"><AuthArrowIcon /></span>
+            </button>
+          ))}
+        </div>
+        <p className="auth-entry-signup"><span>New to the community?</span> <button type="button" className="text-button" onClick={() => switchMode("signup")}>Create a Member Account</button></p>
+      </section>
+      ) : (
       <section className="floating-card auth-card polished-auth-card auth-card-elevated premium-auth-card">
         <span className="auth-glass-sheen" aria-hidden="true" />
 
-        {!isRecoveryMode ? (
-          <div
-            className={`auth-switcher auth-switcher--${switcherMode}${isForgotPasswordMode ? " is-idle" : ""}`}
-            role="group"
-            aria-label="Choose an account action"
-          >
-            <span className="auth-switcher-thumb" aria-hidden="true" />
-            <button
-              type="button"
-              className={mode === "login" ? "switcher-button active" : "switcher-button"}
-              onClick={() => switchMode("login")}
-            >
-              Log in
-            </button>
-            <button
-              type="button"
-              className={mode === "signup" ? "switcher-button active" : "switcher-button"}
-              onClick={() => switchMode("signup")}
-            >
-              Sign up
-            </button>
-          </div>
+        {!isRecoveryMode && mode === "login" ? <div className="auth-selected-context">
+          <button type="button" className="auth-back-button" onClick={backToAccessOptions} aria-label="Back to login options"><AuthBackIcon /> <span>Back</span></button>
+          <span className={`auth-selected-icon auth-selected-icon--${selectedAccess}`}><AuthEntryIcon name={selectedAccess === "super-admin" ? "super-admin" : selectedAccess}/></span>
+          <strong>{selectedAccess === "super-admin" ? "Super Admin Login" : selectedAccess === "admin" ? "Admin Login" : "Member Login"}</strong>
+        </div> : mode === "signup" ? <button type="button" className="auth-back-button auth-signup-back" onClick={backToAccessOptions}><AuthBackIcon /> <span>Back to Login</span></button> : null}
+
+        {emailSent ? (
+          <section className="auth-email-confirmation" aria-live="polite">
+            <span className="auth-email-confirmation-icon" aria-hidden="true"><AuthEntryIcon name="mail"/></span>
+            <p className="eyebrow">Check your email</p>
+            <h2>{emailSent.kind === "signup" ? "Check your email to finish joining." : "A secure link is on its way."}</h2>
+            <p>We sent instructions to <strong>{emailSent.email}</strong>. Open the message to continue. If it doesn’t arrive, check your spam folder.</p>
+            <button type="button" className="primary-button auth-submit-button" onClick={() => { setEmailSent(null); switchMode("login"); }}>Return to sign in</button>
+          </section>
         ) : null}
 
-        <div className="auth-heading auth-heading-spacious" key={isRecoveryMode ? "recovery" : mode}>
+        {!emailSent ? <div className="auth-heading auth-heading-spacious" key={isRecoveryMode ? "recovery" : mode}>
           <p className="eyebrow">
             {isRecoveryMode
               ? "Password Recovery"
+              : selectedAccess === "super-admin" && mode === "login"
+                ? "Super Admin Secure Access"
+                : selectedAccess === "admin" && mode === "login"
+                  ? "Administrator Access"
               : mode === "signup"
                 ? "New Member"
                 : isForgotPasswordMode
@@ -324,6 +414,10 @@ export function AuthScreen() {
           <h2>
             {isRecoveryMode
               ? "Choose a new password"
+              : selectedAccess === "super-admin" && mode === "login"
+                ? "Sign in to Super Admin"
+                : selectedAccess === "admin" && mode === "login"
+                  ? "Administrator sign in"
               : mode === "signup"
                 ? "Create your account"
                 : isForgotPasswordMode
@@ -333,18 +427,22 @@ export function AuthScreen() {
           <p className="auth-heading-support">
             {isRecoveryMode
               ? "Set a secure password to get back into your community."
+              : selectedAccess === "super-admin" && mode === "login"
+                ? "Use your authorized account. Super Admin access is verified securely after sign-in."
+                : selectedAccess === "admin" && mode === "login"
+                  ? "Use your existing administrator account. Permissions are verified securely after sign-in."
               : mode === "signup"
-                ? "Join Glory Carriers and grow together."
+                ? "Create a Member account to join City on a Hill."
                 : isForgotPasswordMode
                   ? "We’ll help you get safely back into your account."
-                  : "Continue your journey with Glory Carriers."}
+                  : "Continue your journey with City on a Hill."}
           </p>
-        </div>
+        </div> : null}
 
-        {message ? <div className="banner success">{message}</div> : null}
-        {error ? <div className="banner error">{error}</div> : null}
+        {!emailSent && message ? <div className="banner success">{message}</div> : null}
+        {!emailSent && error ? <div className="banner error" role="alert">{error}</div> : null}
 
-        <form className={`stack-form auth-form auth-form--${mode}`} onSubmit={handleSubmit}>
+        {!emailSent ? <form className={`stack-form auth-form auth-form--${mode}`} onSubmit={handleSubmit}>
           {!isRecoveryMode && mode === "signup" ? (
             <label className="field auth-field">
               <span>Full name</span>
@@ -355,6 +453,7 @@ export function AuthScreen() {
                   value={form.fullName}
                   onChange={(event) => updateField("fullName", event.target.value)}
                   placeholder="Your name"
+                  autoComplete="name"
                   required
                 />
               </div>
@@ -436,6 +535,12 @@ export function AuthScreen() {
             </label>
           ) : null}
 
+          {mode === "signup" && form.password ? <div className={`auth-password-strength strength-${passwordStrength(form.password).score}`} aria-live="polite">
+            <div><span>Password strength</span><strong>{passwordStrength(form.password).label}</strong></div>
+            <span className="auth-password-strength-track"><span style={{ width: `${passwordStrength(form.password).score * 25}%` }}/></span>
+            <small>Use a longer password with a mix of letters, numbers, and symbols.</small>
+          </div> : null}
+
           {!isRecoveryMode ? (
             <div className="auth-utility-row">
               {isForgotPasswordMode ? (
@@ -454,6 +559,15 @@ export function AuthScreen() {
             </div>
           ) : null}
 
+          {mode === "signup" ? <label className="field auth-field">
+            <span>Confirm password</span>
+            <div className="password-field auth-input-shell">
+              <FieldGlyph name="lock" />
+              <input type={confirmationType} value={form.confirmPassword} onChange={(event) => updateField("confirmPassword", event.target.value)} placeholder="Enter your password again" autoComplete="new-password" minLength={6} required />
+              <PasswordToggle visible={showConfirmation} onClick={() => setShowConfirmation((value) => !value)} />
+            </div>
+          </label> : null}
+
           <button
             type="submit"
             className={submitting ? "primary-button auth-submit-button is-loading" : "primary-button auth-submit-button"}
@@ -465,14 +579,14 @@ export function AuthScreen() {
               : isRecoveryMode
                 ? "Update password"
                 : mode === "login"
-                  ? "Log in securely"
+                  ? selectedAccess === "member" ? "Log in securely" : "Verify & continue"
                   : mode === "signup"
                     ? "Create account"
                     : cooldownSeconds > 0
                       ? `Try again in ${formatCountdown(cooldownSeconds)}`
                       : "Send reset link"}
           </button>
-        </form>
+        </form> : null}
 
         {isRecoveryMode && passwordUpdated ? (
           <div className="auth-support-row">
@@ -482,6 +596,7 @@ export function AuthScreen() {
           </div>
         ) : null}
       </section>
+      )}
     </main>
   );
 }
@@ -509,6 +624,23 @@ function FieldGlyph({ name }) {
       </svg>
     </span>
   );
+}
+
+function AuthEntryIcon({ name }) {
+  return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    {name === "member" ? <><circle cx="12" cy="8" r="3.3"/><path d="M5 20c.6-3.7 3-5.6 7-5.6s6.4 1.9 7 5.6"/></> : null}
+    {name === "admin" ? <><path d="M12 3 19 6v5.2c0 4.5-2.8 7.6-7 9.8-4.2-2.2-7-5.3-7-9.8V6l7-3Z"/><path d="m9 11.8 2 2 4-4"/></> : null}
+    {name === "super-admin" ? <><path d="m4 7 4.2 4 3.8-6 3.8 6L20 7l-1.4 11H5.4L4 7Z"/><path d="M6 21h12"/></> : null}
+    {name === "mail" ? <><rect x="3.5" y="5.5" width="17" height="13" rx="2"/><path d="m4 7 8 6 8-6"/></> : null}
+  </svg>;
+}
+
+function AuthArrowIcon() {
+  return <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M3.5 10h12M10.5 5l5 5-5 5" /></svg>;
+}
+
+function AuthBackIcon() {
+  return <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M16 10H4m5 5-5-5 5-5" /></svg>;
 }
 
 function PasswordToggle({ visible, onClick }) {
@@ -549,25 +681,5 @@ function ThemeIcon({ theme }) {
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
       <path d="M20.5 15.2A8.5 8.5 0 0 1 8.8 3.5 8.5 8.5 0 1 0 20.5 15.2Z" />
     </svg>
-  );
-}
-
-function ChristianArtBackdrop() {
-  const base = import.meta.env.BASE_URL;
-
-  return (
-    <div className="auth-sacred-scene">
-      <img
-        className="auth-photo auth-photo-login"
-        src={`${base}community/login-background.jpeg`}
-        alt=""
-      />
-      <img
-        className="auth-photo auth-photo-signup"
-        src={`${base}community/create-account-background.jpeg`}
-        alt=""
-      />
-      <span className="auth-photo-scrim" />
-    </div>
   );
 }

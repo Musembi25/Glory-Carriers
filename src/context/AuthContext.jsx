@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useRef, useState } from "react";
+import { createContext, useContext, useEffect, useState } from "react";
 import { supabase } from "../lib/supabase";
 
 const AuthContext = createContext(null);
@@ -101,9 +101,9 @@ export function AuthProvider({ children }) {
   const [session, setSession] = useState(null);
   const [profile, setProfile] = useState(null);
   const [initializing, setInitializing] = useState(true);
+  const [authEntryPending, setAuthEntryPending] = useState(false);
   const [isRecoveryMode, setIsRecoveryMode] = useState(() => hasRecoveryParams());
   const [authNotice, setAuthNotice] = useState("");
-  const repairedUsersRef = useRef(new Set());
 
   async function loadProfile(userId) {
     if (!supabase || !userId) {
@@ -148,20 +148,6 @@ export function AuthProvider({ children }) {
     return data ?? null;
   }
 
-  async function claimAdminIfNoActiveAdmin() {
-    if (!supabase) {
-      return null;
-    }
-
-    const { data, error } = await supabase.rpc("claim_admin_if_no_active_admin");
-
-    if (error) {
-      throw error;
-    }
-
-    return data ?? null;
-  }
-
   async function hydrateSignedInUser(userId) {
     if (!userId) {
       setProfile(null);
@@ -190,24 +176,10 @@ export function AuthProvider({ children }) {
     }
 
     try {
-      const claimedProfile = await claimAdminIfNoActiveAdmin();
-
-      if (claimedProfile) {
-        const wasRepaired =
-          nextProfile.role !== "admin" && claimedProfile.role === "admin";
-
-        nextProfile = claimedProfile;
-        setProfile(claimedProfile);
-
-        if (wasRepaired && !repairedUsersRef.current.has(userId)) {
-          repairedUsersRef.current.add(userId);
-          setAuthNotice(
-            "Admin access was restored for this account because no active admin existed."
-          );
-        }
-      }
+      const { error } = await supabase.rpc("link_confirmed_member_records");
+      if (error) console.error("Could not link matching confirmed member records", error);
     } catch (error) {
-      console.error("Failed to repair admin access", error);
+      console.error("Could not link matching confirmed member records", error);
     }
 
     return nextProfile;
@@ -392,6 +364,8 @@ export function AuthProvider({ children }) {
         user: session?.user ?? null,
         profile,
         initializing,
+        authEntryPending,
+        setAuthEntryPending,
         isRecoveryMode,
         authNotice,
         signIn,

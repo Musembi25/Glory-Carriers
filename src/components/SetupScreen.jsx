@@ -1,9 +1,11 @@
+import { APP_NAME } from "../lib/identity";
+
 export function SetupScreen() {
   return (
     <main className="fullscreen-shell">
       <div className="floating-card auth-card">
         <p className="eyebrow">Setup Required</p>
-        <h1>Connect Glory Carriers the easy way</h1>
+        <h1>Connect {APP_NAME}</h1>
         <p className="muted-text">
           Add your project credentials to <code>.env</code> so authentication,
           cloud storage, and realtime collaboration can turn on.

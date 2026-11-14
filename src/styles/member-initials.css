@@ -1,0 +1,60 @@
+/* Optional profile photos with consistent initials fallbacks across the community. */
+.member-initials {
+  display: inline-grid;
+  flex: 0 0 auto;
+  min-width: 0;
+  max-width: 100%;
+  aspect-ratio: 1;
+  box-sizing: border-box;
+  place-items: center;
+  overflow: hidden;
+  border-radius: 50%;
+  color: var(--primary-strong, #513a69);
+  background: color-mix(in srgb, var(--primary, #74469b) 14%, var(--surface-strong, #f5f1f8));
+  font-size: .72em;
+  font-weight: 800;
+  letter-spacing: .02em;
+  line-height: 1;
+  user-select: none;
+}
+
+.member-initials > img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.profile-photo-setting {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: .9rem;
+  border: 1px solid var(--border);
+  border-radius: 1rem;
+  background: var(--surface-strong);
+}
+.profile-photo-setting-preview {
+  flex: 0 0 4.5rem;
+  width: 4.5rem;
+  height: 4.5rem;
+  border: 1px solid var(--border);
+  font-size: 1.05rem;
+}
+.profile-photo-setting-copy {
+  display: grid;
+  justify-items: start;
+  gap: .35rem;
+  min-width: 0;
+}
+.profile-photo-setting-copy > strong { color: var(--text); font-size: .9rem; }
+.profile-photo-setting-copy > strong > span { margin-left: .25rem; color: var(--text-muted); font-size: .7rem; font-weight: 600; }
+.profile-photo-setting-copy p { margin: 0; color: var(--text-muted); font-size: .75rem; line-height: 1.5; }
+.profile-photo-setting-copy input[type="file"] { max-width: 100%; color: var(--text-muted); font: inherit; font-size: .72rem; }
+.profile-photo-setting-copy input[type="file"]::file-selector-button { min-height: 2.2rem; margin-right: .5rem; padding: .4rem .65rem; border: 1px solid var(--border); border-radius: .6rem; color: var(--text); background: var(--surface-muted); font: inherit; font-weight: 700; cursor: pointer; }
+.profile-photo-setting-copy small { color: var(--text-muted); font-size: .66rem; }
+.profile-photo-setting-copy .ghost-button { min-height: 2rem; margin-top: .15rem; }
+@media (max-width: 540px) {
+  .profile-photo-setting { align-items: flex-start; gap: .7rem; padding: .7rem; }
+  .profile-photo-setting-preview { flex-basis: 3.6rem; width: 3.6rem; height: 3.6rem; }
+  .profile-photo-setting-copy input[type="file"] { width: 100%; }
+}

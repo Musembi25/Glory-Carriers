@@ -215,8 +215,8 @@
 
   function renderShell() {
     const member = currentMember();
-    $('#profile-name').textContent = member?.name || 'Glory Carrier';
-    $('#avatar-initials').textContent = initials(member?.name || 'GC');
+    $('#profile-name').textContent = member?.name || 'City on a Hill member';
+    $('#profile-initials').textContent = initials(member?.name || 'CH');
     document.documentElement.classList.toggle('dark', state.settings.theme === 'dark');
     document.documentElement.style.setProperty('--reading-size', `${state.settings.fontSize || 1.05}rem`);
     const before = !member;
@@ -241,7 +241,7 @@
   }
 
   function footer() {
-    return `<footer class="footer"><p><strong>GLORY CARRIERS</strong></p><p>Growing together. Rooted in the Word. Living for Christ.</p><p>© 2026 Glory Carriers. All rights reserved.</p><p>Built for the Glory of God.</p></footer>`;
+    return `<footer class="footer"><p><strong>THE CITY ON A HILL</strong></p><p>Growing together. Rooted in the Word. Living for Christ.</p><p>© 2026 The City on A Hill. All rights reserved.</p><p>Built for the Glory of God.</p></footer>`;
   }
 
   function renderDashboard() {
@@ -258,7 +258,7 @@
     if (s.before) {
       todayContent = `<div class="notice"><strong>Our Bible study journey begins on ${fmtDate(state.settings.startDate)}.</strong><br>Prepare your heart. Your first chapter will be <strong>Galatians 1</strong>.</div>`;
     } else if (s.after) {
-      todayContent = `<div class="notice"><strong>You have completed the Glory Carriers Bible Study Journey.</strong><br>Twenty chapters. One Word. A journey worth carrying forward.</div>`;
+      todayContent = `<div class="notice"><strong>You have completed the City on a Hill Bible Study Journey.</strong><br>Twenty chapters. One Word. A journey worth carrying forward.</div>`;
     } else {
       todayContent = `<div class="hero card ${todayComplete ? 'celebrate' : ''}"><div class="hero-content"><div class="hero-meta"><span class="chapter-badge">Day ${s.day}</span><span>${escapeHTML(s.current.book)}</span></div><h2>${escapeHTML(s.current.label)}</h2><p class="hero-focus">Today's focus: Read the chapter carefully and identify what stands out to you. Slow down enough to listen.</p><div class="btn-row"><button class="btn btn-primary" data-action="go-today">${todayComplete ? 'Open Today’s Study' : 'Start Today’s Study'}</button>${todayComplete ? '<span class="complete-badge">✓ Study completed</span>' : ''}</div></div></div>`;
     }
@@ -276,7 +276,7 @@
         <div class="stack">
           <section class="card"><div class="card-head"><div><h2>Today’s Check-in</h2><small>${s.current ? escapeHTML(s.current.label) : 'Study journey'}</small></div></div><div class="checklist">${checkItems.map((key,i)=>{const label=['I read today’s chapter','I reflected on what stood out','I shared my takeaway'][i]; const checked=checkStatus[key]; return `<label class="check ${checked?'checked':''}"><input type="checkbox" data-check="${key}" ${checked?'checked':''} ${!s.current?'disabled':''}><span>${label}</span></label>`}).join('')}</div>${s.current ? `<div style="margin-top:16px"><button class="btn ${todayComplete?'btn-secondary':'btn-primary'}" data-action="complete-today" ${todayComplete?'disabled':''}>${todayComplete?'Study completed':'Mark study complete'}</button></div>` : ''}</section>
           <section class="card"><div class="card-head"><h2>Journey Preview</h2><button class="btn btn-ghost" data-route="journey">View all</button></div>${renderJourneyPreview()}</section>
-          <section class="card"><div class="card-head"><div><h2>Today’s Glory Carriers</h2><small>${s.current ? escapeHTML(s.current.label) : 'Journey complete'}</small></div></div>${participation.length ? participation.map(m=>`<div class="reflection-item" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px"><strong>${escapeHTML(m.name)}</strong><span class="success">✓ Studied</span></div>`).join('') : `<div class="empty">No Glory Carriers have checked in yet today.</div>`}<p class="muted" style="margin:12px 0 0">${participation.length} Glory Carrier${participation.length===1?'':'s'} studied today.</p></section>
+          <section class="card"><div class="card-head"><div><h2>Today at City on a Hill</h2><small>${s.current ? escapeHTML(s.current.label) : 'Journey complete'}</small></div></div>${participation.length ? participation.map(m=>`<div class="reflection-item" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px"><strong>${escapeHTML(m.name)}</strong><span class="success">✓ Studied</span></div>`).join('') : `<div class="empty">No members have checked in yet today.</div>`}<p class="muted" style="margin:12px 0 0">${participation.length} member${participation.length===1?'':'s'} studied today.</p></section>
         </div>
       </div>${footer()}
     </div>`;
@@ -366,9 +366,9 @@
       <section class="card"><div class="card-head"><h2>Personal</h2></div><div class="stack"><div class="field"><label for="settings-name">Name</label><input class="input" id="settings-name" maxlength="40" value="${escapeHTML(currentMember().name)}"></div><button class="btn btn-primary" data-action="save-name">Save name</button><div class="field"><label for="start-date">Study start date</label><input class="input" id="start-date" type="date" value="${escapeHTML(s.startDate)}"><div class="field-help">Default: September 7, 2026.</div></div><button class="btn btn-primary" data-action="save-start">Save study date</button></div></section>
       <section class="card"><div class="card-head"><h2>Appearance</h2></div><div class="stack"><div class="field"><label for="theme-select">Theme</label><select class="select" id="theme-select"><option value="light" ${s.theme==='light'?'selected':''}>Light</option><option value="dark" ${s.theme==='dark'?'selected':''}>Dark</option></select></div><div class="field"><label for="font-size">Bible reader font size</label><input id="font-size" type="range" min="0.9" max="1.35" step="0.05" value="${s.fontSize}"><div id="font-size-value" class="field-help">${Math.round(s.fontSize/1.05*100)}%</div></div><label class="check"><input type="checkbox" id="notification-toggle" ${s.notifications?'checked':''}><span>Enable study reminder permission when supported</span></label></div></section>
       <section class="card"><div class="card-head"><h2>Backup</h2></div><p class="muted">Move your reflections, prayers, notes, bookmarks and progress to another device.</p><div class="btn-row"><button class="btn btn-primary" data-action="export-data">Export my data</button><button class="btn btn-secondary" data-action="import-data">Import data</button><input type="file" id="import-file" accept="application/json" hidden></div></section>
-      <section class="card"><div class="card-head"><h2>Group members</h2></div><p class="muted">Multiple Glory Carriers can share this device. Each member gets separate progress and reflections.</p><button class="btn btn-primary" data-action="manage-members">Manage members</button></section>
+      <section class="card"><div class="card-head"><h2>Group members</h2></div><p class="muted">Multiple members of City on a Hill can share this device. Each member gets separate progress and reflections.</p><button class="btn btn-primary" data-action="manage-members">Manage members</button></section>
       <section class="card"><div class="card-head"><h2>Notifications</h2></div><p class="muted">Browser notifications may require permission and may not display while the app is closed on every device. A service worker is included for offline app support.</p><button class="btn btn-secondary" data-action="request-notification">${s.notifications?'Notifications enabled':'Enable notifications'}</button></section>
-      <section class="card"><div class="card-head"><h2>About Glory Carriers</h2></div><p>“To know Christ, grow in His Word, and carry His glory into the world.”</p><p class="muted">One chapter. One day. One Word. Growing together.</p></section>
+      <section class="card"><div class="card-head"><h2>About The City on A Hill</h2></div><p>“To know Christ, grow in His Word, and carry His glory into the world.”</p><p class="muted">One chapter. One day. One Word. Growing together.</p></section>
       <section class="card"><div class="card-head"><h2 class="danger-text">Reset personal progress</h2></div><p class="muted">This clears the active member’s completed chapters, check-ins and reflections. It does not remove other members.</p><button class="btn btn-danger" data-action="reset-progress">Reset my progress</button></section>
     </div>${footer()}</div>`;
     bindPageEvents();
@@ -570,9 +570,9 @@
   }
 
   function exportData() {
-    const payload = { app: 'Glory Carriers', version: 1, exportedAt: new Date().toISOString(), data: state };
+    const payload = { app: 'The City on A Hill', version: 1, exportedAt: new Date().toISOString(), data: state };
     const blob = new Blob([JSON.stringify(payload,null,2)], {type:'application/json'});
-    const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href=url; a.download=`glory-carriers-backup-${dateKey()}.json`; a.click(); URL.revokeObjectURL(url); toast('Your backup file is ready.');
+    const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href=url; a.download=`the-city-on-a-hill-backup-${dateKey()}.json`; a.click(); URL.revokeObjectURL(url); toast('Your backup file is ready.');
   }
 
   async function importFileChanged(e) {
@@ -646,8 +646,8 @@
 
   function openMembersModal() {
     const cards=state.members.map(m=>`<div class="reflection-item" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px"><div><strong>${escapeHTML(m.name)}</strong><div class="muted">${m.id===state.activeMemberId?'Active member':''}</div></div><div class="btn-row"><button class="btn btn-secondary" data-member-switch="${m.id}">Select</button>${state.members.length>1?`<button class="btn btn-danger" data-member-delete="${m.id}">Delete</button>`:''}</div></div>`).join('');
-    modal('Glory Carriers on this device', `<div class="field"><label for="new-member">Add another member</label><input id="new-member" class="input" maxlength="40" placeholder="Enter name"></div><div style="margin-top:18px">${cards || '<div class="empty">No members yet.</div>'}</div>`, '<button class="btn btn-secondary" data-modal-close>Close</button><button class="btn btn-primary" id="add-member">Add member</button>');
-    $('#add-member').onclick=()=>{const name=$('#new-member').value.trim();if(!name)return toast('Enter a name first.','error');const m={id:uuid(),name};state.members.push(m);state.activeMemberId=m.id;save();closeModal();render();toast(`${name} added to Glory Carriers.`);};
+    modal('City on a Hill members on this device', `<div class="field"><label for="new-member">Add another member</label><input id="new-member" class="input" maxlength="40" placeholder="Enter name"></div><div style="margin-top:18px">${cards || '<div class="empty">No members yet.</div>'}</div>`, '<button class="btn btn-secondary" data-modal-close>Close</button><button class="btn btn-primary" id="add-member">Add member</button>');
+    $('#add-member').onclick=()=>{const name=$('#new-member').value.trim();if(!name)return toast('Enter a name first.','error');const m={id:uuid(),name};state.members.push(m);state.activeMemberId=m.id;save();closeModal();render();toast(`${name} added to City on a Hill.`);};
     $$('[data-member-switch]').forEach(b=>b.onclick=()=>{state.activeMemberId=b.dataset.memberSwitch;save();closeModal();render();toast('Profile switched.');});
     $$('[data-member-delete]').forEach(b=>b.onclick=()=>{const id=b.dataset.memberDelete;const m=state.members.find(x=>x.id===id);if(!m)return;showConfirm(`Delete ${m.name}?`,'This removes that member and their local data from this device.',()=>{state.members=state.members.filter(x=>x.id!==id);state.reflections=state.reflections.filter(x=>x.memberId!==id);state.prayers=state.prayers.filter(x=>x.memberId!==id);state.notes=state.notes.filter(x=>x.memberId!==id);state.bookmarks=state.bookmarks.filter(x=>x.memberId!==id);Object.keys(state.completed).filter(k=>k.startsWith(`${id}|`)).forEach(k=>delete state.completed[k]);Object.keys(state.checkins).filter(k=>k.startsWith(`${id}|`)).forEach(k=>delete state.checkins[k]);state.activeMemberId=state.members[0]?.id||null;save();closeModal();render();toast('Member deleted.');});});
   }

@@ -73,6 +73,7 @@ export function NotificationCenter({
   onMarkRead,
   onMarkAllRead,
   onDelete,
+  onDeleteAll,
   onArchive,
   formatDateTime
 }) {
@@ -181,12 +182,17 @@ export function NotificationCenter({
           )}
           <button
             type="button"
-            className="ghost-button compact danger"
+            className="ghost-button compact danger nc-delete-button"
+            aria-label={`Delete notification: ${notification.title || "Untitled notification"}`}
+            title="Delete notification"
             onClick={(event) => {
               event.stopPropagation();
               onDelete(notification.id);
             }}
           >
+            <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="M3.5 5.5h13M8 5.5V3.7h4v1.8m-6.8 0 .8 11h8l.8-11M8.2 8.5v5.3m3.6-5.3v5.3" />
+            </svg>
             Delete
           </button>
         </div>
@@ -224,6 +230,15 @@ export function NotificationCenter({
             {unreadCount > 0 ? (
               <button type="button" className="text-button" onClick={onMarkAllRead}>
                 Mark all read
+              </button>
+            ) : null}
+            {notifications.length > 0 ? (
+              <button
+                type="button"
+                className="ghost-button compact danger nc-clear-all"
+                onClick={onDeleteAll}
+              >
+                Clear all
               </button>
             ) : null}
             <button type="button" className="ghost-button" onClick={onClose}>

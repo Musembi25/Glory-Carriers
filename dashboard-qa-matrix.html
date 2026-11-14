@@ -1,0 +1,27 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Dashboard viewport checks</title>
+<style>body{font:16px/1.5 system-ui;padding:24px;color:#21172b}pre{white-space:pre-wrap}iframe{position:absolute;left:-10000px;top:0;border:0}body.single{margin:0;padding:0;background:#f4f1f6}body.single h1,body.single pre{display:none}body.single iframe{position:static;display:block;margin:0 auto}</style></head><body><h1>Responsive layout checks</h1><pre id="results">Waiting for dashboard viewports…</pre>
+<script>
+const params = new URLSearchParams(location.search);
+const isSingle = params.has('width');
+const widths = isSingle ? [Number(params.get('width'))] : [360, 390, 430, 768, 1024, 1366, 1920];
+const themes = isSingle ? [params.get('theme') || 'dark'] : ['light', 'dark'];
+if (isSingle) document.body.classList.add('single');
+const expected = widths.length * themes.length;
+const received = [];
+const results = document.querySelector('#results');
+window.addEventListener('message', (event) => {
+  if (!String(event.data).startsWith('QA ')) return;
+  received.push(String(event.data).replace(/^QA /, ''));
+  results.textContent = received.sort().join('\n');
+  if (received.length === expected) document.title = `QA MATRIX complete (${received.length}/${expected}) | ${received.sort().join(' | ')}`;
+});
+for (const theme of themes) for (const width of widths) {
+  const frame = document.createElement('iframe');
+  frame.title = `${theme} ${width}px`;
+  frame.style.width = `${width}px`;
+  frame.style.height = isSingle ? '2500px' : '2200px';
+  frame.src = `dashboard-qa-preview.html?theme=${theme}`;
+  document.body.append(frame);
+}
+setTimeout(() => { if (received.length !== expected) document.title = `QA MATRIX incomplete (${received.length}/${expected})`; }, 8000);
+</script></body></html>

@@ -1,6 +1,6 @@
-# GLORY CARRIERS — Daily Bible Study
+# The City on A Hill — Daily Bible Study
 
-A vanilla HTML5/CSS3/JavaScript Progressive Web App for the Glory Carriers cell group.
+A vanilla HTML5/CSS3/JavaScript Progressive Web App for the City on a Hill cell group.
 
 ## Run locally
 

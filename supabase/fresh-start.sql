@@ -1,4 +1,4 @@
--- Glory Carriers fresh start
+-- The City on A Hill fresh start
 -- Use this only when you want to wipe the current app setup and begin again.
 -- After running this file, immediately run `supabase/schema.sql`.
 
@@ -9,8 +9,8 @@ drop trigger if exists on_auth_user_updated on auth.users;
 
 delete from auth.users;
 
-delete from storage.objects where bucket_id = 'avatars';
-delete from storage.buckets where id = 'avatars';
+delete from storage.objects where bucket_id in ('avatars', 'member-record-photos', 'profile-photos');
+delete from storage.buckets where id in ('avatars', 'member-record-photos', 'profile-photos');
 
 drop table if exists public.messages cascade;
 drop table if exists public.idea_votes cascade;

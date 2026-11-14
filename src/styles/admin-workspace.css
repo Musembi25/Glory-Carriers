@@ -1,0 +1,106 @@
+.app-shell.admin-workspace {
+  --admin-workspace-nav-height: 4.55rem;
+  display: block;
+  min-height: 100dvh;
+  padding: 0;
+  overflow-x: clip;
+  background: var(--background);
+}
+
+:root[data-theme="dark"] .app-shell.admin-workspace { color-scheme: dark; }
+
+.admin-workspace .main-content { display: grid; grid-column: auto; grid-row: auto; width: 100%; max-width: none; min-width: 0; min-height: calc(100dvh - var(--admin-workspace-nav-height)); margin: 0; padding: clamp(1rem, 2vw, 1.7rem) clamp(1rem, 2.3vw, 2.4rem) 2.5rem; gap: var(--s2); }
+.admin-workspace .main-content,
+.admin-workspace .section-stage,
+.admin-workspace .app-footer { color: var(--text); background-color: var(--background); }
+.admin-workspace .main-content.main-content--management { width: 100%; max-width: none; padding: 0; gap: 0; }
+.admin-workspace .main-content > .mobile-app-header,.admin-workspace .main-content > .topbar { display: none; }
+.admin-workspace .section-stage { width: 100%; min-width: 0; max-width: none; transform: none; animation: none; }
+.admin-workspace .app-footer { width: 100%; max-width: none; margin: 0; padding: 0 clamp(1rem, 2.3vw, 2.4rem) 1rem; }
+.admin-workspace .cgm-root { --cgm-surface: var(--surface-strong); --cgm-surface-2: var(--background); --cgm-surface-3: var(--surface-muted); --cgm-border: var(--border); --cgm-text: var(--text); --cgm-text-muted: var(--text-muted); }
+:root[data-theme="dark"] .admin-workspace .cgm-root { --cgm-charcoal: var(--color-background); --cgm-graphite: var(--color-surface); --cgm-slate: var(--color-surface-secondary); --cgm-surface: var(--surface-strong); --cgm-surface-2: var(--background); --cgm-surface-3: var(--surface-muted); --cgm-border: var(--border); --cgm-text: var(--text); --cgm-text-muted: var(--text-muted); }
+.admin-workspace .cgm-admin-workspace { grid-template-columns: minmax(0, 1fr); gap: .85rem; }
+.admin-workspace .cgm-admin-nav.cgm-tabs { position: sticky; top: var(--admin-workspace-nav-height); z-index: 24; display: flex; flex-direction: row; align-items: center; flex-wrap: wrap; gap: .35rem; margin: 0; padding: .55rem; border-color: var(--cgm-border); background: var(--cgm-surface); box-shadow: 0 6px 18px color-mix(in srgb, var(--text) 5%, transparent); }
+.admin-workspace .cgm-admin-nav-heading { display: none; }
+.admin-workspace .cgm-admin-nav .cgm-tab { display: inline-flex; flex: 0 1 auto; align-items: center; justify-content: center; width: auto; min-height: 2.5rem; padding: .55rem .78rem; text-align: center; }
+.admin-workspace .cgm-admin-content-heading { margin-bottom: .9rem; }
+.admin-workspace .cgm-form-overlay { inset: var(--admin-workspace-nav-height) 0 0; z-index: 220; }
+.admin-workspace .cgm-form-overlay .cgm-member-registration-shell { min-height: calc(100dvh - var(--admin-workspace-nav-height)); }
+.admin-workspace .cgm-form-overlay .cgm-form-sheet-header,
+.admin-workspace .cgm-form-overlay .cgm-member-registration-footer { padding-inline: max(1rem, calc((100vw - 90rem) / 2)); }
+.admin-workspace .cgm-form-overlay .cgm-form-sheet-scroll { width: min(100%, 90rem); }
+.admin-workspace .cgm-form-overlay .cgm-form-section { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; gap: .9rem 1rem; }
+.admin-workspace .cgm-form-overlay .cgm-form-section > h4,
+.admin-workspace .cgm-form-overlay .cgm-form-section > .cgm-form-section-hint,
+.admin-workspace .cgm-form-overlay .cgm-form-section > .cgm-form-grid,
+.admin-workspace .cgm-form-overlay .cgm-form-section > .cgm-dept-grid,
+.admin-workspace .cgm-form-overlay .cgm-form-section > .cgm-radio-group,
+.admin-workspace .cgm-form-overlay .cgm-form-section > .cgm-search-results,
+.admin-workspace .cgm-form-overlay .cgm-form-section:has(.cgm-search-results) > .cgm-field { grid-column: 1 / -1; }
+.admin-workspace .cgm-form-overlay .cgm-form-section > .cgm-field { margin: 0; }
+.admin-workspace .cgm-form-overlay .cgm-form-section > .cgm-field:only-of-type { grid-column: 1 / -1; }
+.admin-workspace .cgm-form-overlay .cgm-form-section > h4 { margin: 0; }
+.admin-workspace .cgm-form-overlay .cgm-field input,
+.admin-workspace .cgm-form-overlay .cgm-field select,
+.admin-workspace .cgm-form-overlay .cgm-field textarea { border-color: color-mix(in srgb, var(--cgm-border) 84%, var(--cgm-text) 16%); background: var(--cgm-surface); color: var(--cgm-text); }
+.admin-workspace .cgm-form-overlay .cgm-field input::placeholder,
+.admin-workspace .cgm-form-overlay .cgm-field textarea::placeholder { color: var(--cgm-text-muted); opacity: 1; }
+.admin-workspace .cgm-profile-workspace { inset: 0; z-index: 220; align-items: center; justify-content: center; padding: clamp(1rem, 3vh, 2rem); overflow: hidden; background: rgba(8, 10, 16, .58); backdrop-filter: blur(7px); }
+.admin-workspace .cgm-profile-workspace .cgm-view-drawer { width: min(100%, 56rem); max-width: 56rem; height: min(100%, 54rem); max-height: calc(100dvh - 2 * clamp(1rem, 3vh, 2rem)); min-height: 0; overflow: hidden; border: 1px solid var(--cgm-border); border-radius: 1.15rem; background: var(--cgm-surface); box-shadow: var(--cgm-shadow-lg); animation: cgm-slide-up .22s ease; }
+.admin-workspace .cgm-profile-workspace .cgm-profile-drawer-header { position: relative; top: auto; z-index: 2; background: var(--cgm-surface); }
+.admin-workspace .cgm-profile-workspace .cgm-drawer-body { width: 100%; min-height: 0; margin: 0; padding: clamp(1rem, 2.5vw, 1.8rem); }
+.admin-workspace .cgm-profile-workspace .cgm-profile-footer { padding-inline: clamp(1rem, 2.5vw, 1.8rem); }
+.admin-workspace .cgm-profile-card-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.admin-workspace .cgm-profile-info-card { background: var(--cgm-surface); }
+.admin-workspace .cgm-profile-info-card strong { white-space: pre-wrap; }
+.admin-workspace .super-admin-page { width: 100%; max-width: none; margin: 0; padding: 0; }
+.admin-workspace .birthday-management { width: 100%; max-width: none; margin: 0; padding: clamp(.8rem, 1.4vw, 1.35rem) 0; }
+.admin-workspace .section-stage::before { display: none; }
+.admin-workspace .section-art-strip { display: none; }
+.admin-workspace .workspace-page--dashboard { border-color: var(--border); background: var(--surface-strong); box-shadow: 0 14px 34px color-mix(in srgb, var(--text) 5%, transparent); }
+.admin-workspace .workspace-page--dashboard::after { opacity: 1; filter: none; background-image: linear-gradient(135deg, color-mix(in srgb, var(--surface-strong) 86%, transparent), color-mix(in srgb, var(--surface-strong) 68%, transparent)), var(--dashboard-art); }
+:root[data-theme="dark"] .admin-workspace .workspace-page--dashboard::after { background-image: linear-gradient(135deg, color-mix(in srgb, var(--surface-strong) 88%, transparent), color-mix(in srgb, var(--surface-strong) 76%, transparent)), var(--dashboard-art); }
+.admin-workspace input::placeholder,
+.admin-workspace textarea::placeholder { color: var(--text-muted); opacity: 1; }
+.admin-workspace button:disabled,
+.admin-workspace input:disabled,
+.admin-workspace select:disabled,
+.admin-workspace textarea:disabled { cursor: not-allowed; opacity: .66; }
+.admin-workspace .dashboard-partner-identity .identity { width: 100%; height: 100%; border: 0; }
+.admin-workspace .dashboard-community-photo-fallback { display: grid; min-width: 0; min-height: 0; place-items: center; padding: .25rem; color: var(--text-muted); background: var(--surface-muted); font-size: .62rem; font-weight: 650; text-align: center; }
+.admin-workspace .dashboard-community-photo-gallery.photo-count-3 .dashboard-community-photo-fallback:first-child { grid-row: span 2; }
+.admin-workspace .pulse-media-stage-fallback { display: grid; width: 100%; height: 100%; min-height: 12rem; place-items: center; padding: 1.25rem; color: var(--text-muted); background: var(--surface-muted); font-size: .85rem; text-align: center; }
+.admin-workspace .pulse-viewer-stage-fallback { display: grid; width: min(100%, 32rem); min-height: 14rem; place-items: center; padding: 2rem; border: 1px dashed var(--border); border-radius: var(--radius-lg); color: var(--text-muted); background: var(--surface-strong); text-align: center; }
+
+@media (max-width: 600px) {
+  .admin-workspace .main-content { padding: .85rem .75rem 2rem; }
+  .admin-workspace .main-content.main-content--management { padding: 0; }
+  .admin-workspace .app-footer { padding-inline: .75rem; }
+}
+
+@media (max-width: 760px) {
+  .admin-workspace .cgm-admin-nav.cgm-tabs { position: static; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .admin-workspace .cgm-admin-nav .cgm-tab { width: 100%; min-width: 0; justify-content: space-between; }
+  .admin-workspace .cgm-profile-card-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 600px) {
+  .admin-workspace .cgm-profile-workspace { align-items: stretch; padding: 0; }
+  .admin-workspace .cgm-profile-workspace .cgm-view-drawer { width: 100%; max-width: none; height: 100%; max-height: 100%; border: 0; border-radius: 0; }
+  .admin-workspace .cgm-profile-workspace .cgm-profile-drawer-header { padding-top: max(1rem, env(safe-area-inset-top)); }
+  .admin-workspace .cgm-profile-workspace .cgm-drawer-body { padding: 1rem .85rem; }
+  .admin-workspace .cgm-profile-workspace .cgm-profile-footer { padding: .65rem .85rem calc(.75rem + env(safe-area-inset-bottom)); }
+  .admin-workspace .cgm-form-overlay .cgm-form-section { grid-template-columns: minmax(0, 1fr); gap: .8rem; }
+  .admin-workspace .cgm-form-overlay .cgm-form-section > * { grid-column: 1; }
+  .admin-workspace .cgm-form-overlay .cgm-form-section > .cgm-form-section-hint,
+  .admin-workspace .cgm-form-overlay .cgm-form-section > .cgm-form-grid,
+  .admin-workspace .cgm-form-overlay .cgm-form-section > .cgm-dept-grid,
+  .admin-workspace .cgm-form-overlay .cgm-form-section > .cgm-radio-group,
+  .admin-workspace .cgm-form-overlay .cgm-form-section > .cgm-search-results,
+  .admin-workspace .cgm-form-overlay .cgm-form-section:has(.cgm-search-results) > .cgm-field { grid-column: 1; }
+  .admin-workspace .cgm-profile-card-grid { grid-template-columns: minmax(0, 1fr); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .admin-workspace-link,.admin-workspace-mobile-menu { animation: none; transition: none; }
+}

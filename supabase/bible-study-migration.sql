@@ -64,7 +64,9 @@ create policy "bible_completions_self_insert" on public.bible_study_completions 
 create policy "bible_takeaways_select" on public.bible_study_takeaways for select to authenticated using (public.is_active_user());
 create policy "bible_takeaways_self_write" on public.bible_study_takeaways for all to authenticated using (public.is_admin() or user_id = auth.uid()) with check (public.is_admin() or user_id = auth.uid());
 create policy "bible_reactions_select" on public.bible_study_takeaway_reactions for select to authenticated using (public.is_active_user());
-create policy "bible_reactions_self_write" on public.bible_study_takeaway_reactions for all to authenticated using (public.is_admin() or user_id = auth.uid()) with check (public.is_admin() or user_id = auth.uid());
+create policy "bible_reactions_self_write" on public.bible_study_takeaway_reactions for all to authenticated using (public.is_active_user() and (public.is_admin() or user_id = auth.uid())) with check (public.is_active_user() and (public.is_admin() or user_id = auth.uid()));
+revoke all on public.bible_study_takeaway_reactions from anon;
+grant select, insert, update, delete on public.bible_study_takeaway_reactions to authenticated;
 
 -- Safe upgrade for installations that ran an earlier version of this migration.
 alter table public.bible_study_takeaway_reactions drop constraint if exists bible_study_takeaway_reactions_reaction_check;
@@ -161,6 +163,10 @@ create policy "bible_question_answers_self_write" on public.bible_study_question
 -- for members who are already on the Bible Study page.
 do $$
 begin
+  if exists (select 1 from pg_publication where pubname = 'supabase_realtime')
+     and not exists (select 1 from pg_publication_tables where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'bible_study_takeaway_reactions') then
+    alter publication supabase_realtime add table public.bible_study_takeaway_reactions;
+  end if;
   if not exists (select 1 from pg_publication_tables where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'bible_study_takeaway_replies') then
     alter publication supabase_realtime add table public.bible_study_takeaway_replies;
   end if;

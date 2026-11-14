@@ -68,10 +68,12 @@ create policy "bible_audio_update_owner" on storage.objects
 for update to authenticated
 using (
   bucket_id = 'bible-study-audio'
+  and public.is_active_user()
   and ((storage.foldername(name))[1] = auth.uid()::text or public.is_admin())
 )
 with check (
   bucket_id = 'bible-study-audio'
+  and public.is_active_user()
   and ((storage.foldername(name))[1] = auth.uid()::text or public.is_admin())
 );
 
@@ -80,5 +82,6 @@ create policy "bible_audio_delete_owner" on storage.objects
 for delete to authenticated
 using (
   bucket_id = 'bible-study-audio'
+  and public.is_active_user()
   and ((storage.foldername(name))[1] = auth.uid()::text or public.is_admin())
 );

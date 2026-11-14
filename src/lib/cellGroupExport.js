@@ -1,11 +1,12 @@
 import {
   buildMemberExportRow,
   getDiscipleshipLabel,
+  formatMemberBirthday,
   getMembershipStatusMeta,
   MONTHS
 } from "./cellGroupManagement.js";
-
-const groupLogo = `${import.meta.env.BASE_URL}icons/icon-512.png`;
+import groupLogo from "../../logo.png";
+import { APP_NAME, CELL_GROUP_NAME } from "./identity.js";
 
 function reportDate() {
   return new Intl.DateTimeFormat(undefined, { day: "2-digit", month: "long", year: "numeric" }).format(new Date());
@@ -16,11 +17,30 @@ function reportDateStamp() {
 }
 
 function reportFileName(filtered = false, extension) {
-  return `Glory-Carriers-Membership-Report${filtered ? "-Filtered" : ""}-${reportDateStamp()}.${extension}`;
+  return `City-on-a-Hill-Membership-Report${filtered ? "-Filtered" : ""}-${reportDateStamp()}.${extension}`;
 }
 
 function reportRows(members, fields) {
   return members.map((member, index) => ({ "#": index + 1, ...buildMemberExportRow(member, fields) }));
+}
+
+function downloadBlob(blob, fileName) {
+  if (!(blob instanceof Blob) || !blob.size) {
+    throw new Error("The report file could not be generated.");
+  }
+  if (typeof document === "undefined" || !document.body) {
+    throw new Error("Downloads are only available in a browser.");
+  }
+
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = fileName;
+  link.style.display = "none";
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  window.setTimeout(() => URL.revokeObjectURL(url), 30_000);
 }
 
 function isFilteredReport(filters) {
@@ -48,7 +68,7 @@ export async function exportMembersExcel({ members, fields, groupName, filters }
   const title = filtered ? "FILTERED MEMBERSHIP REPORT" : "MEMBERSHIP REPORT";
 
   XLSX.utils.sheet_add_aoa(worksheet, [
-    [(groupName || "Glory Carriers").toUpperCase()],
+    [(groupName || CELL_GROUP_NAME).toUpperCase()],
     [title],
     [`Generated: ${reportDate()}`],
     [`Total Members: ${members.length}`],
@@ -81,9 +101,10 @@ export async function exportMembersExcel({ members, fields, groupName, filters }
     });
   });
 
-  worksheet["!cols"] = headers.map((header) => ({
-    wch: Math.min(34, Math.max(12, header.length + 3, ...rows.map((row) => String(row[header] ?? "").length + 2)))
-  }));
+  worksheet["!cols"] = headers.map((header) => {
+    const longestValue = rows.reduce((longest, row) => Math.max(longest, String(row[header] ?? "").length), 0);
+    return { wch: Math.min(34, Math.max(12, header.length + 3, longestValue + 2)) };
+  });
   worksheet["!rows"] = [{ hpt: 25 }, { hpt: 18 }, { hpt: 16 }, { hpt: 16 }, { hpt: 8 }, { hpt: 8 }, { hpt: 30 }];
   worksheet["!merge"] = ["A1", "A2", "A3", "A4"].map((cell) => {
     const row = XLSX.utils.decode_cell(cell).r;
@@ -97,9 +118,13 @@ export async function exportMembersExcel({ members, fields, groupName, filters }
   worksheet["!printArea"] = `A1:${XLSX.utils.encode_col(headers.length - 1)}${Math.max(7, rows.length + 7)}`;
 
   const workbook = XLSX.utils.book_new();
-  workbook.Props = { Title: `${groupName || "Glory Carriers"} Membership Report`, Author: "Glory Carriers", CreatedDate: new Date() };
+  workbook.Props = { Title: `${groupName || CELL_GROUP_NAME} Membership Report`, Author: APP_NAME, CreatedDate: new Date() };
   XLSX.utils.book_append_sheet(workbook, worksheet, "Membership Report");
-  XLSX.writeFile(workbook, reportFileName(filtered, "xlsx"));
+  const file = XLSX.write(workbook, { bookType: "xlsx", type: "array", compression: true });
+  downloadBlob(
+    new Blob([file], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" }),
+    reportFileName(filtered, "xlsx")
+  );
 }
 
 export async function exportMembersPdf({ members, fields, groupName, filters }) {
@@ -126,14 +151,14 @@ export async function exportMembersPdf({ members, fields, groupName, filters }) 
     doc.setFont("helvetica", "bold");
     doc.setFontSize(14);
     doc.setTextColor(255, 255, 255);
-    doc.text((groupName || "Glory Carriers").toUpperCase(), logo ? 88 : margin, 33);
+    doc.text((groupName || CELL_GROUP_NAME).toUpperCase(), logo ? 88 : margin, 33);
     doc.setFont("helvetica", "normal");
     doc.setFontSize(8);
     doc.setTextColor(253, 186, 116);
     doc.text(title, logo ? 88 : margin, 48);
     doc.setFontSize(8);
     doc.setTextColor(100, 116, 139);
-    doc.text("GLORY CARRIERS", margin, pageHeight - 22);
+    doc.text(APP_NAME.toUpperCase(), margin, pageHeight - 22);
     doc.text(`Page ${pageNumber}${pageCount ? ` of ${pageCount}` : ""}`, pageWidth - margin, pageHeight - 22, { align: "right" });
   };
 
@@ -176,10 +201,10 @@ export async function exportMembersPdf({ members, fields, groupName, filters }) 
     doc.setFont("helvetica", "normal");
     doc.setFontSize(8);
     doc.setTextColor(100, 116, 139);
-    doc.text("GLORY CARRIERS", margin, pageHeight - 22);
+    doc.text(APP_NAME.toUpperCase(), margin, pageHeight - 22);
     doc.text(`Page ${page} of ${pageCount}`, pageWidth - margin, pageHeight - 22, { align: "right" });
   }
-  doc.save(reportFileName(filtered, "pdf"));
+  downloadBlob(doc.output("blob"), reportFileName(filtered, "pdf"));
 }
 
 function safeFilePart(value) {
@@ -229,7 +254,7 @@ function profileDepartments(member) {
 }
 
 /** Generates an official single-member profile; it intentionally never uses list export rows. */
-export async function exportMemberProfilePdf({ member, groupName = "Glory Carriers" }) {
+export async function exportMemberProfilePdf({ member, groupName = CELL_GROUP_NAME }) {
   const { jsPDF } = await import("jspdf");
   const doc = new jsPDF({ unit: "pt", format: "a4" });
   const pageWidth = doc.internal.pageSize.getWidth();
@@ -240,9 +265,8 @@ export async function exportMemberProfilePdf({ member, groupName = "Glory Carrie
   const muted = [100, 116, 139];
   const name = member.profile?.full_name?.trim() || "Member";
   const logo = await imageAsDataUrl(groupLogo);
-  const photo = await imageAsDataUrl(member.profile?.avatar_url);
 
-  // Header — uses the existing Glory Carriers orange/charcoal palette and logo asset.
+  // Header — uses the existing brand palette and unchanged logo asset.
   doc.setFillColor(...charcoal);
   doc.rect(0, 0, pageWidth, 150, "F");
   doc.setFillColor(...orange);
@@ -251,7 +275,7 @@ export async function exportMemberProfilePdf({ member, groupName = "Glory Carrie
   doc.setFont("helvetica", "bold");
   doc.setFontSize(19);
   doc.setTextColor(255, 255, 255);
-  doc.text((groupName || "Glory Carriers").toUpperCase(), logo ? 114 : margin, 58);
+  doc.text((groupName || CELL_GROUP_NAME).toUpperCase(), logo ? 114 : margin, 58);
   doc.setFont("helvetica", "normal");
   doc.setFontSize(9);
   doc.setTextColor(253, 186, 116);
@@ -259,11 +283,8 @@ export async function exportMemberProfilePdf({ member, groupName = "Glory Carrie
   doc.setFont("helvetica", "bold");
   doc.setFontSize(25);
   doc.setTextColor(255, 255, 255);
-  const nameLines = doc.splitTextToSize(name, pageWidth - margin * 2 - (photo ? 104 : 0));
+  const nameLines = doc.splitTextToSize(name, pageWidth - margin * 2);
   doc.text(nameLines, margin, 115);
-  if (photo) {
-    try { doc.addImage(photo, "PNG", pageWidth - margin - 76, 45, 76, 76); } catch { /* photo is optional */ }
-  }
 
   let y = 184;
   const cardGap = 12;
@@ -308,7 +329,7 @@ export async function exportMemberProfilePdf({ member, groupName = "Glory Carrie
 
   drawSection("Personal information", [
     { label: "Full name", value: name },
-    { label: "Date of birth", value: profileDate(member.date_of_birth) },
+    { label: "Birthday", value: formatMemberBirthday(member) },
     { label: "Favorite food", value: member.favorite_food?.trim() || "" }
   ]);
   drawSection("Membership information", [
@@ -332,9 +353,9 @@ export async function exportMemberProfilePdf({ member, groupName = "Glory Carrie
     doc.setFont("helvetica", "bold");
     doc.setFontSize(8);
     doc.setTextColor(...muted);
-    doc.text((groupName || "Glory Carriers").toUpperCase(), margin, pageHeight - 20);
+    doc.text((groupName || CELL_GROUP_NAME).toUpperCase(), margin, pageHeight - 20);
     doc.setFont("helvetica", "normal");
     doc.text(`Page ${page} of ${total}`, pageWidth - margin, pageHeight - 20, { align: "right" });
   }
-  doc.save(`Glory-Carriers-${safeFilePart(name)}-Profile.pdf`);
+  doc.save(`City-on-a-Hill-${safeFilePart(name)}-Profile.pdf`);
 }

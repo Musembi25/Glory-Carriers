@@ -1,5 +1,5 @@
 {
-  "name": "glory-carriers",
+  "name": "the-city-on-a-hill",
   "private": true,
   "version": "0.1.0",
   "type": "module",
@@ -7,7 +7,8 @@
     "dev": "vite",
     "build": "vite build",
     "generate:icons": "powershell -ExecutionPolicy Bypass -File scripts/generate-pwa-icons.ps1",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test": "node --test"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.50.0",

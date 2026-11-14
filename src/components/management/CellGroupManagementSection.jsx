@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-const groupLogo = `${import.meta.env.BASE_URL}icons/icon-512.png`;
+import groupLogo from "../../../logo.png";
 import { supabase } from "../../lib/supabase";
+import { APP_NAME, CELL_GROUP_NAME } from "../../lib/identity";
 import { exportMemberProfilePdf, exportMembersExcel, exportMembersPdf } from "../../lib/cellGroupExport";
 import {
   DEPARTMENTS,
@@ -9,22 +10,25 @@ import {
   EXPORT_FIELDS,
   MANAGEMENT_TABS,
   emptyMemberForm,
+  buildMemberPayload,
   filterMembers,
   formatDate,
   formatDepartments,
+  formatMemberBirthday,
   formatJoinedDate,
   formatRelativeTime,
   formsAreEqual,
+  getBirthdayOccurrence,
   getDepartmentChips,
   getInitials,
   getMembershipStatusMeta,
-  isCurrentMember,
+  normalizeMembershipStatus,
   memberToForm,
   normalizeDiscipleshipStatus,
-  optimizeImage,
   validateMemberForm
 } from "../../lib/cellGroupManagement";
 import { MemberFormSheet } from "./MemberFormSheet";
+import { MemberInitials as SharedMemberIdentity } from "../MemberInitials.jsx";
 
 function Icon({ name, size = 16 }) {
   const props = {
@@ -45,6 +49,13 @@ function Icon({ name, size = 16 }) {
         <svg {...props}>
           <circle cx="11" cy="11" r="7" />
           <path d="m20 20-3.5-3.5" />
+        </svg>
+      );
+    case "calendar":
+      return (
+        <svg {...props}>
+          <rect x="3.5" y="5" width="17" height="15.5" rx="2.5" />
+          <path d="M7.5 3.5v3M16.5 3.5v3M3.5 9.5h17" />
         </svg>
       );
     case "plus":
@@ -158,19 +169,11 @@ function Icon({ name, size = 16 }) {
   }
 }
 
-function MemberAvatar({ profile, size = "" }) {
-  const name = profile?.full_name || profile?.email || "?";
-  if (profile?.avatar_url) {
-    return <img src={profile.avatar_url} alt="" className={`cgm-avatar ${size}`} />;
-  }
-  return (
-    <div className={`cgm-avatar fallback ${size}`} aria-label="No photo">
-      {getInitials(name)}
-    </div>
-  );
+function MemberIdentity({ profile, size = "" }) {
+  return <SharedMemberIdentity member={profile} className={`cgm-identity fallback ${size}`} />;
 }
 
-function ActionMenu({ member, onView, onEdit, onDownload, onRemove }) {
+function ActionMenu({ member, onView, onEdit, onDownload, onRemove, canEdit }) {
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
 
@@ -190,9 +193,9 @@ function ActionMenu({ member, onView, onEdit, onDownload, onRemove }) {
       {open ? (
         <div className="cgm-action-menu">
           <button type="button" onClick={() => { setOpen(false); onView(member); }}><Icon name="eye" size={14} /> View</button>
-          <button type="button" onClick={() => { setOpen(false); onEdit(member); }}><Icon name="edit" size={14} /> Edit</button>
+          {canEdit ? <button type="button" onClick={() => { setOpen(false); onEdit(member); }}><Icon name="edit" size={14} /> Edit</button> : null}
           <button type="button" onClick={() => { setOpen(false); onDownload(member); }}><Icon name="download" size={14} /> Download PDF</button>
-          <button type="button" className="danger" onClick={() => { setOpen(false); onRemove(member); }}><Icon name="trash" size={14} /> Remove</button>
+          {canEdit ? <button type="button" className="danger" onClick={() => { setOpen(false); onRemove(member); }}><Icon name="trash" size={14} /> Remove from Membership</button> : null}
         </div>
       ) : null}
     </div>
@@ -217,16 +220,18 @@ function ToastStack({ toasts, onDismiss }) {
 }
 
 function ReportsExportCenter({ groupName, members, exporting, onExport, isFiltered, memberName, onMemberNameChange }) {
-  const active = members.filter((member) => member.membership_status === "active").length;
-  const temporarilyInactive = members.filter((member) => member.membership_status === "temporarily_inactive").length;
+  const active = members.filter((member) => normalizeMembershipStatus(member.membership_status) === "active").length;
+  const prospective = members.filter((member) => normalizeMembershipStatus(member.membership_status) === "prospective").length;
+  const pending = members.filter((member) => normalizeMembershipStatus(member.membership_status) === "pending").length;
+  const inactive = members.filter((member) => normalizeMembershipStatus(member.membership_status) === "inactive").length;
 
   return (
     <section className="cgm-reports" aria-label="Membership reports and exports">
       <div className="cgm-reports-heading">
         <div className="cgm-reports-brand">
-          <img src={groupLogo} alt="Glory Carriers logo" />
+          <img src={groupLogo} alt="Soldout Ministry logo" />
           <div>
-            <p>GLORY CARRIERS</p>
+            <p>{CELL_GROUP_NAME.toUpperCase()}</p>
             <h4>Membership Reports</h4>
           </div>
         </div>
@@ -244,20 +249,22 @@ function ReportsExportCenter({ groupName, members, exporting, onExport, isFilter
             aria-label="Member full name for report"
           />
         </div>
-        <small>{memberName.trim() ? `Preparing a report for matching members in ${groupName || "this cell group"}.` : "Leave blank to include all current members."}</small>
+        <small>{memberName.trim() ? `Preparing a report for matching records in ${groupName || "this cell group"}.` : "Leave blank to include all member records."}</small>
       </label>
       <div className="cgm-reports-summary" aria-label="Current report summary">
-        <div><span>Current Members</span><strong>{members.length}</strong></div>
+        <div><span>Records</span><strong>{members.length}</strong></div>
         <div><span>Active</span><strong>{active}</strong></div>
-        <div><span>Temporarily Inactive</span><strong>{temporarilyInactive}</strong></div>
-        {isFiltered ? <span className="cgm-reports-filter-note">Filtered membership report</span> : <span className="cgm-reports-filter-note">All current members</span>}
+        <div><span>Prospective</span><strong>{prospective}</strong></div>
+        <div><span>Pending</span><strong>{pending}</strong></div>
+        <div><span>Inactive</span><strong>{inactive}</strong></div>
+        {isFiltered ? <span className="cgm-reports-filter-note">Filtered membership report</span> : <span className="cgm-reports-filter-note">All member records</span>}
       </div>
       <div className="cgm-report-card-grid">
         <article className="cgm-report-card">
           <div className="cgm-report-card-icon"><Icon name="file-pdf" size={20} /></div>
           <div className="cgm-report-card-copy">
             <h5>Membership PDF Report</h5>
-            <p>Generate a professionally formatted report containing the current membership records.</p>
+            <p>Generate a professionally formatted report containing the selected membership records.</p>
           </div>
           <button type="button" className="cgm-btn cgm-btn-report" disabled={!!exporting || !members.length} onClick={() => void onExport("pdf")}>
             <Icon name="download" /> {exporting === "pdf" ? "Preparing Membership Report..." : "Download PDF"}
@@ -274,7 +281,7 @@ function ReportsExportCenter({ groupName, members, exporting, onExport, isFilter
           </button>
         </article>
       </div>
-      {members.length === 0 ? <p className="cgm-reports-empty">There are no current members in this report selection.</p> : null}
+      {members.length === 0 ? <p className="cgm-reports-empty">There are no records in this report selection.</p> : null}
     </section>
   );
 }
@@ -283,7 +290,8 @@ export function CellGroupManagementSection({
   user,
   isAdmin,
   profiles,
-  onNavigateSection
+  groupId = "",
+  isSuperAdmin = false
 }) {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
@@ -293,12 +301,15 @@ export function CellGroupManagementSection({
   const [joinRequests, setJoinRequests] = useState([]);
   const [rules, setRules] = useState([]);
   const [activityLog, setActivityLog] = useState([]);
+  const [groupAdmins, setGroupAdmins] = useState([]);
+  const [selectedAdminId, setSelectedAdminId] = useState("");
   const [activeTab, setActiveTab] = useState("overview");
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [deptFilter, setDeptFilter] = useState("all");
   const [discFilter, setDiscFilter] = useState("all");
   const [yearFilter, setYearFilter] = useState("all");
+  const [birthdayFilter, setBirthdayFilter] = useState("all");
   const [sortBy, setSortBy] = useState("name_asc");
   const [memberFormMode, setMemberFormMode] = useState(null);
   const [memberForm, setMemberForm] = useState(emptyMemberForm());
@@ -308,60 +319,79 @@ export function CellGroupManagementSection({
   const [viewMember, setViewMember] = useState(null);
   const [showDiscardConfirm, setShowDiscardConfirm] = useState(false);
   const [confirmRemove, setConfirmRemove] = useState(null);
+  const [memberFeedback, setMemberFeedback] = useState(null);
   const [exporting, setExporting] = useState(null);
   const [toasts, setToasts] = useState([]);
   const [userSearch, setUserSearch] = useState("");
   const [editingRule, setEditingRule] = useState(null);
   const [ruleForm, setRuleForm] = useState({ title: "", content: "" });
   const [groupForm, setGroupForm] = useState(null);
-  const photoInputRef = useRef(null);
+  const memberSaveInProgressRef = useRef(false);
+  const memberRemovalInProgressRef = useRef(false);
+  const memberFeedbackButtonRef = useRef(null);
 
-  const canManage = isAdmin || cellGroup?.leader_id === user?.id;
+  const canManage = (isAdmin && Boolean(cellGroup?.id)) || cellGroup?.leader_id === user?.id;
+  const canEditGroupSettings = Boolean(cellGroup) && (!cellGroup.management_only || isSuperAdmin);
   const profileMap = useMemo(
     () => new Map((profiles ?? []).map((p) => [p.id, p])),
     [profiles]
   );
 
-  const enrichedMembers = useMemo(() => {
-    return members.map((m) => ({
-      ...m,
-      profile: profileMap.get(m.user_id),
-      discipleship_status: normalizeDiscipleshipStatus(m.discipleship_status)
-    }));
-  }, [members, profileMap]);
+  const enrichedMembers = useMemo(() => members.map((member) => {
+    const linkedProfile = profileMap.get(member.user_id);
+    return {
+      ...member,
+      profile: {
+        ...linkedProfile,
+        full_name: member.full_name || linkedProfile?.full_name || "",
+        email: member.contact_email || linkedProfile?.email || ""
+      },
+      membership_status_raw: member.membership_status,
+      membership_status: normalizeMembershipStatus(member.membership_status),
+      discipleship_status: normalizeDiscipleshipStatus(member.discipleship_status)
+    };
+  }), [members, profileMap]);
 
   const currentMembers = useMemo(
-    () => enrichedMembers.filter(isCurrentMember),
+    () => enrichedMembers.filter((member) => member.membership_status_raw !== "removed"),
     [enrichedMembers]
   );
-
   const leaderProfile = profileMap.get(cellGroup?.leader_id);
   const pendingCount = joinRequests.filter((r) => r.status === "pending").length;
 
   const filteredMembers = useMemo(
-    () =>
-      filterMembers(enrichedMembers, {
+    () => {
+      const filtered = filterMembers(enrichedMembers, {
         search,
         status: statusFilter,
         department: deptFilter,
         discipleship: discFilter,
         joinedYear: yearFilter,
         sort: sortBy,
-        currentOnly: true
-      }),
-    [enrichedMembers, search, statusFilter, deptFilter, discFilter, yearFilter, sortBy]
+        currentOnly: false
+      });
+      if (birthdayFilter === "all") return filtered;
+      return filtered.filter((member) => {
+        const birthday = getBirthdayOccurrence(member, new Date(), cellGroup?.timezone || "UTC");
+        return birthday && (birthdayFilter === "today" ? birthday.daysUntil === 0 : birthday.daysUntil > 0 && birthday.daysUntil <= 30);
+      });
+    },
+    [enrichedMembers, search, statusFilter, deptFilter, discFilter, yearFilter, birthdayFilter, sortBy, cellGroup?.timezone]
   );
 
   const stats = useMemo(() => {
-    const active = currentMembers.filter((m) => m.membership_status === "active").length;
-    const newCount = currentMembers.filter((m) => m.membership_status === "new").length;
-    return {
-      total: currentMembers.length,
-      active,
-      new: newCount,
-      pending: pendingCount
-    };
+    const active = currentMembers.filter((member) => normalizeMembershipStatus(member.membership_status) === "active").length;
+    const prospective = currentMembers.filter((member) => normalizeMembershipStatus(member.membership_status) === "prospective").length;
+    return { total: currentMembers.length, active, prospective, pending: pendingCount };
   }, [currentMembers, pendingCount]);
+
+  const memberStatusCounts = useMemo(() => ({
+    all: currentMembers.length,
+    active: currentMembers.filter((member) => member.membership_status === "active").length,
+    prospective: currentMembers.filter((member) => member.membership_status === "prospective").length,
+    pending: currentMembers.filter((member) => member.membership_status === "pending").length,
+    inactive: currentMembers.filter((member) => member.membership_status === "inactive").length
+  }), [currentMembers]);
 
   const joinedYears = useMemo(() => {
     const years = new Set(currentMembers.map((m) => m.joined_year).filter(Boolean));
@@ -377,19 +407,24 @@ export function CellGroupManagementSection({
   const logActivity = useCallback(
     async (actionType, description, affectedUserId = null, metadata = {}) => {
       if (!cellGroup?.id || !supabase) return;
-      await supabase.rpc("log_cell_group_activity", {
-        p_group_id: cellGroup.id,
-        p_action_type: actionType,
-        p_description: description,
-        p_affected_user_id: affectedUserId,
-        p_metadata: metadata
-      });
+      try {
+        const { error } = await supabase.rpc("log_cell_group_activity", {
+          p_group_id: cellGroup.id,
+          p_action_type: actionType,
+          p_description: description,
+          p_affected_user_id: affectedUserId,
+          p_metadata: metadata
+        });
+        if (error) console.error("Cell group activity logging failed", error);
+      } catch (error) {
+        console.error("Cell group activity logging failed", error);
+      }
     },
     [cellGroup?.id]
   );
 
   const loadData = useCallback(async () => {
-    if (!supabase) {
+    if (!supabase || !groupId) {
       setLoading(false);
       return;
     }
@@ -402,12 +437,15 @@ export function CellGroupManagementSection({
         throw rpcError;
       }
 
-      const [groupRes, membersRes, requestsRes, rulesRes, activityRes] = await Promise.all([
-        supabase.from("cell_groups").select("*").order("created_at", { ascending: true }).limit(1).maybeSingle(),
-        supabase.from("cell_group_members").select("*").order("created_at", { ascending: true }),
-        supabase.from("cell_group_join_requests").select("*").order("created_at", { ascending: false }),
-        supabase.from("cell_group_rules").select("*").order("sort_order", { ascending: true }),
-        supabase.from("cell_group_activity_log").select("*").order("created_at", { ascending: false }).limit(50)
+      const [groupRes, membersRes, requestsRes, rulesRes, activityRes, adminsRes] = await Promise.all([
+        supabase.from("cell_groups").select("*").eq("id", groupId).maybeSingle(),
+        supabase.from("cell_group_members").select("*").eq("cell_group_id", groupId).order("created_at", { ascending: true }),
+        supabase.from("cell_group_join_requests").select("*").eq("cell_group_id", groupId).order("created_at", { ascending: false }),
+        supabase.from("cell_group_rules").select("*").eq("cell_group_id", groupId).order("sort_order", { ascending: true }),
+        supabase.from("cell_group_activity_log").select("*").eq("cell_group_id", groupId).order("created_at", { ascending: false }).limit(50),
+        isSuperAdmin
+          ? supabase.from("cell_group_admin_assignments").select("cell_group_id,admin_user_id,assigned_at").eq("cell_group_id", groupId)
+          : Promise.resolve({ data: [], error: null })
       ]);
 
       const firstError =
@@ -415,7 +453,8 @@ export function CellGroupManagementSection({
         membersRes.error ||
         requestsRes.error ||
         rulesRes.error ||
-        activityRes.error;
+        activityRes.error ||
+        adminsRes.error;
 
       if (firstError) {
         throw firstError;
@@ -429,29 +468,34 @@ export function CellGroupManagementSection({
       setJoinRequests(requestsRes.data ?? []);
       setRules(rulesRes.data ?? []);
       setActivityLog(activityRes.data ?? []);
+      setGroupAdmins(adminsRes.data ?? []);
     } catch (err) {
       console.error("Cell group management load failed", err);
       setLoadError(
-        "Unable to load cell group management. Run supabase/cell-group-management-migration.sql in your Supabase SQL Editor, then refresh."
+        "Unable to load this group's management data. Apply the cell-group management and private management-groups migrations, then refresh."
       );
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [groupId, isSuperAdmin]);
 
   useEffect(() => {
     void loadData();
   }, [loadData]);
 
   useEffect(() => {
+    if (memberFeedback) memberFeedbackButtonRef.current?.focus();
+  }, [memberFeedback]);
+
+  useEffect(() => {
     if (!supabase || !cellGroup?.id) return undefined;
 
     const channel = supabase
       .channel(`cgm-live-${cellGroup.id}`)
-      .on("postgres_changes", { event: "*", schema: "public", table: "cell_group_members" }, () => void loadData())
-      .on("postgres_changes", { event: "*", schema: "public", table: "cell_group_join_requests" }, () => void loadData())
-      .on("postgres_changes", { event: "*", schema: "public", table: "cell_group_rules" }, () => void loadData())
-      .on("postgres_changes", { event: "*", schema: "public", table: "cell_group_activity_log" }, () => void loadData())
+      .on("postgres_changes", { event: "*", schema: "public", table: "cell_group_members", filter: `cell_group_id=eq.${cellGroup.id}` }, () => void loadData())
+      .on("postgres_changes", { event: "*", schema: "public", table: "cell_group_join_requests", filter: `cell_group_id=eq.${cellGroup.id}` }, () => void loadData())
+      .on("postgres_changes", { event: "*", schema: "public", table: "cell_group_rules", filter: `cell_group_id=eq.${cellGroup.id}` }, () => void loadData())
+      .on("postgres_changes", { event: "*", schema: "public", table: "cell_group_activity_log", filter: `cell_group_id=eq.${cellGroup.id}` }, () => void loadData())
       .on("postgres_changes", { event: "*", schema: "public", table: "cell_groups" }, () => void loadData())
       .subscribe();
 
@@ -460,147 +504,143 @@ export function CellGroupManagementSection({
     };
   }, [cellGroup?.id, loadData]);
 
-  async function uploadAvatar(userId, file) {
-    if (!file || !supabase) return null;
-    const optimized = await optimizeImage(file);
-    if (optimized.size > 1024 * 1024) {
-      throw new Error("Image must be under 1MB");
-    }
-    const ext = optimized.name.split(".").pop() || "webp";
-    const path = `${userId}/avatar-${Date.now()}.${ext}`;
-    const { error } = await supabase.storage.from("avatars").upload(path, optimized, { upsert: true });
-    if (error) throw error;
-    const { data } = supabase.storage.from("avatars").getPublicUrl(path);
-    await supabase.from("profiles").update({ avatar_url: data.publicUrl }).eq("id", userId);
-    return data.publicUrl;
-  }
-
   async function handleSaveMemberForm() {
+    if (!isAdmin || memberSaveInProgressRef.current) return;
     const isEdit = memberFormMode === "edit";
-    const isExisting = memberForm.mode === "existing";
-    const errors = validateMemberForm(memberForm, { isExistingUser: isExisting || isEdit, isEdit });
-    if (!isEdit && isExisting && !memberForm.user_id) {
-      errors.user_id = "Select a member to add";
+    const errors = validateMemberForm(memberForm, { isEdit });
+    if (!isEdit && memberForm.mode === "existing" && !memberForm.user_id) {
+      errors.user_id = "Select a registered account";
     }
     setMemberFormErrors(errors);
     if (Object.keys(errors).length) return;
 
-    if (!isEdit) {
-      const existingMember = members.find((m) => m.user_id === memberForm.user_id);
-      if (existingMember && isCurrentMember(existingMember)) {
-        toast("Already a member", "This person already belongs to the cell group.", "error");
-        return;
-      }
-    }
-
+    memberSaveInProgressRef.current = true;
     setSubmitting(true);
     try {
-      let targetUserId = memberForm.user_id;
-
-      if (isEdit) {
-        targetUserId = editingMember.user_id;
-      } else if (memberForm.mode === "invite") {
+      let targetUserId = isEdit ? (editingMember.user_id || memberForm.user_id || null) : null;
+      if (!isEdit && memberForm.mode === "invite") {
         const inviteEmail = memberForm.email.trim().toLowerCase();
-        const existingProfile = profiles.find((p) => p.email?.toLowerCase() === inviteEmail);
+        const existingProfile = profiles.find((profile) => profile.email?.trim().toLowerCase() === inviteEmail);
         if (existingProfile) {
           targetUserId = existingProfile.id;
         } else {
-          const { error: invError } = await supabase.from("cell_group_invitations").upsert(
-            {
-              cell_group_id: cellGroup.id,
-              email: inviteEmail,
-              full_name: memberForm.full_name.trim(),
-              invited_by: user.id,
-              membership_data: await buildMemberPayload(memberForm)
-            },
-            { onConflict: "cell_group_id,email" }
-          );
-          if (invError) throw invError;
+          const { error: inviteError } = await supabase.from("cell_group_invitations").upsert({
+            cell_group_id: cellGroup.id,
+            email: inviteEmail,
+            full_name: memberForm.full_name.trim(),
+            invited_by: user.id,
+            membership_data: await buildMemberPayload(memberForm)
+          }, { onConflict: "cell_group_id,email" });
+          if (inviteError) throw inviteError;
           await logActivity("invitation_sent", `Invitation sent to ${memberForm.full_name.trim()} (${inviteEmail})`);
           toast("Invitation sent", `${memberForm.full_name.trim()} will be added when they register.`);
           requestCloseMemberForm(true);
           return;
         }
+      } else if (!isEdit && memberForm.mode === "existing") {
+        targetUserId = memberForm.user_id;
       }
 
-      if (memberForm.remove_avatar) {
-        await supabase.from("profiles").update({ avatar_url: null }).eq("id", targetUserId);
-      } else if (memberForm.avatar_file) {
-        await uploadAvatar(targetUserId, memberForm.avatar_file);
+      let recordId = isEdit ? editingMember.id : memberForm.record_id || null;
+      if (!isEdit && targetUserId) {
+        const linkedRecord = members.find((member) => member.user_id === targetUserId);
+        if (linkedRecord) {
+          toast("Record already exists", "Open this person’s existing record to update their information or membership status.", "error");
+          return;
+        }
+        const accountEmail = profiles.find((profile) => profile.id === targetUserId)?.email?.trim().toLowerCase();
+        const matchingProspects = accountEmail
+          ? members.filter((member) => !member.user_id && member.contact_email?.trim().toLowerCase() === accountEmail)
+          : [];
+        if (matchingProspects.length > 1) {
+          toast("Account not linked", "Several unlinked records share this email. Resolve the matching record before linking the account.", "error");
+          return;
+        }
+        if (matchingProspects.length === 1) recordId = matchingProspects[0].id;
       }
-
-      if (memberForm.full_name.trim()) {
-        await supabase.from("profiles").update({ full_name: memberForm.full_name.trim() }).eq("id", targetUserId);
-      }
-
-      const memberData = {
+      const payload = {
         cell_group_id: cellGroup.id,
-        user_id: targetUserId,
+        user_id: targetUserId || null,
         ...(await buildMemberPayload(memberForm))
       };
+      const saveQuery = supabase.from("cell_group_members");
+      const { data: savedRow, error: saveError } = recordId
+        ? await saveQuery
+          .update(payload)
+          .eq("id", recordId)
+          .eq("cell_group_id", cellGroup.id)
+          .select("*")
+          .maybeSingle()
+        : await saveQuery
+          .insert(payload)
+          .select("*")
+          .single();
+      if (saveError) throw saveError;
+      if (!savedRow?.id) throw new Error("The database did not confirm the member record save.");
 
-      if (isEdit) {
-        const payload = await buildMemberPayload(memberForm);
-        const { error } = await supabase.from("cell_group_members").update(payload).eq("id", editingMember.id);
-        if (error) throw error;
-        const name = memberForm.full_name.trim() || profileMap.get(targetUserId)?.full_name || "Member";
-        await logActivity("member_updated", `${name}'s membership information was updated.`, targetUserId);
-        toast("Member updated successfully", `${name}'s information has been saved.`);
-        if (!isCurrentMember({ membership_status: payload.membership_status })) {
-          setMembers((prev) => prev.filter((m) => m.id !== editingMember.id));
-        } else {
-          void loadData();
-        }
-      } else {
-        const { error } = await supabase.from("cell_group_members").upsert(memberData, {
-          onConflict: "cell_group_id,user_id"
-        });
-        if (error) {
-          if (error.code === "23505") {
-            toast("Already a member", "This person already belongs to the cell group.", "error");
-            return;
-          }
-          throw error;
-        }
-        const name = memberForm.full_name.trim() || profileMap.get(targetUserId)?.full_name || "Member";
-        await logActivity("member_added", `${name} was added to the cell group.`, targetUserId);
-        toast("Member Added", `${name} has been successfully added to the cell group.`);
-        void loadData();
+      const name = memberForm.full_name.trim() || "Member";
+      const action = isEdit ? "member_updated" : "member_added";
+      await logActivity(action, `${name}'s membership information was ${isEdit ? "updated" : "recorded"}.`, targetUserId, { member_record_id: savedRow.id });
+      setMembers((previous) => {
+        const existingIndex = previous.findIndex((member) => member.id === savedRow.id);
+        if (existingIndex < 0) return [...previous, savedRow];
+        return previous.map((member) => member.id === savedRow.id ? savedRow : member);
+      });
+      if (!isEdit) {
+        setSearch("");
+        setStatusFilter("all");
+        setDeptFilter("all");
+        setDiscFilter("all");
+        setYearFilter("all");
+        setBirthdayFilter("all");
+        setSortBy("name_asc");
       }
-
-      requestCloseMemberForm(true);
-    } catch (err) {
-      console.error(err);
-      toast(
-        isEdit ? "Update failed" : "Unable to add member",
-        "Something went wrong while saving this member. Please try again.",
-        "error"
-      );
+      setActiveTab("membership");
+      setMemberFormMode(null);
+      setEditingMember(null);
+      setMemberFormErrors({});
+      setShowDiscardConfirm(false);
+      setMemberFeedback({
+        type: "success",
+        title: isEdit ? "Update Success" : "Member Added Successfully",
+        message: isEdit
+          ? "Member details have been successfully updated."
+          : "The new member has been successfully registered."
+      });
+    } catch (error) {
+      console.error("Member record save failed", {
+        code: error?.code,
+        message: error?.message,
+        details: error?.details,
+        hint: error?.hint,
+        error
+      });
+      let title = isEdit ? "Member update failed" : "Member registration failed";
+      let message = error?.message || "Supabase did not confirm the member record save. Please try again.";
+      if (error?.code === "42501") {
+        title = "Permission denied";
+        message = "Your administrator access does not allow changes to this cell group.";
+      } else if (error?.code === "23503") {
+        title = "Invalid linked account";
+        message = "The selected account or cell group is no longer available. Refresh and try again.";
+      } else if (error?.code === "23505") {
+        title = "Account already linked";
+        message = "This account already has a record in the cell group. Open that record to update it.";
+      } else if (error?.code === "42703" || error?.code === "PGRST204") {
+        title = "Database setup required";
+        message = "Supabase is missing a member-record column. In this app’s Supabase project, run member-record-status-enum-migration.sql by itself and commit it, then run pre-membership-records-migration.sql. If both already ran, run NOTIFY pgrst, 'reload schema'. Your entries are still here.";
+      }
+      setMemberFeedback({ type: "error", title, message });
     } finally {
+      memberSaveInProgressRef.current = false;
       setSubmitting(false);
     }
   }
 
-  async function buildMemberPayload(form) {
-    return {
-      date_of_birth: form.date_of_birth || null,
-      departments: form.departments.includes("None") ? [] : form.departments.filter((d) => d !== "None"),
-      custom_department: form.departments.includes("Other") ? form.custom_department?.trim() || null : null,
-      favorite_food: form.favorite_food?.trim() || null,
-      joined_month: form.joined_month ? Number(form.joined_month) : null,
-      joined_year: form.joined_year ? Number(form.joined_year) : null,
-      joined_date: form.joined_date || null,
-      discipleship_status: normalizeDiscipleshipStatus(form.discipleship_status),
-      membership_status: form.membership_status,
-      phone: form.phone?.trim() || null,
-      gender: form.gender?.trim() || null,
-      bio: form.bio?.trim() || null,
-      notes: form.notes?.trim() || null
-    };
-  }
-
   function openAddForm() {
+    if (!isAdmin) return;
     const form = emptyMemberForm();
+    setActiveTab("membership");
     setMemberForm(form);
     setMemberFormInitial(JSON.parse(JSON.stringify(form)));
     setMemberFormErrors({});
@@ -609,13 +649,29 @@ export function CellGroupManagementSection({
     setUserSearch("");
   }
 
+  function acknowledgeMemberFeedback() {
+    const shouldRefresh = memberFeedback?.type === "success";
+    setMemberFeedback(null);
+    if (shouldRefresh) {
+      setActiveTab("membership");
+      void loadData();
+    }
+  }
+
+  function retryMemberRemoval() {
+    setMemberFeedback(null);
+    if (confirmRemove) void handleRemoveMember(confirmRemove);
+  }
+
   function openEditForm(member) {
+    if (!isAdmin) return;
     const form = memberToForm(member, member.profile);
     setMemberForm(form);
     setMemberFormInitial(JSON.parse(JSON.stringify(form)));
     setMemberFormErrors({});
     setMemberFormMode("edit");
     setEditingMember(member);
+    setUserSearch("");
     setViewMember(null);
   }
 
@@ -631,24 +687,43 @@ export function CellGroupManagementSection({
   }
 
   async function handleRemoveMember(member) {
+    if (!isAdmin || memberRemovalInProgressRef.current) return;
+    memberRemovalInProgressRef.current = true;
     setSubmitting(true);
-    const name = profileMap.get(member.user_id)?.full_name || "Member";
-    const memberId = member.id;
-    setMembers((prev) => prev.filter((m) => m.id !== memberId));
+    const name = member.profile?.full_name || member.full_name || "Member";
     try {
-      await logActivity("member_removed", `${name} was removed from the cell group.`, member.user_id);
-      const { error } = await supabase.from("cell_group_members").delete().eq("id", memberId);
+      const { data, error } = await supabase
+        .from("cell_group_members")
+        .update({ membership_status: "removed" })
+        .eq("id", member.id)
+        .eq("cell_group_id", cellGroup?.id || groupId)
+        .select("id")
+        .maybeSingle();
       if (error) throw error;
-      toast("Member removed", `${name} has been removed from the cell group.`);
+      if (!data) {
+        throw new Error("This membership could not be updated. It may already have been removed, or you may not have permission to manage this group.");
+      }
+
+      setMembers((previous) => previous.map((entry) => entry.id === member.id
+        ? { ...entry, membership_status: "removed" }
+        : entry));
+      await logActivity("member_removed", `${name} was removed from the cell group.`, member.user_id);
       setConfirmRemove(null);
       setViewMember(null);
-      setMemberFormMode(null);
-      setEditingMember(null);
+      setMemberFeedback({
+        type: "success",
+        title: "Member Removed Successfully",
+        message: `${name} has been successfully removed from the membership.`
+      });
     } catch (err) {
       console.error(err);
-      void loadData();
-      toast("Remove failed", "Could not remove this member. Please try again.", "error");
+      setMemberFeedback({
+        type: "error",
+        title: "Member Could Not Be Removed",
+        message: err?.message || "The membership could not be removed. Please try again."
+      });
     } finally {
+      memberRemovalInProgressRef.current = false;
       setSubmitting(false);
     }
   }
@@ -749,7 +824,6 @@ export function CellGroupManagementSection({
       const { error } = await supabase
         .from("cell_groups")
         .update({
-          name: groupForm.name.trim(),
           description: groupForm.description?.trim() || "",
           allow_join_requests: groupForm.allow_join_requests,
           allow_member_invitations: groupForm.allow_member_invitations,
@@ -771,22 +845,99 @@ export function CellGroupManagementSection({
     }
   }
 
+  async function assignAdminToGroup(event) {
+    event.preventDefault();
+    if (!isSuperAdmin || !selectedAdminId || !cellGroup?.id) return;
+    setSubmitting(true);
+    try {
+      const { error } = await supabase.from("cell_group_admin_assignments").insert({
+        cell_group_id: cellGroup.id,
+        admin_user_id: selectedAdminId,
+        assigned_by: user.id
+      });
+      if (error) throw error;
+      setSelectedAdminId("");
+      toast("Administrator assigned", "This Admin can now access the selected group.");
+      void loadData();
+    } catch (error) {
+      toast("Assignment failed", error.message || "The administrator could not be assigned.", "error");
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  async function revokeGroupAdmin(adminUserId) {
+    if (!isSuperAdmin || !cellGroup?.id) return;
+    setSubmitting(true);
+    try {
+      const { error } = await supabase.from("cell_group_admin_assignments").delete()
+        .eq("cell_group_id", cellGroup.id).eq("admin_user_id", adminUserId);
+      if (error) throw error;
+      toast("Administrator access removed");
+      void loadData();
+    } catch (error) {
+      toast("Could not update access", error.message || "Please try again.", "error");
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
   async function handleExport(format) {
     if (exporting) return;
     setExporting(format);
-    const isFiltered = Boolean(search.trim() || statusFilter !== "all" || deptFilter !== "all" || discFilter !== "all" || yearFilter !== "all" || sortBy !== "name_asc");
-    toast(
-      format === "excel" ? "Preparing Excel Report..." : "Preparing Membership Report...",
-      isFiltered ? "Your report reflects the current filters." : "Your report includes all current members.",
-      "success"
-    );
+    const isFiltered = Boolean(search.trim() || statusFilter !== "all" || deptFilter !== "all" || discFilter !== "all" || yearFilter !== "all" || birthdayFilter !== "all" || sortBy !== "name_asc");
     try {
+      const pageSize = 1000;
+      const allMembers = [];
+      for (let from = 0; ; from += pageSize) {
+        const { data, error } = await supabase
+          .from("cell_group_members")
+          .select("*")
+          .eq("cell_group_id", cellGroup.id)
+          .order("created_at", { ascending: true })
+          .range(from, from + pageSize - 1);
+        if (error) throw error;
+        allMembers.push(...(data ?? []));
+        if (!data || data.length < pageSize) break;
+      }
+
+      const completeMemberList = allMembers.map((member) => {
+        const linkedProfile = profileMap.get(member.user_id);
+        return {
+          ...member,
+          profile: {
+            ...linkedProfile,
+            full_name: member.full_name || linkedProfile?.full_name || "",
+            email: member.contact_email || linkedProfile?.email || ""
+          },
+          membership_status_raw: member.membership_status,
+          membership_status: normalizeMembershipStatus(member.membership_status),
+          discipleship_status: normalizeDiscipleshipStatus(member.discipleship_status)
+        };
+      });
+      const exportFilters = {
+        search,
+        status: statusFilter,
+        department: deptFilter,
+        discipleship: discFilter,
+        joinedYear: yearFilter,
+        sort: sortBy,
+        currentOnly: false
+      };
+      let exportMembers = filterMembers(completeMemberList, exportFilters);
+      if (birthdayFilter !== "all") {
+        exportMembers = exportMembers.filter((member) => {
+          const birthday = getBirthdayOccurrence(member, new Date(), cellGroup?.timezone || "UTC");
+          return birthday && (birthdayFilter === "today" ? birthday.daysUntil === 0 : birthday.daysUntil > 0 && birthday.daysUntil <= 30);
+        });
+      }
+
       const fields = EXPORT_FIELDS.filter((f) => f.default).map((f) => f.key);
       const exportData = {
-        members: filteredMembers,
+        members: exportMembers,
         fields,
         groupName: cellGroup?.name,
-        filters: { search: search.trim(), status: statusFilter, department: deptFilter, discipleship: discFilter, joinedYear: yearFilter, sort: sortBy }
+        filters: { search: search.trim(), status: statusFilter, department: deptFilter, discipleship: discFilter, joinedYear: yearFilter, birthday: birthdayFilter, sort: sortBy }
       };
       if (format === "excel") {
         await exportMembersExcel(exportData);
@@ -795,13 +946,13 @@ export function CellGroupManagementSection({
       }
       toast(
         format === "excel" ? "Membership Excel report downloaded successfully." : "Membership PDF downloaded successfully.",
-        "Your official membership report has been saved to your downloads."
+        `${exportMembers.length} member${exportMembers.length === 1 ? "" : "s"} included${isFiltered ? " using the current filters" : ""}.`
       );
     } catch (err) {
-      console.error(err);
+      console.error(`${format} member export failed`, err);
       toast(
         format === "excel" ? "Unable to generate the Excel report." : "Unable to generate the membership PDF.",
-        "Please try again.",
+        err?.message || "Please try again.",
         "error"
       );
     } finally {
@@ -813,7 +964,7 @@ export function CellGroupManagementSection({
     if (exporting) return;
     setExporting(`member-${member.id}`);
     try {
-      await exportMemberProfilePdf({ member, groupName: cellGroup?.name || "Glory Carriers" });
+      await exportMemberProfilePdf({ member, groupName: cellGroup?.name || CELL_GROUP_NAME });
       toast("Member profile PDF downloaded successfully.", "The individual member profile has been saved to your downloads.");
     } catch (err) {
       console.error("Member profile PDF generation failed", err);
@@ -870,7 +1021,7 @@ export function CellGroupManagementSection({
         <div className="cgm-hero-glow" aria-hidden="true" />
         <div className="cgm-hero-inner">
           <div className="cgm-hero-copy">
-            <p className="cgm-hero-eyebrow">{isAdmin ? "Glory Carriers Administration" : "Leadership Portal"}</p>
+            <p className="cgm-hero-eyebrow">{isAdmin ? `${APP_NAME} Administration` : `${CELL_GROUP_NAME} Leadership`}</p>
             <h1>{isAdmin ? "Admin Control Center" : cellGroup?.name || "Cell Group Management"}</h1>
             <p className="cgm-hero-desc">
               {isAdmin
@@ -920,9 +1071,9 @@ export function CellGroupManagementSection({
                   <Icon name="file-pdf" />
                   {exporting === "pdf" ? "Downloading..." : "Download PDF"}
                 </button>
-                <button type="button" className="cgm-btn cgm-btn-primary" onClick={openAddForm}>
+                {isAdmin ? <button type="button" className="cgm-btn cgm-btn-primary" onClick={openAddForm}>
                   <Icon name="plus" /> Add Member
-                </button>
+                </button> : null}
               </>
             ) : null}
           </div>
@@ -947,14 +1098,6 @@ export function CellGroupManagementSection({
             ) : null}
           </button>
         ))}
-        {isAdmin ? <>
-          <p className="cgm-admin-nav-heading cgm-admin-nav-heading--tools">App administration</p>
-          <button type="button" className="cgm-admin-tool-link" onClick={() => onNavigateSection("members")}>Member accounts</button>
-          <button type="button" className="cgm-admin-tool-link" onClick={() => onNavigateSection("bible-study")}>Bible Study plan</button>
-          <button type="button" className="cgm-admin-tool-link" onClick={() => onNavigateSection("events")}>Events</button>
-          <button type="button" className="cgm-admin-tool-link" onClick={() => onNavigateSection("announcements")}>Announcements</button>
-          <button type="button" className="cgm-admin-tool-link cgm-admin-tool-link--return" onClick={() => onNavigateSection("dashboard")}>Return to member home</button>
-        </> : null}
       </nav>
 
       <div className="cgm-admin-content">
@@ -965,12 +1108,8 @@ export function CellGroupManagementSection({
       {activeTab === "overview" ? (
         <>
           <div className="cgm-stats-grid">
-            <div className="cgm-stat-card">
-              <span>Cell Group</span>
-              <strong>{cellGroup?.name || "—"}</strong>
-            </div>
             <div className="cgm-stat-card accent">
-              <span>Total Members</span>
+              <span>All Records</span>
               <strong>{stats.total}</strong>
             </div>
             <div className="cgm-stat-card">
@@ -978,18 +1117,12 @@ export function CellGroupManagementSection({
               <strong>{stats.active}</strong>
             </div>
             <div className="cgm-stat-card accent">
-              <span>New Members</span>
-              <strong>{stats.new}</strong>
+              <span>Prospective</span>
+              <strong>{stats.prospective}</strong>
             </div>
             <div className="cgm-stat-card">
               <span>Pending Requests</span>
               <strong>{stats.pending}</strong>
-            </div>
-            <div className="cgm-stat-card">
-              <span>Created</span>
-              <strong style={{ fontSize: "var(--fs-1)" }}>
-                {cellGroup?.created_at ? formatDate(cellGroup.created_at) : "—"}
-              </strong>
             </div>
           </div>
           <div className="cgm-panel">
@@ -1001,9 +1134,9 @@ export function CellGroupManagementSection({
             </div>
             <div className="cgm-panel-body">
               <div className="cgm-quick-links">
-                <button type="button" className="cgm-btn cgm-btn-primary" onClick={() => { setActiveTab("membership"); openAddForm(); }}>
+                {isAdmin ? <button type="button" className="cgm-btn cgm-btn-primary" onClick={() => { setActiveTab("membership"); openAddForm(); }}>
                   <Icon name="plus" /> Add Member
-                </button>
+                </button> : null}
                 <button type="button" className="cgm-btn cgm-btn-secondary" onClick={() => setActiveTab("membership")}>
                   <Icon name="users" /> View Membership
                 </button>
@@ -1011,13 +1144,6 @@ export function CellGroupManagementSection({
                   <button type="button" className="cgm-btn cgm-btn-secondary" onClick={() => setActiveTab("requests")}>
                     Review Requests ({pendingCount})
                   </button>
-                ) : null}
-                {onNavigateSection ? (
-                  <>
-                    <button type="button" className="cgm-quick-link" onClick={() => onNavigateSection("members")}>Members Page</button>
-                    <button type="button" className="cgm-quick-link" onClick={() => onNavigateSection("discipleship")}>Discipleship</button>
-                    <button type="button" className="cgm-quick-link" onClick={() => onNavigateSection("events")}>Dashboard</button>
-                  </>
                 ) : null}
               </div>
             </div>
@@ -1036,10 +1162,25 @@ export function CellGroupManagementSection({
               </p>
             </div>
             <div className="cgm-panel-header-actions">
-              <button type="button" className="cgm-btn cgm-btn-primary" onClick={openAddForm}>
+              {isAdmin ? <button type="button" className="cgm-btn cgm-btn-primary" onClick={openAddForm}>
                 <Icon name="plus" /> Add Member
-              </button>
+              </button> : null}
             </div>
+          </div>
+          <div className="cgm-record-status-tabs" role="tablist" aria-label="Filter member records by membership status">
+            {[
+              { id: "all", label: "All Records" },
+              { id: "active", label: "Active Members" },
+              { id: "prospective", label: "Prospective" },
+              { id: "pending", label: "Pending" },
+              { id: "inactive", label: "Inactive" }
+            ].map((item) => (
+              <button key={item.id} type="button" role="tab" aria-selected={statusFilter === item.id}
+                className={`cgm-record-status-tab${statusFilter === item.id ? " active" : ""}`}
+                onClick={() => setStatusFilter(item.id)}>
+                <span>{item.label}</span><strong>{memberStatusCounts[item.id]}</strong>
+              </button>
+            ))}
           </div>
           <div className="cgm-panel-toolbar">
             <div className="cgm-toolbar-filters">
@@ -1080,6 +1221,14 @@ export function CellGroupManagementSection({
                 </select>
               </label>
               <label className="cgm-filter-field">
+                <span>Birthday</span>
+                <select value={birthdayFilter} onChange={(e) => setBirthdayFilter(e.target.value)} aria-label="Filter members by birthday">
+                  <option value="all">All birthdays</option>
+                  <option value="today">Today</option>
+                  <option value="upcoming">Next 30 days</option>
+                </select>
+              </label>
+              <label className="cgm-filter-field">
                 <span>Sort by</span>
                 <select value={sortBy} onChange={(e) => setSortBy(e.target.value)} aria-label="Sort members">
                   <option value="name_asc">Name A–Z</option>
@@ -1096,7 +1245,7 @@ export function CellGroupManagementSection({
             members={filteredMembers}
             exporting={exporting}
             onExport={handleExport}
-            isFiltered={Boolean(search.trim() || statusFilter !== "all" || deptFilter !== "all" || discFilter !== "all" || yearFilter !== "all" || sortBy !== "name_asc")}
+            isFiltered={Boolean(search.trim() || statusFilter !== "all" || deptFilter !== "all" || discFilter !== "all" || yearFilter !== "all" || birthdayFilter !== "all" || sortBy !== "name_asc")}
             memberName={search}
             onMemberNameChange={setSearch}
           />
@@ -1124,7 +1273,7 @@ export function CellGroupManagementSection({
                           <tr key={m.id}>
                             <td onClick={() => setViewMember(m)} className="cgm-clickable">
                               <div className="cgm-member-cell">
-                                <MemberAvatar profile={m.profile} />
+                                <MemberIdentity profile={m.profile} />
                                 <div>
                                   <div className="cgm-member-name">{m.profile?.full_name || "Unnamed"}</div>
                                   <div className="cgm-member-email">{m.profile?.email}</div>
@@ -1154,6 +1303,7 @@ export function CellGroupManagementSection({
                                 onEdit={openEditForm}
                                 onDownload={(member) => void handleMemberPdf(member)}
                                 onRemove={setConfirmRemove}
+                                canEdit={isAdmin}
                               />
                             </td>
                           </tr>
@@ -1170,7 +1320,7 @@ export function CellGroupManagementSection({
                       <article key={m.id} className="cgm-member-card">
                         <div className="cgm-member-card-top">
                           <div className="cgm-member-cell">
-                            <MemberAvatar profile={m.profile} />
+                            <MemberIdentity profile={m.profile} />
                             <div>
                               <div className="cgm-member-name">{m.profile?.full_name || "Unnamed"}</div>
                               <div className="cgm-member-email">{m.profile?.email}</div>
@@ -1198,15 +1348,15 @@ export function CellGroupManagementSection({
                           <button type="button" className="cgm-btn cgm-btn-secondary" onClick={() => setViewMember(m)}>
                             <Icon name="eye" size={14} /> View
                           </button>
-                          <button type="button" className="cgm-btn cgm-btn-secondary" onClick={() => openEditForm(m)}>
+                          {isAdmin ? <button type="button" className="cgm-btn cgm-btn-secondary" onClick={() => openEditForm(m)}>
                             <Icon name="edit" size={14} /> Edit
-                          </button>
+                          </button> : null}
                           <button type="button" className="cgm-btn cgm-btn-download" disabled={!!exporting} onClick={() => void handleMemberPdf(m)}>
                             <Icon name="download" size={14} /> PDF
                           </button>
-                          <button type="button" className="cgm-btn cgm-btn-ghost cgm-btn-danger" onClick={() => setConfirmRemove(m)}>
-                            <Icon name="trash" size={14} /> Remove
-                          </button>
+                          {isAdmin ? <button type="button" className="cgm-btn cgm-btn-ghost cgm-btn-danger" onClick={() => setConfirmRemove(m)}>
+                            <Icon name="trash" size={14} /> Remove from Membership
+                          </button> : null}
                         </div>
                       </article>
                     );
@@ -1218,9 +1368,9 @@ export function CellGroupManagementSection({
                 <Icon name="users" size={40} />
                 <h4>Your Cell Group Has No Members Yet</h4>
                 <p>Add members to begin building your cell group.</p>
-                <button type="button" className="cgm-btn cgm-btn-primary" onClick={openAddForm}>
+                {isAdmin ? <button type="button" className="cgm-btn cgm-btn-primary" onClick={openAddForm}>
                   <Icon name="plus" /> Add Member
-                </button>
+                </button> : null}
               </div>
             )}
           </div>
@@ -1244,7 +1394,7 @@ export function CellGroupManagementSection({
                   return (
                     <div key={req.id} className="cgm-request-card">
                       <div className="cgm-member-cell">
-                        <MemberAvatar profile={requester} />
+                        <MemberIdentity profile={requester} />
                         <div>
                           <div className="cgm-member-name">{requester?.full_name || "Unknown"}</div>
                           <div className="cgm-member-email">{requester?.email}</div>
@@ -1321,7 +1471,7 @@ export function CellGroupManagementSection({
               <h4>General</h4>
               <label className="cgm-field">
                 <span>Cell Group Name</span>
-                <input type="text" value={groupForm.name} onChange={(e) => setGroupForm({ ...groupForm, name: e.target.value })} required />
+                <input type="text" value={CELL_GROUP_NAME} readOnly aria-label="Cell group name" />
               </label>
               <label className="cgm-field">
                 <span>Description</span>
@@ -1373,10 +1523,33 @@ export function CellGroupManagementSection({
                 </label>
               </div>
             </div>
+            {isSuperAdmin ? <div className="cgm-form-section">
+              <h4>Administrator access</h4>
+              <p>Assign an existing Admin account to this group. Role assignment itself remains controlled by the Super Admin role system.</p>
+              <div className="cgm-form-grid">
+                <label className="cgm-field">
+                  <span>Admin account</span>
+                  <select value={selectedAdminId} onChange={(event) => setSelectedAdminId(event.target.value)}>
+                    <option value="">Choose an Admin</option>
+                    {(profiles || []).filter((profile) => profile.role === "admin" && !groupAdmins.some((assignment) => assignment.admin_user_id === profile.id)).map((profile) => <option key={profile.id} value={profile.id}>{profile.full_name || profile.email}</option>)}
+                  </select>
+                </label>
+                <div className="cgm-field"><span>&nbsp;</span><button type="button" className="cgm-btn cgm-btn-primary" disabled={!selectedAdminId || submitting} onClick={(event) => void assignAdminToGroup(event)}>Assign access</button></div>
+              </div>
+              <div className="cgm-list">
+                {groupAdmins.length ? groupAdmins.map((assignment) => {
+                  const assignedProfile = profileMap.get(assignment.admin_user_id);
+                  return <div className="cgm-list-row" key={assignment.admin_user_id}>
+                    <span>{assignedProfile?.full_name || assignedProfile?.email || "Admin account"}</span>
+                    <button type="button" className="cgm-btn cgm-btn-ghost cgm-btn-danger" disabled={submitting} onClick={() => void revokeGroupAdmin(assignment.admin_user_id)}>Remove access</button>
+                  </div>;
+                }) : <p>No additional Admin accounts are assigned to this group.</p>}
+              </div>
+            </div> : null}
             </div>
             <div className="cgm-sticky-save">
               <p>Changes are saved to your cell group immediately.</p>
-              <button type="submit" className="cgm-btn cgm-btn-primary cgm-btn-save" disabled={submitting}>
+              <button type="submit" className="cgm-btn cgm-btn-primary cgm-btn-save" disabled={submitting || !canEditGroupSettings}>
                 <Icon name="save" />
                 {submitting ? "Saving..." : "Save Settings"}
               </button>
@@ -1439,12 +1612,10 @@ export function CellGroupManagementSection({
               ...memberForm,
               user_id: p.id,
               full_name: p.full_name || "",
-              email: p.email || "",
-              avatar_preview: p.avatar_url || ""
+              email: p.email || ""
             });
             setUserSearch(p.full_name || p.email);
           }}
-          photoInputRef={photoInputRef}
           submitLabel={memberFormMode === "edit" ? "Save Changes" : "Add Member"}
         />
       ) : null}
@@ -1457,11 +1628,12 @@ export function CellGroupManagementSection({
           onDownload={() => void handleMemberPdf(viewMember)}
           downloading={exporting === `member-${viewMember.id}`}
           onRemove={() => setConfirmRemove(viewMember)}
+          canEdit={isAdmin}
         />
       ) : null}
 
       {showDiscardConfirm ? (
-        <div className="cgm-overlay" onClick={(e) => e.target === e.currentTarget && setShowDiscardConfirm(false)}>
+        <div className="cgm-overlay cgm-confirm-overlay" onClick={(e) => e.target === e.currentTarget && setShowDiscardConfirm(false)}>
           <div className="cgm-modal" role="alertdialog">
             <div className="cgm-modal-header">
               <h3>Discard unsaved changes?</h3>
@@ -1512,24 +1684,74 @@ export function CellGroupManagementSection({
 
       {/* Remove confirmation */}
       {confirmRemove ? (
-        <div className="cgm-overlay" onClick={(e) => e.target === e.currentTarget && setConfirmRemove(null)}>
-          <div className="cgm-modal" role="alertdialog">
+        <div className="cgm-overlay cgm-member-remove-confirm-overlay" onClick={(e) => e.target === e.currentTarget && setConfirmRemove(null)}>
+          <div className="cgm-modal" role="alertdialog" aria-modal="true">
             <div className="cgm-modal-header">
-              <h3>Remove this member?</h3>
+              <h3>Remove Member?</h3>
             </div>
             <div className="cgm-modal-body">
+              <div className="cgm-remove-warning-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none">
+                  <path d="M12 3 2.8 19a1.4 1.4 0 0 0 1.2 2.1h16a1.4 1.4 0 0 0 1.2-2.1L12 3Z" />
+                  <path d="M12 9v5M12 17.5h.01" />
+                </svg>
+              </div>
               <p className="cgm-confirm-text">
-                This will remove {profileMap.get(confirmRemove.user_id)?.full_name || "this member"}&apos;s membership from the cell group.
-                Their account will not be deleted.
+                Are you sure you want to remove {confirmRemove.profile?.full_name || profileMap.get(confirmRemove.user_id)?.full_name || confirmRemove.full_name || "this member"} from this membership? Their account and historical information will remain in the system.
               </p>
               <div className="cgm-form-actions">
                 <button type="button" className="cgm-btn cgm-btn-secondary" onClick={() => setConfirmRemove(null)}>Cancel</button>
                 <button type="button" className="cgm-btn cgm-btn-primary cgm-btn-danger" disabled={submitting} onClick={() => void handleRemoveMember(confirmRemove)}>
-                  Remove Member
+                  {submitting ? "Removing..." : "Remove Member"}
                 </button>
               </div>
             </div>
           </div>
+        </div>
+      ) : null}
+
+      {memberFeedback ? (
+        <div className={`cgm-overlay cgm-member-feedback-overlay${memberFeedback.type === "success" ? " is-success" : " is-error"}`}>
+          <section
+            className="cgm-member-feedback"
+            role={memberFeedback.type === "success" ? "dialog" : "alertdialog"}
+            aria-modal="true"
+            aria-labelledby="cgm-member-feedback-title"
+            aria-describedby="cgm-member-feedback-message"
+          >
+            <div className="cgm-member-feedback-brand">
+              <img src={groupLogo} alt="" />
+              <span>{APP_NAME}</span>
+            </div>
+            <div className="cgm-member-feedback-icon" aria-hidden="true">
+              {memberFeedback.type === "success" ? (
+                <svg viewBox="0 0 56 56" fill="none">
+                  <circle className="cgm-success-ring" cx="28" cy="28" r="25" />
+                  <path className="cgm-success-check" d="m16 28 8 8 16-17" />
+                </svg>
+              ) : (
+                <svg viewBox="0 0 56 56" fill="none">
+                  <circle cx="28" cy="28" r="25" />
+                  <path d="M28 16v14M28 38h.01" />
+                </svg>
+              )}
+            </div>
+            <h2 id="cgm-member-feedback-title">{memberFeedback.title}</h2>
+            <p id="cgm-member-feedback-message">{memberFeedback.message}</p>
+            <button
+              ref={memberFeedbackButtonRef}
+              type="button"
+              className="cgm-btn cgm-member-feedback-ok"
+              onClick={acknowledgeMemberFeedback}
+            >
+              OK
+            </button>
+            {memberFeedback.type === "error" && confirmRemove ? (
+              <button type="button" className="cgm-btn cgm-btn-secondary" onClick={retryMemberRemoval}>
+                Retry
+              </button>
+            ) : null}
+          </section>
         </div>
       ) : null}
 
@@ -1542,38 +1764,46 @@ export function CellGroupManagementSection({
   );
 }
 
-function MemberViewDrawer({ member, onClose, onEdit, onDownload, downloading, onRemove }) {
+function MemberViewDrawer({ member, onClose, onEdit, onDownload, downloading, onRemove, canEdit }) {
+  useEffect(() => {
+    const bodyOverflow = document.body.style.overflow;
+    const documentOverflow = document.documentElement.style.overflow;
+    document.body.style.overflow = "hidden";
+    document.documentElement.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = bodyOverflow;
+      document.documentElement.style.overflow = documentOverflow;
+    };
+  }, []);
+
   const statusMeta = getMembershipStatusMeta(member.membership_status);
   const discYes = normalizeDiscipleshipStatus(member.discipleship_status) === "yes";
   const listedDepartments = (member.departments || []).filter((department) => department !== "Other" && department !== "None");
   const departmentValue = listedDepartments.join(", ") || ((member.departments || []).includes("Other") ? "Other" : "No department assigned");
   const profileDate = (value) => new Intl.DateTimeFormat(undefined, { day: "2-digit", month: "long", year: "numeric" }).format(new Date(`${value}T00:00:00`));
+  const birthday = formatMemberBirthday(member);
 
   return (
-    <div className="cgm-overlay cgm-drawer-overlay" onClick={(e) => e.target === e.currentTarget && onClose()}>
+    <div className="cgm-overlay cgm-drawer-overlay cgm-profile-workspace" onClick={(e) => e.target === e.currentTarget && onClose()}>
       <div className="cgm-drawer cgm-view-drawer" role="dialog" aria-label="Member details" aria-modal="true">
         <div className="cgm-drawer-header cgm-profile-drawer-header">
-          <div className="cgm-profile-brand"><img src={groupLogo} alt="Glory Carriers" /> <span>GLORY CARRIERS</span></div>
+          <div className="cgm-profile-brand"><img src={groupLogo} alt="Soldout Ministry logo" /> <span>{CELL_GROUP_NAME.toUpperCase()}</span></div>
           <button type="button" className="cgm-close-btn" onClick={onClose} aria-label="Close"><Icon name="x" /></button>
         </div>
         <div className="cgm-drawer-body">
           <section className="cgm-profile-hero">
-            <button type="button" className="cgm-profile-photo" onClick={() => member.profile?.avatar_url && window.open(member.profile.avatar_url, "_blank", "noopener,noreferrer")} aria-label={member.profile?.avatar_url ? "View profile photo larger" : "Member initials"}>
-              <MemberAvatar profile={member.profile} size="profile" />
-            </button>
-            <div><p>Glory Carriers Member</p><h2>{member.profile?.full_name || "Unnamed"}</h2><span className={statusMeta.pillClass}>{statusMeta.label}</span></div>
+            <div className="cgm-profile-initials" aria-hidden="true">
+              <MemberIdentity profile={member.profile} size="profile" />
+            </div>
+            <div><p>{member.user_id ? "Application account linked" : "No application account"}</p><h2>{member.profile?.full_name || "Unnamed"}</h2><span className={statusMeta.pillClass}>{statusMeta.label}</span></div>
           </section>
-          <div className="cgm-profile-actions">
-            <button type="button" className="cgm-btn cgm-btn-download" onClick={onDownload} disabled={downloading}>
-              <Icon name="download" /> {downloading ? "Preparing Member Profile..." : "Download PDF"}
-            </button>
-            <button type="button" className="cgm-btn cgm-btn-primary" onClick={onEdit}>
-              <Icon name="edit" /> Edit Member
-            </button>
-          </div>
           <ProfileSection title="Personal information">
             <ProfileCard label="Full Name" value={member.profile?.full_name || ""} />
-            {member.date_of_birth ? <ProfileCard label="Date of Birth" value={profileDate(member.date_of_birth)} /> : null}
+            <ProfileCard label="Application Account" value={member.user_id ? "Linked" : "Not linked"} />
+            {member.profile?.email ? <ProfileCard label="Email" value={member.profile.email} /> : null}
+            {member.phone ? <ProfileCard label="Phone" value={member.phone} /> : null}
+            {member.gender ? <ProfileCard label="Gender" value={member.gender} /> : null}
+            {birthday !== "Not provided" ? <ProfileCard label="Birthday" value={birthday} /> : null}
             {member.favorite_food ? <ProfileCard label="Favorite Food" value={member.favorite_food} /> : null}
           </ProfileSection>
           <ProfileSection title="Membership information">
@@ -1588,12 +1818,24 @@ function MemberViewDrawer({ member, onClose, onEdit, onDownload, downloading, on
           <ProfileSection title="Discipleship">
             <ProfileCard label="Completed Discipleship Class?" value={discYes ? "Yes" : "No"} highlight={discYes} />
           </ProfileSection>
-          <div className="cgm-form-actions cgm-profile-remove">
-            <button type="button" className="cgm-btn cgm-btn-ghost cgm-btn-danger" onClick={onRemove}>
-              <Icon name="trash" /> Remove Member
-            </button>
-          </div>
+          {member.bio || member.notes ? <ProfileSection title="Additional information">
+            {member.bio ? <ProfileCard label="Short Bio" value={member.bio} /> : null}
+            {member.notes ? <ProfileCard label="Notes" value={member.notes} /> : null}
+          </ProfileSection> : null}
         </div>
+        <footer className="cgm-profile-footer">
+          <div className="cgm-profile-actions">
+            <button type="button" className="cgm-btn cgm-btn-download" onClick={onDownload} disabled={downloading}>
+              <Icon name="download" /> {downloading ? "Preparing Member Profile..." : "Download PDF"}
+            </button>
+            {canEdit ? <button type="button" className="cgm-btn cgm-btn-primary" onClick={onEdit}>
+              <Icon name="edit" /> Edit Member
+            </button> : null}
+          </div>
+          {canEdit ? <button type="button" className="cgm-btn cgm-btn-ghost cgm-btn-danger cgm-profile-remove" onClick={onRemove}>
+            <Icon name="trash" /> Remove from Membership
+          </button> : null}
+        </footer>
       </div>
     </div>
   );

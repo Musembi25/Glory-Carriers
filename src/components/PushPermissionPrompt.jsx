@@ -1,3 +1,5 @@
+import { APP_NAME } from "../lib/identity";
+
 export function PushPermissionPrompt({ isOpen, onEnable, onDismiss }) {
   if (!isOpen) {
     return null;
@@ -16,8 +18,8 @@ export function PushPermissionPrompt({ isOpen, onEnable, onDismiss }) {
         </span>
         <h2 id="push-prompt-title">Stay updated anywhere</h2>
         <p>
-          Get instant alerts for messages, assignments, meetings, and announcements — even when
-          Glory Carriers is closed or your screen is locked.
+          Get instant alerts for messages, assignments, meetings, and Bible study — even when
+          {APP_NAME} is closed or your screen is locked.
         </p>
         <ul className="push-prompt-list">
           <li>Works on phone, tablet, and desktop</li>

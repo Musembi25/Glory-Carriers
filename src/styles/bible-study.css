@@ -1,4 +1,4 @@
-.bible-study{--bs-orange:var(--accent,#f97316);--bs-dark:#0f1117;max-width:110rem;margin:auto;padding:clamp(1rem,3vw,2.5rem);color:var(--text,#0f172a)}.bible-hero{display:flex;justify-content:space-between;gap:1.5rem;padding:clamp(1.5rem,4vw,3rem);border-radius:1.1rem;background:linear-gradient(135deg,#0f1117,#171923);color:#fff;box-shadow:0 16px 42px #0f172a26}.bible-hero p,.bible-hero small,.bible-panel small,.bible-current small,.bible-stat small{margin:0;color:#fdba74;font-size:.72rem;font-weight:800;letter-spacing:.1em}.bible-hero h1{margin:.35rem 0;font-size:clamp(2rem,5vw,3.4rem);letter-spacing:-.05em}.bible-hero-reading{align-self:end;display:grid;gap:.35rem;padding:1rem 1.25rem;border-left:1px solid #ffffff2e}.bible-hero-reading strong{font-size:1.35rem}.bible-hero-reading span{color:#ffffffaa;font-size:.88rem}.bible-overview{display:grid;grid-template-columns:1.25fr .7fr .8fr;gap:1rem;margin:1rem 0}.bible-current,.bible-stat,.bible-panel{border:1px solid var(--border,#e2e8f0);border-radius:1rem;background:var(--surface,#fff);box-shadow:0 6px 18px #0f172a0a}.bible-current{padding:1.4rem}.bible-current h2,.bible-panel h2{margin:.35rem 0;font-size:1.45rem;letter-spacing:-.03em}.bible-current p,.bible-stat p,.bible-muted{color:var(--text-muted,#64748b);font-size:.9rem}.bible-current>div{display:flex;flex-wrap:wrap;gap:.6rem;margin-top:1.1rem}.bible-stat{padding:1.25rem;display:flex;flex-direction:column}.bible-stat strong{margin-top:.5rem;font-size:2rem;line-height:1;color:var(--bs-orange)}.bible-stat span{margin-top:.45rem;font-size:.72rem;font-weight:800;letter-spacing:.08em;color:var(--text-muted,#64748b)}.bible-progress{height:.38rem;margin-top:auto;border-radius:9px;background:#f9731624;overflow:hidden}.bible-progress i{display:block;height:100%;background:var(--bs-orange);border-radius:inherit}.bible-btn{display:inline-flex;align-items:center;justify-content:center;gap:.45rem;border:1px solid transparent;border-radius:.7rem;padding:.68rem 1rem;font:700 .86rem inherit;cursor:pointer}.bible-btn svg{width:1rem;height:1rem}.bible-btn.primary{background:var(--bs-orange);color:#fff}.bible-btn.secondary{background:transparent;color:var(--text,#0f172a);border-color:var(--border,#e2e8f0)}.bible-layout{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(17rem,.6fr);gap:1rem}.bible-panel{padding:1.3rem}.bible-panel header{display:flex;justify-content:space-between}.bible-panel form{display:grid;gap:.7rem;margin:1rem 0}.bible-panel textarea{min-height:8rem;resize:vertical;padding:.9rem;border:1px solid var(--border,#e2e8f0);border-radius:.7rem;background:var(--surface-2,#f8fafc);color:inherit;font:inherit;line-height:1.55}.bible-panel textarea:focus{outline:0;border-color:var(--bs-orange);box-shadow:0 0 0 3px #f9731624}.bible-feed{display:grid;gap:.9rem}.bible-feed article{display:flex;gap:.75rem;padding-top:1rem;border-top:1px solid var(--border,#e2e8f0)}.bible-feed strong,.bible-feed small{display:block}.bible-feed small{margin:.2rem 0;color:var(--text-muted,#64748b);font-size:.72rem}.bible-feed p{margin:.5rem 0 0;line-height:1.6}.bible-avatar{width:2.35rem;height:2.35rem;border-radius:50%;overflow:hidden;display:grid;place-items:center;flex:0 0 auto;background:#f9731624;color:var(--bs-orange);font-weight:800;font-size:.75rem}.bible-avatar img{width:100%;height:100%;object-fit:cover}.bible-side{display:grid;gap:1rem;align-content:start}.bible-plan{display:grid;gap:.2rem;margin-top:.7rem;max-height:26rem;overflow:auto}.bible-plan button{display:flex;align-items:center;gap:.6rem;text-align:left;padding:.6rem;border:0;border-radius:.6rem;background:transparent;color:inherit;cursor:pointer}.bible-plan button:hover,.bible-plan button.current{background:#f9731617}.bible-plan button.done span{color:var(--bs-orange)}.bible-plan span{width:1.1rem;height:1.1rem;color:var(--text-muted,#64748b)}.bible-plan svg{width:100%;height:100%}.bible-plan strong,.bible-plan small{display:block}.bible-plan small{margin-top:.12rem;color:var(--text-muted,#64748b);font-size:.7rem}.bible-reader-overlay{position:fixed;inset:0;z-index:400;padding:1rem;background:#080a10b8;display:grid;place-items:center}.bible-reader{width:min(100%,52rem);height:min(92vh,60rem);display:grid;grid-template-rows:auto 1fr auto;background:var(--surface,#fff);border-radius:1rem;overflow:hidden;box-shadow:0 24px 64px #0008}.bible-reader header,.bible-reader footer{display:flex;align-items:center;justify-content:space-between;gap:1rem;padding:1rem 1.25rem;border-bottom:1px solid var(--border,#e2e8f0)}.bible-reader header h2{margin:.2rem 0 0}.bible-reader header button{padding:.4rem .6rem;border:1px solid var(--border,#e2e8f0);border-radius:.45rem;background:transparent;color:inherit;cursor:pointer}.bible-reader main{overflow:auto;padding:clamp(1.25rem,5vw,4rem);line-height:1.9;font-family:Georgia,serif}.bible-reader main p{margin:0 0 1rem}.bible-reader sup{padding-right:.35rem;color:var(--bs-orange);font:700 .65rem Inter,sans-serif}.bible-reader footer{border-bottom:0;border-top:1px solid var(--border,#e2e8f0);font-size:.72rem;color:var(--text-muted,#64748b)}.bible-empty,.bible-loading{text-align:center;padding:5rem 1rem;color:var(--text-muted,#64748b)}.bible-empty svg{width:2.5rem;color:var(--bs-orange)}@media(max-width:800px){.bible-hero,.bible-overview,.bible-layout{grid-template-columns:1fr;display:grid}.bible-hero-reading{border-left:0;border-top:1px solid #ffffff2e}.bible-reader footer{align-items:stretch;flex-direction:column}.bible-reader footer .bible-btn{width:100%}}@media(prefers-reduced-motion:reduce){.bible-study *{scroll-behavior:auto!important;transition:none!important}}
+.bible-study{--bs-orange:var(--color-accent,var(--accent));--bs-dark:var(--color-brand-deep);max-width:110rem;margin:auto;padding:clamp(1rem,3vw,2.5rem);color:var(--text,#0f172a)}.bible-hero{display:flex;justify-content:space-between;gap:1.5rem;padding:clamp(1.5rem,4vw,3rem);border-radius:1.1rem;background:linear-gradient(135deg,var(--color-brand-hero-start),var(--color-brand-hero-end));color:#fff;box-shadow:0 16px 42px #0f172a26}.bible-hero p,.bible-hero small,.bible-panel small,.bible-current small,.bible-stat small{margin:0;color:var(--color-soft-gold);font-size:.72rem;font-weight:800;letter-spacing:.1em}.bible-hero h1{margin:.35rem 0;font-size:clamp(2rem,5vw,3.4rem);letter-spacing:-.05em}.bible-hero-reading{align-self:end;display:grid;gap:.35rem;padding:1rem 1.25rem;border-left:1px solid #ffffff2e}.bible-hero-reading strong{font-size:1.35rem}.bible-hero-reading span{color:#ffffffaa;font-size:.88rem}.bible-overview{display:grid;grid-template-columns:1.25fr .7fr .8fr;gap:1rem;margin:1rem 0}.bible-current,.bible-stat,.bible-panel{border:1px solid var(--border,#e2e8f0);border-radius:1rem;background:var(--surface,#fff);box-shadow:0 6px 18px #0f172a0a}.bible-current{padding:1.4rem}.bible-current h2,.bible-panel h2{margin:.35rem 0;font-size:1.45rem;letter-spacing:-.03em}.bible-current p,.bible-stat p,.bible-muted{color:var(--text-muted,#64748b);font-size:.9rem}.bible-current>div{display:flex;flex-wrap:wrap;gap:.6rem;margin-top:1.1rem}.bible-stat{padding:1.25rem;display:flex;flex-direction:column}.bible-stat strong{margin-top:.5rem;font-size:2rem;line-height:1;color:var(--bs-orange)}.bible-stat span{margin-top:.45rem;font-size:.72rem;font-weight:800;letter-spacing:.08em;color:var(--text-muted,#64748b)}.bible-progress{height:.38rem;margin-top:auto;border-radius:9px;background:color-mix(in srgb, var(--primary) 14%, transparent);overflow:hidden}.bible-progress i{display:block;height:100%;background:var(--bs-orange);border-radius:inherit}.bible-btn{display:inline-flex;align-items:center;justify-content:center;gap:.45rem;border:1px solid transparent;border-radius:.7rem;padding:.68rem 1rem;font:700 .86rem inherit;cursor:pointer}.bible-btn svg{width:1rem;height:1rem}.bible-btn.primary{background:var(--bs-orange);color:var(--color-on-accent)}.bible-btn.secondary{background:transparent;color:var(--text,#0f172a);border-color:var(--border,#e2e8f0)}.bible-layout{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(17rem,.6fr);gap:1rem}.bible-panel{padding:1.3rem}.bible-panel header{display:flex;justify-content:space-between}.bible-panel form{display:grid;gap:.7rem;margin:1rem 0}.bible-panel textarea{min-height:8rem;resize:vertical;padding:.9rem;border:1px solid var(--border,#e2e8f0);border-radius:.7rem;background:var(--surface-2,#f8fafc);color:inherit;font:inherit;line-height:1.55}.bible-panel textarea:focus{outline:0;border-color:var(--bs-orange);box-shadow:0 0 0 3px color-mix(in srgb, var(--primary) 14%, transparent)}.bible-feed{display:grid;gap:.9rem}.bible-feed article{display:flex;gap:.75rem;padding-top:1rem;border-top:1px solid var(--border,#e2e8f0)}.bible-feed strong,.bible-feed small{display:block}.bible-feed small{margin:.2rem 0;color:var(--text-muted,#64748b);font-size:.72rem}.bible-feed p{margin:.5rem 0 0;line-height:1.6}.bible-identity{width:2.35rem;height:2.35rem;border-radius:50%;overflow:hidden;display:grid;place-items:center;flex:0 0 auto;background:color-mix(in srgb, var(--primary) 14%, transparent);color:var(--bs-orange);font-weight:800;font-size:.75rem}.bible-side{display:grid;gap:1rem;align-content:start}.bible-plan{display:grid;gap:.2rem;margin-top:.7rem;max-height:26rem;overflow:auto}.bible-plan button{display:flex;align-items:center;gap:.6rem;text-align:left;padding:.6rem;border:0;border-radius:.6rem;background:transparent;color:inherit;cursor:pointer}.bible-plan button:hover,.bible-plan button.current{background:var(--primary-soft)}.bible-plan button.done span{color:var(--bs-orange)}.bible-plan span{width:1.1rem;height:1.1rem;color:var(--text-muted,#64748b)}.bible-plan svg{width:100%;height:100%}.bible-plan strong,.bible-plan small{display:block}.bible-plan small{margin-top:.12rem;color:var(--text-muted,#64748b);font-size:.7rem}.bible-reader-overlay{position:fixed;inset:0;z-index:400;padding:1rem;background:#080a10b8;display:grid;place-items:center}.bible-reader{width:min(100%,52rem);height:min(92vh,60rem);display:grid;grid-template-rows:auto 1fr auto;background:var(--surface,#fff);border-radius:1rem;overflow:hidden;box-shadow:0 24px 64px #0008}.bible-reader header,.bible-reader footer{display:flex;align-items:center;justify-content:space-between;gap:1rem;padding:1rem 1.25rem;border-bottom:1px solid var(--border,#e2e8f0)}.bible-reader header h2{margin:.2rem 0 0}.bible-reader header button{padding:.4rem .6rem;border:1px solid var(--border,#e2e8f0);border-radius:.45rem;background:transparent;color:inherit;cursor:pointer}.bible-reader main{overflow:auto;padding:clamp(1.25rem,5vw,4rem);line-height:1.9;font-family:Georgia,serif}.bible-reader main p{margin:0 0 1rem}.bible-reader sup{padding-right:.35rem;color:var(--bs-orange);font:700 .65rem Inter,sans-serif}.bible-reader footer{border-bottom:0;border-top:1px solid var(--border,#e2e8f0);font-size:.72rem;color:var(--text-muted,#64748b)}.bible-empty,.bible-loading{text-align:center;padding:5rem 1rem;color:var(--text-muted,#64748b)}.bible-empty svg{width:2.5rem;color:var(--bs-orange)}@media(max-width:800px){.bible-hero,.bible-overview,.bible-layout{grid-template-columns:1fr;display:grid}.bible-hero-reading{border-left:0;border-top:1px solid #ffffff2e}.bible-reader footer{align-items:stretch;flex-direction:column}.bible-reader footer .bible-btn{width:100%}}@media(prefers-reduced-motion:reduce){.bible-study *{scroll-behavior:auto!important;transition:none!important}}
 .bible-reading-admin { display:grid; gap:.75rem; margin:1rem 0; padding:1rem; border:1px solid var(--border); border-radius:1rem; background:var(--surface-muted); }
 .bible-reading-admin-fields { display:grid; grid-template-columns:1.3fr .6fr 1fr; gap:.65rem; }
 .bible-reading-admin-fields label { display:grid; gap:.35rem; color:var(--text-muted); font-size:.78rem; font-weight:700; }
@@ -55,7 +55,7 @@
 }
 .bible-audio-tools { display:flex; flex-wrap:wrap; align-items:center; gap:.55rem; }
 .bible-audio-tools input { position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; }
-.bible-audio-attach,.bible-audio-remove { display:inline-flex; align-items:center; justify-content:center; min-height:2.55rem; padding:.58rem .85rem; border:1px solid var(--border); border-radius:.7rem; color:var(--text); background:var(--surface-strong); font:700 .82rem inherit; cursor:pointer; }
+.bible-audio-attach,.bible-audio-remove { display:inline-flex; align-items:center; justify-content:center; min-height:2.55rem; padding:.58rem .85rem; border:1px solid var(--border); border-radius:.7rem; color:var(--text); background:var(--surface-strong); font:inherit; font-size:.82rem; font-weight:700; cursor:pointer; }
 .bible-audio-attach:focus-within,.bible-audio-tools button:focus-visible,.bible-audio-remove:focus-visible { outline:2px solid var(--primary-strong); outline-offset:2px; }
 .bible-audio-remove { color:var(--danger); }
 .bible-audio-player { display:block; width:min(100%,32rem); margin:.65rem 0; }
@@ -89,7 +89,7 @@
 .bible-no-reading { display:grid; gap:.25rem; margin-bottom:1.1rem; padding:1rem 1.15rem; border:1px solid var(--border); border-radius:var(--radius-lg); background:var(--surface-strong); }
 .bible-no-reading span,.bible-reader-note { color:var(--text-muted); font-size:.83rem; }
 .bible-section-tabs { display:flex; gap:.25rem; width:max-content; max-width:100%; margin:0 0 1rem; padding:.25rem; overflow-x:auto; border:1px solid var(--border); border-radius:999px; background:var(--surface-muted); scrollbar-width:thin; }
-.bible-section-tabs button { display:inline-flex; align-items:center; justify-content:center; gap:.4rem; min-height:2.5rem; padding:.55rem .95rem; border:0; border-radius:999px; color:var(--text-muted); background:transparent; font:700 .82rem inherit; white-space:nowrap; cursor:pointer; }
+.bible-section-tabs button { display:inline-flex; align-items:center; justify-content:center; gap:.4rem; min-height:2.5rem; padding:.55rem .95rem; border:0; border-radius:999px; color:var(--text-muted); background:transparent; font:inherit; font-size:.82rem; font-weight:700; white-space:nowrap; cursor:pointer; }
 .bible-section-tabs button:hover { color:var(--text); background:var(--surface-strong); }
 .bible-section-tabs button.active { color:var(--text); background:var(--surface-strong); box-shadow:0 1px 4px color-mix(in srgb,var(--text) 10%,transparent); }
 .bible-section-tabs button > span { min-width:1.15rem; padding:.08rem .28rem; border-radius:999px; color:var(--primary-strong); background:var(--primary-soft); font-size:.68rem; text-align:center; }
@@ -101,7 +101,7 @@
 .bible-section-heading .bible-select span { color:var(--text-muted); font-size:.72rem; font-weight:700; }
 .bible-section-heading .bible-select select { min-height:2.7rem; padding:.5rem .7rem; border:1px solid var(--border); border-radius:.7rem; color:var(--text); background:var(--surface-strong); }
 .full-bible-embedded { width:100%; }
-.full-bible-reader--embedded { width:100%; height:auto; min-height:0; grid-template-rows:auto auto auto auto; overflow:visible; border-radius:var(--radius-lg); box-shadow:var(--shadow-sm); }
+.full-bible-reader--embedded { width:100%; height:min(76dvh,50rem); min-height:28rem; grid-template-rows:auto auto auto minmax(0,1fr) auto; overflow:hidden; border-radius:var(--radius-lg); box-shadow:var(--shadow-sm); }
 .full-bible-reader--embedded .full-bible-header { padding:.9rem clamp(.9rem,2vw,1.3rem); }
 .full-bible-reader--embedded .full-bible-header h2 { font-size:1.05rem; }
 .full-bible-reader--embedded .full-bible-toolbar { gap:.65rem; padding:.75rem clamp(.9rem,2vw,1.3rem); }
@@ -109,12 +109,44 @@
 .full-bible-reader--embedded .full-bible-book-field { flex:1 1 11rem; }
 .full-bible-reader--embedded .full-bible-search-field { flex:1 1 11rem; }
 .full-bible-reader--embedded .full-bible-chapter-nav { padding:.65rem clamp(.9rem,2vw,1.3rem); }
-.full-bible-reader--embedded .full-bible-text { overflow:visible; width:min(100%,58rem); max-height:none; }
+.full-bible-reader--embedded .full-bible-text { min-height:0; overflow:auto; width:min(100%,58rem); max-height:none; overscroll-behavior:contain; -webkit-overflow-scrolling:touch; }
 .full-bible-reader--embedded .full-bible-header h2 { font-size:1.05rem; }
-.full-bible-reader--embedded .full-bible-text { max-height:none; }
+.full-bible-reader--embedded .full-bible-text { scroll-behavior:smooth; }
 .bible-plan { max-height:none; overflow:visible; }
 .full-bible-reader--embedded .full-bible-footer { flex-wrap:wrap; gap:.35rem 1rem; padding:.7rem clamp(.9rem,2vw,1.3rem); }
 .bible-reader-note { margin:.6rem .15rem 0; }
+.bible-voice-composer { display:grid;gap:.55rem;min-width:0; }
+.bible-voice-composer-actions { display:flex;flex-wrap:wrap;align-items:center;gap:.45rem; }
+.bible-voice-composer input[type="file"] { position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap; }
+.bible-voice-composer .bible-audio-attach:focus-within { outline:2px solid var(--primary-strong);outline-offset:2px; }
+.bible-voice-composer-actions .bible-audio-attach,.bible-voice-composer-actions button { min-height:2.7rem; }
+.bible-voice-composer-actions .bible-audio-attach[aria-disabled="true"] { opacity:.55;cursor:not-allowed; }
+.bible-voice-recording-stop { display:inline-flex;align-items:center;gap:.5rem;padding:.55rem .8rem;border:1px solid color-mix(in srgb,var(--danger) 35%,var(--border));border-radius:.7rem;color:var(--danger);background:var(--danger-soft);font:inherit;font-size:.82rem;font-weight:700;cursor:pointer; }
+.bible-voice-recording-stop span { font-variant-numeric:tabular-nums; }
+.bible-voice-live { display:flex;flex-wrap:wrap;align-items:center;gap:.45rem .6rem;color:var(--text-muted);font-size:.74rem;font-weight:650; }
+.bible-voice-live-indicator { width:.55rem;height:.55rem;border-radius:50%;background:var(--danger);box-shadow:0 0 0 .2rem var(--danger-soft);animation:bible-voice-pulse 1.2s ease-in-out infinite; }
+.bible-voice-waveform { display:flex;align-items:center;gap:2px;width:min(10rem,100%);height:1.6rem;margin-left:auto; }
+.bible-voice-waveform i { flex:1;height:calc(.2rem + var(--wave-level,.12) * 1.3rem);min-width:2px;border-radius:99px;background:color-mix(in srgb,var(--accent-strong) 68%,var(--primary-strong));transition:height 80ms linear; }
+.bible-voice-reply-tools { justify-self:start;margin:.1rem 0; }
+.bible-voice-reply-tools > summary { min-height:2.55rem;padding:.55rem .7rem;border:1px solid var(--border);border-radius:.7rem;color:var(--primary-strong);background:var(--surface-strong);font-size:.78rem;font-weight:700;cursor:pointer; }
+.bible-voice-reply-tools[open] { width:100%; }
+.bible-voice-reply-tools[open] > .bible-voice-composer { margin-top:.55rem; }
+.bible-voice-reply-tools > summary:focus-visible { outline:2px solid var(--primary-strong);outline-offset:2px; }
+.bible-voice-player { display:grid;grid-template-columns:auto minmax(0,1fr);align-items:center;gap:.65rem;width:min(100%,34rem);max-width:100%;margin:.65rem 0;padding:.7rem;border:1px solid var(--border);border-radius:.9rem;background:var(--surface-muted); }
+.bible-voice-play { display:grid;place-items:center;width:2.75rem;height:2.75rem;border:0;border-radius:50%;color:var(--color-on-primary);background:var(--primary);cursor:pointer;transition:transform 150ms ease,background 150ms ease; }
+.bible-voice-play:hover { transform:scale(1.05);background:var(--primary); }
+.bible-voice-play:active { transform:scale(.96); }
+.bible-voice-play:focus-visible,.bible-voice-track input:focus-visible { outline:2px solid var(--primary-strong);outline-offset:2px; }
+.bible-voice-play svg { width:1.15rem;height:1.15rem;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round; }
+.bible-voice-track { display:grid;gap:.25rem;min-width:0; }
+.bible-voice-track input { width:100%;height:.5rem;margin:.2rem 0;appearance:none;border-radius:999px;background:linear-gradient(to right,var(--primary-strong) var(--audio-progress,0%),color-mix(in srgb,var(--text) 13%,var(--surface-strong)) var(--audio-progress,0%));cursor:pointer; }
+.bible-voice-track input::-webkit-slider-thumb { width:.85rem;height:.85rem;appearance:none;border:2px solid var(--surface-strong);border-radius:50%;background:var(--primary-strong);box-shadow:0 0 0 1px color-mix(in srgb,var(--primary-strong) 48%,transparent); }
+.bible-voice-track input::-moz-range-thumb { width:.7rem;height:.7rem;border:2px solid var(--surface-strong);border-radius:50%;background:var(--primary-strong);box-shadow:0 0 0 1px color-mix(in srgb,var(--primary-strong) 48%,transparent); }
+.bible-voice-times { display:flex;justify-content:space-between;color:var(--text-muted);font-size:.68rem;font-variant-numeric:tabular-nums; }
+.bible-voice-player audio { display:none; }
+.bible-voice-error { grid-column:1/-1;color:var(--danger);font-size:.72rem; }
+.bible-voice-reply-tools[open] .bible-audio-attach,.bible-voice-reply-tools[open] .bible-voice-recording-stop { min-height:2.55rem;padding:.5rem .65rem;font-size:.76rem; }
+@keyframes bible-voice-pulse { 50% { opacity:.45; transform:scale(.82); } }
 .bible-tab-panel > .bible-panel,.bible-tab-panel > .bible-progress-summary,.bible-tab-panel > .full-bible-embedded { margin-bottom:1rem; }
 .bible-plan-panel > header { margin-bottom:.6rem; }
 .bible-group-progress { display:flex; align-items:center; justify-content:space-between; gap:.75rem; margin:.25rem 0 .7rem; padding:.65rem .75rem; border-radius:.7rem; background:var(--surface-muted); }
@@ -161,8 +193,13 @@
 .bible-catchup-list button b { color:var(--primary-strong); font-size:.78rem; }
 .bible-reaction-row { display:flex; align-items:center; flex-wrap:wrap; gap:.45rem; margin-top:.65rem; }
 .bible-reaction-summary { display:flex; flex-wrap:wrap; gap:.25rem; }
-.bible-reaction-summary > span { display:inline-flex; align-items:center; gap:.2rem; padding:.22rem .4rem; border:1px solid var(--border); border-radius:999px; background:var(--surface-muted); font-size:.75rem; }
+.bible-reaction-count { position:relative; }
+.bible-reaction-count > summary { display:inline-flex; align-items:center; gap:.2rem; min-height:1.8rem; padding:.22rem .4rem; border:1px solid var(--border); border-radius:999px; background:var(--surface-muted); font-size:.75rem; cursor:pointer; list-style:none; }
+.bible-reaction-count > summary::-webkit-details-marker { display:none; }
+.bible-reaction-count[open] > summary { border-color:var(--primary); background:var(--primary-soft); }
+.bible-reaction-people { position:absolute;z-index:12;top:calc(100% + .3rem);left:0;width:max-content;max-width:min(20rem,calc(100vw - 2rem));padding:.55rem .7rem;border:1px solid var(--border);border-radius:.7rem;color:var(--text);background:var(--surface-strong);box-shadow:var(--shadow-md);font-size:.74rem;line-height:1.45;overflow-wrap:anywhere; }
 .bible-reaction-summary b { color:var(--text-muted); font-size:.68rem; }
+.bible-reaction-error { flex-basis:100%; color:var(--danger); font-size:.76rem; }
 .bible-reaction-picker { position:relative; }
 .bible-reaction-picker > summary { display:inline-flex; align-items:center; justify-content:center; min-height:2rem; padding:.35rem .7rem; border:1px solid var(--border); border-radius:999px; color:var(--text-muted); background:var(--surface-strong); font-size:.75rem; font-weight:700; cursor:pointer; list-style:none; }
 .bible-reaction-picker > summary::-webkit-details-marker { display:none; }
@@ -171,6 +208,41 @@
 .bible-reaction-picker .bible-text-reactions { margin:0; gap:.2rem; }
 .bible-reaction-picker .bible-text-reactions button { min-width:2.35rem; min-height:2.35rem; padding:.3rem; }
 .bible-tab-panel :focus-visible { outline:2px solid var(--primary-strong); outline-offset:2px; }
+.bible-reader-overlay { position:fixed;inset:0;z-index:900;display:grid;place-items:center;padding:1rem;background:rgba(8,10,16,.72);animation:bible-reader-enter 180ms ease both; }
+.bible-reader { display:grid;width:min(100%,54rem);height:min(92dvh,64rem);min-height:24rem;grid-template-rows:auto auto minmax(0,1fr) auto;overflow:hidden;border:1px solid var(--border);border-radius:var(--radius-xl);color:var(--text);background:var(--surface-strong);box-shadow:var(--shadow-lg); }
+.bible-reader-heading { display:grid;grid-template-columns:minmax(0,1fr) auto auto;align-items:center;gap:.8rem;padding:1rem 1.25rem;border-bottom:1px solid var(--border); }
+.bible-reader-heading small { color:var(--primary-strong);font-size:.68rem;font-weight:800;letter-spacing:.09em; }
+.bible-reader-heading h2 { margin:.2rem 0 0;font-size:clamp(1.1rem,2vw,1.4rem);letter-spacing:-.025em; }
+.bible-reader-navigation { display:flex;gap:.35rem; }
+.bible-reader-navigation button,.bible-reader-close { display:inline-flex;align-items:center;justify-content:center;min-height:2.65rem;padding:.5rem .75rem;border:1px solid var(--border);border-radius:.7rem;color:var(--text);background:var(--surface-strong);font:650 .8rem inherit;cursor:pointer;transition:background 160ms ease,transform 160ms ease,border-color 160ms ease; }
+.bible-reader-navigation button:hover:not(:disabled),.bible-reader-close:hover { border-color:color-mix(in srgb,var(--primary-strong) 36%,var(--border));background:var(--surface-muted); }
+.bible-reader-navigation button:active:not(:disabled),.bible-reader-close:active { transform:scale(.97); }
+.bible-reader-navigation button:disabled { opacity:.42;cursor:not-allowed; }
+.bible-reader-navigation button:focus-visible,.bible-reader-close:focus-visible,.bible-complete-button:focus-visible { outline:2px solid var(--primary-strong);outline-offset:2px; }
+.bible-reading-progress { display:flex;align-items:center;gap:.75rem;padding:.55rem 1.25rem;border-bottom:1px solid var(--border);background:var(--surface-muted); }
+.bible-reading-progress > span { display:block;flex:1;height:.32rem;overflow:hidden;border-radius:99px;background:color-mix(in srgb,var(--primary-strong) 16%,var(--surface-strong)); }
+.bible-reading-progress i { display:block;height:100%;border-radius:inherit;background:var(--primary-strong);transition:width 180ms ease; }
+.bible-reading-progress small { min-width:4.5rem;color:var(--text-muted);font-size:.72rem;font-variant-numeric:tabular-nums;text-align:right; }
+.bible-reader > main { min-height:0;overflow:auto;padding:clamp(1.25rem,5vw,3.7rem);overscroll-behavior:contain;-webkit-overflow-scrolling:touch;scroll-behavior:smooth;font-family:Georgia,"Times New Roman",serif;line-height:1.95; }
+.bible-reader > main p { max-width:44rem;margin:0 auto 1.05rem;color:var(--text);font-size:clamp(1.05rem,1.45vw,1.18rem);line-height:1.92; }
+.bible-reader > main sup { margin-right:.45rem;color:var(--primary-strong);font:750 .7rem Inter,system-ui,sans-serif; }
+.bible-reader-skeleton { display:grid;gap:.8rem;width:min(100%,44rem);margin:0 auto; }
+.bible-reader-skeleton i { display:block;height:.85rem;border-radius:99px;background:linear-gradient(90deg,var(--surface-muted),color-mix(in srgb,var(--surface-muted) 55%,var(--surface-strong)),var(--surface-muted));background-size:200% 100%;animation:bible-reading-shimmer 1.25s ease-in-out infinite; }
+.bible-reader-skeleton i:nth-child(3n) { width:76%; }
+.bible-reader-skeleton i:nth-child(3n + 1) { width:91%; }
+.bible-reader-error { color:var(--danger);font:600 .82rem/1.5 Inter,system-ui,sans-serif; }
+.bible-reader > footer { display:flex;align-items:center;justify-content:space-between;gap:1rem;min-height:4.4rem;padding:.75rem 1.25rem;border-top:1px solid var(--border);color:var(--text-muted);font-size:.8rem; }
+.bible-reader-complete-actions { display:grid;justify-items:end;gap:.4rem; }
+.bible-complete-button { min-height:2.9rem;padding:.75rem 1.05rem;border:1px solid transparent;border-radius:.8rem;color:var(--color-on-primary);background:var(--primary);box-shadow:0 3px 10px color-mix(in srgb,var(--primary-strong) 24%,transparent);transition:transform 160ms ease,box-shadow 160ms ease,background 160ms ease; }
+.bible-complete-button:hover:not(:disabled) { transform:translateY(-1px);box-shadow:0 6px 16px color-mix(in srgb,var(--primary-strong) 30%,transparent); }
+.bible-complete-button:active:not(:disabled) { transform:scale(.97); }
+.bible-complete-button:disabled { cursor:default; }
+.bible-complete-button.is-complete { color:var(--success);border-color:color-mix(in srgb,var(--success) 28%,var(--border));background:var(--success-soft);box-shadow:none; }
+.bible-complete-check { display:inline-grid;place-items:center;width:1.15rem;height:1.15rem;border:1.5px solid currentColor;border-radius:50%;font-size:.72rem;line-height:1; }
+.bible-complete-button.is-complete .bible-complete-check { animation:bible-completion-pop 380ms cubic-bezier(.2,.8,.2,1) both; }
+@keyframes bible-reader-enter { from { opacity:0; } to { opacity:1; } }
+@keyframes bible-reading-shimmer { to { background-position:-200% 0; } }
+@keyframes bible-completion-pop { 0% { transform:scale(.55);opacity:.35; } 65% { transform:scale(1.16); } 100% { transform:scale(1);opacity:1; } }
 @media(max-width:700px) {
   .bible-study { padding:.2rem 0; }
   .bible-page-header { align-items:flex-start; }
@@ -193,5 +265,1588 @@
   .full-bible-reader--embedded .full-bible-chapter-nav .secondary-button { min-height:2.75rem; }
   .full-bible-reader--embedded .full-bible-text { padding:1.2rem .95rem; }
   .full-bible-reader--embedded .full-bible-text p { font-size:1.08rem; line-height:1.85; }
+  .full-bible-reader--embedded { height:min(68dvh,44rem);min-height:23rem; }
   .bible-answers { margin-left:.25rem; padding-left:.55rem; }
 }
+@media(max-width:640px) {
+  .bible-reader-overlay { padding:0; }
+  .bible-reader { width:100%;height:100dvh;min-height:0;border:0;border-radius:0;grid-template-rows:auto auto minmax(0,1fr) auto; }
+  .bible-reader-heading { grid-template-columns:minmax(0,1fr) auto;padding:calc(.7rem + env(safe-area-inset-top)) 1rem .7rem;gap:.55rem; }
+  .bible-reader-navigation { grid-column:1/-1;grid-row:2; }
+  .bible-reader-navigation button { min-width:5rem; }
+  .bible-reader-close { grid-column:2;grid-row:1; }
+  .bible-reading-progress { padding:.5rem 1rem; }
+  .bible-reader > main { padding:1.35rem 1.2rem calc(1.35rem + env(safe-area-inset-bottom)); }
+  .bible-reader > main p { font-size:1.08rem;line-height:1.9; }
+  .bible-reader > footer { align-items:stretch;flex-direction:column;gap:.55rem;padding:.7rem 1rem calc(.7rem + env(safe-area-inset-bottom)); }
+  .bible-reader-complete-actions { justify-items:stretch; }
+  .bible-complete-button { width:100%;min-height:3rem; }
+}
+@media(prefers-reduced-motion:reduce) {
+  .bible-reader-overlay { animation:none; }
+  .bible-reader-skeleton i { animation:none; }
+  .bible-reading-progress i,.bible-reader-navigation button,.bible-reader-close,.bible-complete-button { transition:none; }
+  .bible-complete-button.is-complete .bible-complete-check { animation:none; }
+  .bible-voice-live-indicator { animation:none; }
+  .bible-voice-waveform i { transition:none; }
+}
+
+/* Personal and group study are separate journeys inside one Bible Study home. */
+.bible-landing-hero {
+  min-height: 13rem;
+  align-items: end;
+  margin: 0 0 1rem;
+  padding: clamp(1.4rem, 4vw, 2.4rem);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  color: var(--text);
+  background:
+    linear-gradient(90deg, color-mix(in srgb, var(--surface) 95%, transparent), color-mix(in srgb, var(--surface) 75%, transparent)),
+    var(--page-art) center 44% / cover,
+    var(--surface);
+  box-shadow: var(--shadow-sm);
+}
+.bible-landing-hero .bible-page-eyebrow { color: var(--primary-strong); }
+.bible-landing-hero h1 { margin: .35rem 0; color: var(--text); font-size: clamp(2rem, 4vw, 3rem); }
+.bible-landing-hero > div > p:last-child { max-width: 42rem; margin: 0; color: var(--text-muted); font-size: 1rem; }
+.bible-journey-switcher { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:.8rem; margin:0 0 1.15rem; }
+.bible-journey-switcher button { display:flex; align-items:center; gap:.85rem; min-height:5.4rem; padding:.9rem 1rem; border:1px solid var(--border); border-radius:var(--radius-lg); color:var(--text); background:var(--surface-strong); text-align:left; box-shadow:var(--shadow-sm); cursor:pointer; transition:transform 160ms ease,border-color 160ms ease,background 160ms ease; }
+.bible-journey-switcher button:hover { transform:translateY(-1px); border-color:color-mix(in srgb,var(--primary-strong) 46%,var(--border)); }
+.bible-journey-switcher button.active { border-color:var(--primary-strong); background:var(--primary-soft); }
+.bible-journey-switcher button > span:nth-child(2) { display:grid; gap:.18rem; flex:1; }
+.bible-journey-switcher strong { font-size:.92rem; }
+.bible-journey-switcher small { color:var(--text-muted); font-size:.76rem; }
+.bible-journey-switcher button > b { color:var(--primary-strong); font-size:1.2rem; }
+.bible-journey-icon { display:grid; place-items:center; width:2.65rem; height:2.65rem; flex:0 0 auto; border-radius:.85rem; color:var(--primary-strong); background:var(--surface-strong); }
+.bible-journey-icon svg { width:1.25rem; height:1.25rem; }
+.bible-group-overview { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:.75rem; margin:0 0 1rem; }
+.bible-group-overview article { display:grid; align-content:start; gap:.35rem; min-height:7.3rem; padding:1rem; border:1px solid var(--border); border-radius:var(--radius-lg); background:var(--surface-strong); box-shadow:var(--shadow-sm); }
+.bible-group-overview small { color:var(--primary-strong); font-size:.66rem; font-weight:800; letter-spacing:.08em; }
+.bible-group-overview strong { font-size:1.08rem; line-height:1.3; }
+.bible-group-overview span { color:var(--text-muted); font-size:.76rem; line-height:1.45; }
+.bible-group-overview-streak { border-color:color-mix(in srgb,var(--primary) 25%,var(--border))!important; background:linear-gradient(135deg,var(--primary-soft),var(--surface-strong))!important; }
+.personal-bible-study { display:grid; gap:1rem; }
+.personal-bible-loading { min-height:12rem; display:grid; place-items:center; color:var(--text-muted); }
+.personal-bible-feedback { padding:.75rem .9rem; border:1px solid var(--border); border-radius:.8rem; font-size:.82rem; }
+.personal-bible-feedback.error { border-color:color-mix(in srgb,var(--danger) 34%,var(--border)); color:var(--danger); background:var(--danger-soft); }
+.personal-bible-feedback.success { border-color:color-mix(in srgb,var(--success) 34%,var(--border)); color:var(--success); background:var(--success-soft); }
+.personal-bible-overview { display:grid; grid-template-columns:1.35fr repeat(3,minmax(0,.75fr)); gap:.7rem; }
+.personal-bible-overview > article { display:grid; align-content:start; gap:.32rem; min-height:6rem; padding:.9rem 1rem; border:1px solid var(--border); border-radius:var(--radius-lg); background:var(--surface-strong); box-shadow:var(--shadow-sm); }
+.personal-bible-overview > article > span,.personal-bible-progress-copy > span { color:var(--text-muted); font-size:.7rem; font-weight:750; letter-spacing:.055em; }
+.personal-bible-overview > article > strong { font-size:1.32rem; line-height:1.15; }
+.personal-bible-overview > article > small,.personal-bible-progress-copy > small { color:var(--text-muted); font-size:.7rem; line-height:1.35; }
+.personal-bible-overview .personal-bible-progress-card { display:grid; gap:.65rem; }
+.personal-bible-progress-copy { display:grid; grid-template-columns:auto auto; align-items:center; gap:.25rem .65rem; }
+.personal-bible-progress-copy > span { grid-column:1/-1; }
+.personal-bible-progress-track,.personal-bible-book-track { display:block; height:.42rem; overflow:hidden; border-radius:99px; background:color-mix(in srgb,var(--primary-strong) 14%,var(--surface-strong)); }
+.personal-bible-progress-track i,.personal-bible-book-track i { display:block; height:100%; border-radius:inherit; background:var(--primary-strong); transition:width 220ms ease; }
+.personal-bible-content-grid { display:grid; grid-template-columns:minmax(0,1.5fr) minmax(17rem,.82fr); gap:.8rem; align-items:start; }
+.personal-bible-reader-panel { display:grid; gap:.75rem; }
+.personal-bible-section-heading { display:flex; align-items:start; justify-content:space-between; gap:.7rem; margin-bottom:.55rem; }
+.personal-bible-section-heading > div { display:grid; gap:.18rem; }
+.personal-bible-section-heading small { color:var(--primary-strong); font-size:.66rem; font-weight:800; letter-spacing:.08em; }
+.personal-bible-section-heading h2 { margin:.12rem 0; font-size:1.12rem; }
+.personal-bible-section-heading p { margin:0; color:var(--text-muted); font-size:.75rem; line-height:1.4; }
+.personal-bible-side-column { display:grid; gap:.8rem; min-width:0; }
+.personal-bible-status { display:inline-flex; align-items:center; width:max-content; max-width:100%; padding:.22rem .45rem; border-radius:99px; color:var(--text-muted); background:var(--surface-muted); font-size:.65rem; font-weight:750; white-space:nowrap; }
+.personal-bible-status--completed { color:var(--success); background:var(--success-soft); }
+.personal-bible-status--in_progress { color:var(--primary-strong); background:var(--primary-soft); }
+.personal-bible-next-reading { display:grid; gap:.17rem; width:100%; margin:.3rem 0 .65rem; padding:.7rem .75rem; border:1px solid var(--border); border-radius:.75rem; color:var(--text); background:var(--surface-muted); text-align:left; cursor:pointer; }
+.personal-bible-next-reading > span { color:var(--primary-strong); font-size:.63rem; font-weight:800; letter-spacing:.08em; }
+.personal-bible-next-reading > strong { font-size:.88rem; }
+.personal-bible-next-reading > small { color:var(--text-muted); font-size:.7rem; }
+.personal-bible-plan-form { display:grid; grid-template-columns:1fr .72fr; gap:.55rem; margin:.5rem 0 .75rem; }
+.personal-bible-plan-form label,.personal-bible-note-fields label { display:grid; gap:.28rem; color:var(--text-muted); font-size:.72rem; font-weight:700; }
+.personal-bible-plan-form label:first-child,.personal-bible-plan-form label:nth-child(3) { grid-column:1/-1; }
+.personal-bible-plan-form input,.personal-bible-plan-form select,.personal-bible-note-fields input,.personal-bible-note-fields select { width:100%; min-height:2.55rem; padding:.45rem .62rem; border:1px solid var(--border); border-radius:.65rem; color:var(--text); background:var(--surface-strong); font:inherit; }
+.personal-bible-plan-form .bible-btn { grid-column:1/-1; min-height:2.65rem; }
+.personal-bible-plan-list { display:grid; max-height:24rem; overflow:auto; }
+.personal-bible-plan-list > button { display:flex; align-items:center; gap:.5rem; min-width:0; padding:.58rem .2rem; border:0; border-top:1px solid var(--border); color:var(--text); background:transparent; text-align:left; cursor:pointer; }
+.personal-bible-plan-list > button.selected { padding-inline:.5rem; border-radius:.65rem; background:var(--primary-soft); }
+.personal-bible-plan-list > button > span:nth-child(2) { display:grid; gap:.1rem; flex:1; min-width:0; }
+.personal-bible-plan-list strong { font-size:.78rem; }
+.personal-bible-plan-list small { color:var(--text-muted); font-size:.67rem; }
+.personal-bible-plan-list .personal-bible-status { font-size:.58rem; }
+.personal-bible-plan-mark { display:grid; place-items:center; width:1.25rem; height:1.25rem; flex:0 0 auto; border:1px solid var(--border); border-radius:50%; color:var(--primary-strong); font-size:.72rem; font-weight:800; }
+.personal-bible-book-progress { display:grid; gap:.7rem; margin:.7rem 0 1rem; }
+.personal-bible-book-progress > div { display:grid; gap:.3rem; }
+.personal-bible-book-progress > div > div { display:flex; justify-content:space-between; gap:.5rem; font-size:.72rem; }
+.personal-bible-book-progress > div > div > span { color:var(--text-muted); font-variant-numeric:tabular-nums; }
+.personal-bible-calendar { display:grid; grid-template-columns:repeat(14,minmax(.45rem,1fr)); gap:.3rem; margin-top:.75rem; }
+.personal-bible-calendar > span { aspect-ratio:1; min-width:.4rem; border-radius:.22rem; background:var(--surface-muted); box-shadow:inset 0 0 0 1px var(--border); }
+.personal-bible-calendar > span.completed { background:color-mix(in srgb,var(--success) 72%,var(--surface)); box-shadow:none; }
+.personal-bible-calendar-caption { display:block; margin-top:.4rem; color:var(--text-muted); font-size:.66rem; }
+.personal-bible-reader-actions { display:flex; justify-content:flex-end; flex-wrap:wrap; gap:.45rem; }
+.personal-bible-lower-grid { grid-template-columns:minmax(0,1.45fr) minmax(16rem,.8fr); }
+.personal-bible-note-form { display:grid; gap:.65rem; margin:.5rem 0 1rem; padding-bottom:1rem; border-bottom:1px solid var(--border); }
+.personal-bible-note-fields { display:grid; grid-template-columns:.75fr 1.25fr; gap:.6rem; }
+.personal-bible-note-content { display:grid; gap:.3rem; color:var(--text-muted); font-size:.73rem; font-weight:700; }
+.personal-bible-note-content textarea { min-height:6rem; padding:.7rem; border:1px solid var(--border); border-radius:.7rem; color:var(--text); background:var(--surface-muted); font:inherit; line-height:1.55; resize:vertical; }
+.personal-bible-note-actions { display:flex; flex-wrap:wrap; gap:.4rem; }
+.personal-bible-notes-list { display:grid; gap:.7rem; }
+.personal-bible-notes-list > article { padding:.75rem; border:1px solid var(--border); border-radius:.75rem; background:var(--surface-muted); }
+.personal-bible-notes-list > article > div { display:flex; align-items:center; justify-content:space-between; gap:.5rem; color:var(--primary-strong); font-size:.7rem; font-weight:750; }
+.personal-bible-notes-list time,.personal-bible-activity-panel time { color:var(--text-muted); font-size:.65rem; font-weight:500; }
+.personal-bible-notes-list p { margin:.55rem 0; color:var(--text); font-size:.82rem; line-height:1.55; white-space:pre-wrap; overflow-wrap:anywhere; }
+.personal-bible-notes-list footer { display:flex; justify-content:flex-end; gap:.35rem; }
+.personal-bible-notes-list footer button { min-height:2rem; padding:.35rem .55rem; border:1px solid var(--border); border-radius:.55rem; color:var(--text); background:var(--surface-strong); font:inherit; font-size:.68rem; cursor:pointer; }
+.personal-bible-notes-list footer button.danger { color:var(--danger); }
+.personal-bible-activity-panel ul { display:grid; gap:.1rem; margin:.55rem 0 0; padding:0; list-style:none; }
+.personal-bible-activity-panel li { display:flex; gap:.6rem; padding:.65rem 0; border-top:1px solid var(--border); }
+.personal-bible-activity-panel li > span { width:.52rem; height:.52rem; flex:0 0 auto; margin-top:.28rem; border-radius:50%; background:var(--primary-strong); }
+.personal-bible-activity-panel li > div { display:grid; gap:.2rem; }
+.personal-bible-activity-panel li strong { font-size:.74rem; }
+.personal-bible-activity-panel li time { font-size:.66rem; }
+.personal-bible-study :focus-visible,.bible-journey-switcher :focus-visible { outline:2px solid var(--primary-strong); outline-offset:2px; }
+
+.bible-streak-connection { display:flex; align-items:center; gap:.5rem; color:var(--text-muted); font-size:.72rem; }
+.bible-streak-connection i,.bible-streak-live i { width:.48rem; height:.48rem; flex:0 0 auto; border-radius:50%; background:var(--text-muted); }
+.bible-streak-connection.is-live i,.bible-streak-live i { background:#64b884; box-shadow:0 0 0 4px color-mix(in srgb,#64b884 15%,transparent); }
+.bible-streak-connection.is-error i { background:var(--highlight); }
+.bible-streak-card { position:relative; isolation:isolate; overflow:hidden; padding:clamp(1rem,3vw,1.65rem); border:1px solid color-mix(in srgb,#B995CF 35%,transparent); border-radius:1.25rem; color:#fff; background:radial-gradient(circle at 80% 12%,#74469b 0,transparent 34%),linear-gradient(132deg,#35165C 0%,#4B2478 55%,#352348 100%); box-shadow:0 16px 38px #35165c32; }
+.bible-streak-glow { position:absolute; z-index:-1; top:-8rem; right:12%; width:18rem; height:18rem; border-radius:50%; background:#D6B66F20; filter:blur(45px); pointer-events:none; }
+.bible-streak-card-topline,.bible-streak-primary,.bible-streak-footer,.bible-streak-section-heading,.bible-streak-selected-day-heading { display:flex; align-items:center; justify-content:space-between; gap:1rem; }
+.bible-streak-card-topline { align-items:flex-start; }
+.bible-streak-card-topline small,.bible-streak-milestone-copy > span,.bible-streak-section-heading small,.bible-streak-selected-day-heading small { display:block; color:#E8D3A0; font-size:.63rem; font-weight:850; letter-spacing:.13em; }
+.bible-streak-card-topline h2 { margin:.32rem 0 0; font-size:clamp(1rem,2.4vw,1.35rem); letter-spacing:-.025em; }
+.bible-streak-live { display:inline-flex; align-items:center; gap:.45rem; padding:.43rem .62rem; border:1px solid #ffffff31; border-radius:99px; color:#f7f1fb; font-size:.65rem; white-space:nowrap; }
+.bible-streak-primary { justify-content:flex-start; min-height:9.5rem; margin:.5rem 0 .4rem; }
+.bible-streak-flame-wrap { display:grid; place-items:center; width:5.25rem; height:6.2rem; flex:0 0 auto; filter:drop-shadow(0 0 13px #e8d3a05c); animation:bibleFlameFloat 2.8s ease-in-out infinite; }
+.bible-streak-flame-svg { display:block; width:100%; height:100%; overflow:visible; transform-origin:50% 85%; animation:bibleFlameFlicker 1.8s ease-in-out infinite alternate; }
+.bible-streak-card.is-growing .bible-streak-flame-wrap { filter:drop-shadow(0 0 17px #e8d3a078); }
+.bible-streak-card.is-bright .bible-streak-flame-wrap,.bible-streak-card.is-brilliant .bible-streak-flame-wrap { filter:drop-shadow(0 0 22px #e8d3a09e); }
+.bible-streak-card.is-brilliant .bible-streak-flame-svg { animation-duration:1.35s; }
+.bible-streak-card.is-golden { border-color:#D6B66F90; box-shadow:0 18px 46px #35165c42,0 0 28px #d6b66f25; }
+.bible-streak-card.is-golden .bible-streak-flame-wrap { transform:scale(1.08); filter:drop-shadow(0 0 28px #e8d3a0bb); }
+.bible-streak-count-wrap { display:grid; grid-template-columns:auto auto; align-items:baseline; column-gap:.5rem; }
+.bible-streak-count { font-size:clamp(3.3rem,9vw,5.9rem); font-weight:900; line-height:.9; letter-spacing:-.085em; font-variant-numeric:tabular-nums; animation:bibleStreakNumberIn .4s cubic-bezier(.2,.8,.2,1) both; }
+.bible-streak-count-wrap > span { color:#E8D3A0; font-size:.85rem; font-weight:850; letter-spacing:.16em; }
+.bible-streak-count-wrap > small { grid-column:1/-1; margin-top:.55rem; color:#ffffffcf; font-size:.76rem; }
+.bible-streak-today { display:flex; align-items:flex-start; gap:.7rem; max-width:23rem; margin-left:auto; padding:.8rem .9rem; border:1px solid #ffffff2d; border-radius:.9rem; background:#ffffff12; }
+.bible-streak-status-dot { width:.62rem; height:.62rem; flex:0 0 auto; margin-top:.23rem; border-radius:50%; background:#D6B66F; box-shadow:0 0 0 4px #D6B66F25; }
+.bible-streak-status-dot.complete { background:#a9dfbc; box-shadow:0 0 0 4px #a9dfbc25; }
+.bible-streak-status-dot.progress { background:#E8D3A0; }
+.bible-streak-today strong { font-size:.78rem; }
+.bible-streak-today p { margin:.25rem 0; color:#ffffffdf; font-size:.72rem; line-height:1.45; }
+.bible-streak-today small { color:#ffffffb8; font-size:.64rem; line-height:1.4; }
+.bible-streak-metrics { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:.55rem; }
+.bible-streak-metrics article { display:grid; gap:.18rem; min-width:0; padding:.7rem .78rem; border:1px solid #ffffff24; border-radius:.75rem; background:#ffffff10; }
+.bible-streak-metrics span,.bible-streak-metrics small { color:#ffffffbf; font-size:.65rem; }
+.bible-streak-metrics strong { font-size:1rem; font-variant-numeric:tabular-nums; }
+.bible-streak-week { display:grid; grid-template-columns:repeat(7,minmax(0,1fr)); gap:.45rem; margin:1rem 0; }
+.bible-streak-week-day { display:grid; justify-items:center; gap:.27rem; min-height:4.3rem; padding:.45rem .25rem; border:1px solid #ffffff26; border-radius:.72rem; color:#fff; background:#ffffff10; cursor:pointer; transition:transform .18s ease,background .18s ease,border-color .18s ease; }
+.bible-streak-week-day:hover { transform:translateY(-2px); background:#ffffff1c; }
+.bible-streak-week-day > span,.bible-streak-week-day > small { color:#ffffffbd; font-size:.61rem; }
+.bible-streak-week-day > i { display:grid; place-items:center; width:1.22rem; height:1.22rem; border:1px solid #ffffff55; border-radius:50%; color:transparent; font-size:.7rem; font-style:normal; font-weight:900; }
+.bible-streak-week-day.is-completed > i { border-color:#E8D3A0; color:#35165C; background:#E8D3A0; }
+.bible-streak-week-day.is-protected > i { border-color:#E8D3A0; color:#E8D3A0; }
+.bible-streak-week-day.is-missed > i { border-color:#ffffff65; color:#ffffff95; }
+.bible-streak-week-day.is-today { border-color:#E8D3A0; box-shadow:inset 0 0 0 1px #E8D3A0; }
+.bible-streak-next-milestone { display:grid; grid-template-columns:minmax(0,1fr) minmax(8rem,.55fr); align-items:center; gap:1rem; padding:.85rem .95rem; border:1px solid #E8D3A048; border-radius:.85rem; background:#21142e74; }
+.bible-streak-milestone-copy > span { color:#E8D3A0; font-size:.57rem; }
+.bible-streak-milestone-copy strong,.bible-streak-milestone-copy small { display:block; }
+.bible-streak-milestone-copy strong { margin-top:.2rem; font-size:.8rem; }
+.bible-streak-milestone-copy small { margin-top:.18rem; color:#ffffffbd; font-size:.66rem; }
+.bible-streak-milestone-track { height:.55rem; overflow:hidden; border-radius:99px; background:#ffffff28; }
+.bible-streak-milestone-track i { display:block; height:100%; border-radius:inherit; background:linear-gradient(90deg,#B995CF,#E8D3A0); transition:width .55s cubic-bezier(.2,.75,.25,1); }
+.bible-streak-footer { align-items:flex-start; margin-top:.85rem; color:#ffffffbc; font-size:.67rem; line-height:1.45; }
+.bible-streak-freeze { display:flex; align-items:center; justify-content:flex-end; flex-wrap:wrap; gap:.45rem .7rem; text-align:right; }
+.bible-streak-freeze button { min-height:2.25rem; padding:.35rem .65rem; border:1px solid #E8D3A0a8; border-radius:.65rem; color:#fff; background:#D6B66F25; font:inherit; font-weight:750; cursor:pointer; }
+.bible-streak-freeze button:disabled { opacity:.65; cursor:wait; }
+.bible-streak-freeze small { flex-basis:100%; color:#ffffffa8; }
+@keyframes bibleFlameFlicker { 0% { transform:rotate(-2deg) scale(.98,1); } 100% { transform:rotate(2deg) scale(1.025,.99); } }
+@keyframes bibleFlameFloat { 0%,100% { translate:0 2px; } 50% { translate:0 -3px; } }
+@keyframes bibleStreakNumberIn { from { opacity:.45; transform:translateY(8px) scale(.96); } to { opacity:1; transform:translateY(0) scale(1); } }
+.bible-streak-card.is-celebrating { animation:bibleCardGlow .8s ease-in-out 2 alternate; }
+@keyframes bibleCardGlow { from { box-shadow:0 16px 38px #35165c32; } to { box-shadow:0 14px 50px #d6b66f72; } }
+.bible-streak-calendar-panel,.bible-streak-achievements { display:grid; gap:.85rem; }
+.bible-streak-section-heading { align-items:flex-start; }
+.bible-streak-section-heading > div { display:grid; gap:.18rem; }
+.bible-streak-section-heading small,.bible-streak-selected-day-heading small { color:var(--primary-strong); font-size:.62rem; }
+.bible-streak-section-heading h2 { margin:.12rem 0; font-size:1.15rem; }
+.bible-streak-section-heading p { margin:0; color:var(--text-muted); font-size:.74rem; line-height:1.45; }
+.bible-streak-month-nav { display:flex; align-items:center; gap:.55rem; }
+.bible-streak-month-nav strong { min-width:8.5rem; color:var(--text); font-size:.82rem; text-align:center; }
+.bible-streak-month-nav button { display:grid; place-items:center; width:2.25rem; height:2.25rem; border:1px solid var(--border); border-radius:.65rem; color:var(--text); background:var(--surface-strong); font-size:1.25rem; cursor:pointer; }
+.bible-streak-month-nav button:disabled { opacity:.38; cursor:not-allowed; }
+.bible-streak-calendar-grid { display:grid; grid-template-columns:repeat(7,minmax(0,1fr)); gap:.35rem; }
+.bible-streak-calendar-weekday { padding:.35rem 0; color:var(--text-muted); font-size:.63rem; font-weight:800; text-align:center; }
+.bible-streak-calendar-blank { min-height:3rem; }
+.bible-streak-calendar-day { position:relative; display:flex; align-items:center; justify-content:space-between; min-width:0; min-height:3rem; padding:.38rem .42rem; border:1px solid var(--border); border-radius:.62rem; color:var(--text); background:var(--surface-strong); cursor:pointer; transition:transform .16s ease,border-color .16s ease,background .16s ease; }
+.bible-streak-calendar-day:hover { transform:translateY(-1px); border-color:var(--primary-strong); }
+.bible-streak-calendar-day > span { font-size:.76rem; font-weight:750; font-variant-numeric:tabular-nums; }
+.bible-streak-calendar-day > i { display:grid; place-items:center; width:1rem; height:1rem; border-radius:50%; color:var(--text-muted); font-size:.65rem; font-style:normal; font-weight:900; }
+.bible-streak-calendar-day.is-completed { border-color:color-mix(in srgb,var(--primary-strong) 46%,var(--border)); background:color-mix(in srgb,var(--primary-strong) 12%,var(--surface-strong)); }
+.bible-streak-calendar-day.is-completed > i { color:#fff; background:var(--primary-strong); }
+.bible-streak-calendar-day.is-missed { color:var(--text-muted); background:var(--surface-muted); }
+.bible-streak-calendar-day.is-missed > i { background:color-mix(in srgb,var(--text-muted) 12%,transparent); }
+.bible-streak-calendar-day.is-pending { border-color:#D6B66F; box-shadow:inset 0 0 0 1px #D6B66F; }
+.bible-streak-calendar-day.is-in_progress { border-color:var(--accent); background:color-mix(in srgb,var(--accent) 10%,var(--surface-strong)); }
+.bible-streak-calendar-day.is-scheduled { border-style:dashed; color:var(--text-muted); }
+.bible-streak-calendar-day.is-protected { border-color:#B58A45; background:color-mix(in srgb,#D6B66F 17%,var(--surface-strong)); }
+.bible-streak-calendar-day.is-future { color:var(--text-muted); background:var(--surface-muted); opacity:.7; }
+.bible-streak-calendar-day.is-today { outline:2px solid color-mix(in srgb,#D6B66F 75%,transparent); outline-offset:1px; }
+.bible-streak-calendar-day.is-selected { box-shadow:0 0 0 2px var(--primary-strong); }
+.bible-streak-calendar-legend { display:flex; flex-wrap:wrap; gap:.45rem .85rem; }
+.bible-streak-calendar-legend span { display:inline-flex; align-items:center; gap:.32rem; color:var(--text-muted); font-size:.63rem; }
+.bible-streak-calendar-legend i { width:.68rem; height:.68rem; border:1px solid var(--border); border-radius:.2rem; background:var(--surface-muted); }
+.bible-streak-calendar-legend i.is-completed { border-color:var(--primary-strong); background:var(--primary-strong); }
+.bible-streak-calendar-legend i.is-missed { background:var(--surface-muted); }
+.bible-streak-calendar-legend i.is-pending { border-color:#D6B66F; background:color-mix(in srgb,#D6B66F 25%,var(--surface)); }
+.bible-streak-calendar-legend i.is-scheduled { border-style:dashed; background:var(--surface); }
+.bible-streak-calendar-legend i.is-protected { border-color:#B58A45; background:#D6B66F; }
+.bible-streak-calendar-legend i.is-future { opacity:.5; }
+.bible-streak-selected-day { padding:.85rem; border:1px solid var(--border); border-radius:.8rem; background:var(--surface-muted); }
+.bible-streak-selected-day-heading { align-items:flex-start; }
+.bible-streak-selected-day-heading h3 { margin:.17rem 0 0; font-size:.95rem; }
+.bible-streak-day-status { padding:.28rem .48rem; border-radius:99px; color:var(--text-muted); background:var(--surface-strong); font-size:.62rem; font-weight:750; }
+.bible-streak-day-status.is-completed { color:var(--primary-strong); background:var(--primary-soft); }
+.bible-streak-day-status.is-protected { color:#795719; background:#D6B66F38; }
+.bible-streak-reading-list { display:grid; gap:.45rem; margin-top:.65rem; }
+.bible-streak-reading-list article { display:grid; gap:.35rem; padding:.65rem; border:1px solid var(--border); border-radius:.65rem; background:var(--surface-strong); }
+.bible-streak-reading-list article > div { display:flex; justify-content:space-between; gap:.6rem; }
+.bible-streak-reading-list strong { font-size:.75rem; }
+.bible-streak-reading-list time,.bible-streak-reading-list small { color:var(--text-muted); font-size:.66rem; }
+.bible-streak-reading-list details { color:var(--text-muted); font-size:.68rem; }
+.bible-streak-reading-list summary { cursor:pointer; }
+.bible-streak-reading-list details p { margin:.4rem 0 0; padding:.45rem; border-radius:.5rem; color:var(--text); background:var(--surface-muted); line-height:1.5; }
+.bible-streak-day-empty { margin:.65rem 0 0; color:var(--text-muted); font-size:.72rem; line-height:1.5; }
+.bible-streak-achievement-count { padding:.38rem .55rem; border:1px solid var(--border); border-radius:99px; color:var(--text-muted); font-size:.65rem; white-space:nowrap; }
+.bible-streak-achievement-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:.55rem; }
+.bible-streak-achievement { display:flex; align-items:flex-start; gap:.65rem; min-width:0; min-height:7rem; padding:.75rem; border:1px solid var(--border); border-radius:.8rem; background:var(--surface-strong); }
+.bible-streak-achievement.is-locked { opacity:.68; }
+.bible-streak-achievement.is-earned { border-color:color-mix(in srgb,#D6B66F 56%,var(--border)); background:color-mix(in srgb,#D6B66F 10%,var(--surface-strong)); }
+.bible-streak-achievement-mark { display:grid; place-items:center; width:2.25rem; height:2.25rem; flex:0 0 auto; border-radius:.72rem; color:var(--text-muted); background:var(--surface-muted); }
+.bible-streak-achievement.is-earned .bible-streak-achievement-mark { color:#684711; background:linear-gradient(135deg,#E8D3A0,#D6B66F); box-shadow:0 4px 12px #d6b66f30; }
+.bible-streak-achievement-mark svg { width:1.3rem; height:1.3rem; }
+.bible-streak-achievement-mark svg path:first-child { fill:currentColor; opacity:.15; stroke:currentColor; stroke-width:1.2; }
+.bible-streak-achievement-mark svg path:last-child { stroke:currentColor; stroke-width:2.2; stroke-linecap:round; stroke-linejoin:round; }
+.bible-streak-achievement > div { min-width:0; }
+.bible-streak-achievement-label { color:var(--primary-strong); font-size:.56rem; font-weight:850; letter-spacing:.07em; }
+.bible-streak-achievement h3 { margin:.2rem 0; font-size:.76rem; }
+.bible-streak-achievement p,.bible-streak-achievement small { display:block; margin:.15rem 0 0; color:var(--text-muted); font-size:.64rem; line-height:1.4; }
+.personal-bible-freeze-history { display:grid; gap:.28rem; margin-top:.8rem; padding-top:.7rem; border-top:1px solid var(--border); color:var(--text-muted); font-size:.66rem; }
+.personal-bible-freeze-history strong { color:var(--text); }
+.bible-streak-reminder-form { display:grid; gap:.65rem; margin:.65rem 0 .5rem; }
+.bible-streak-reminder-form > label:not(.bible-streak-toggle),.bible-streak-quiet-times label { display:grid; gap:.28rem; color:var(--text-muted); font-size:.68rem; font-weight:700; }
+.bible-streak-reminder-form input[type="time"],.bible-streak-reminder-form select { width:100%; min-height:2.45rem; padding:.4rem .55rem; border:1px solid var(--border); border-radius:.6rem; color:var(--text); background:var(--surface-strong); font:inherit; }
+.bible-streak-reminder-form input:disabled,.bible-streak-reminder-form select:disabled { opacity:.52; }
+.bible-streak-toggle { display:flex; align-items:flex-start; gap:.55rem; padding:.65rem; border:1px solid var(--border); border-radius:.7rem; background:var(--surface-muted); }
+.bible-streak-toggle input { width:1rem; height:1rem; flex:0 0 auto; margin:.15rem 0 0; accent-color:var(--primary-strong); }
+.bible-streak-toggle span { display:grid; gap:.15rem; }
+.bible-streak-toggle strong { color:var(--text); font-size:.71rem; }
+.bible-streak-toggle small { color:var(--text-muted); font-size:.62rem; line-height:1.4; }
+.bible-streak-quiet-times { display:grid; grid-template-columns:1fr 1fr; gap:.55rem; }
+.bible-streak-reminder-note { display:block; color:var(--text-muted); font-size:.62rem; line-height:1.45; }
+.bible-streak-welcome { padding:1.3rem; border:1px solid color-mix(in srgb,var(--primary-strong) 22%,var(--border)); border-radius:1rem; background:linear-gradient(120deg,var(--primary-soft),var(--surface-strong)); }
+.bible-streak-welcome small { color:var(--primary-strong); font-size:.63rem; font-weight:850; letter-spacing:.1em; }
+.bible-streak-welcome h2 { margin:.35rem 0; color:var(--text); font-size:1.25rem; }
+.bible-streak-welcome p { max-width:52rem; margin:.2rem 0 0; color:var(--text-muted); font-size:.78rem; line-height:1.5; }
+.bible-streak-celebration-backdrop { position:fixed; z-index:1800; inset:0; display:grid; place-items:center; padding:1rem; background:#160d20b8; backdrop-filter:blur(8px); animation:bibleCelebrationFade .25s ease-out both; }
+.bible-streak-celebration { position:relative; isolation:isolate; display:grid; justify-items:center; width:min(100%,29rem); overflow:hidden; padding:2.2rem 1.5rem 1.5rem; border:1px solid #D6B66F7a; border-radius:1.3rem; color:#fff; background:radial-gradient(circle at 50% 0,#74469b 0,transparent 44%),linear-gradient(145deg,#35165C,#21142E); box-shadow:0 24px 80px #0008; text-align:center; animation:bibleCelebrationRise .45s cubic-bezier(.2,.8,.2,1) both; }
+.bible-streak-celebration.is-milestone-7,.bible-streak-celebration.is-milestone-30,.bible-streak-celebration.is-milestone-100,.bible-streak-celebration.is-milestone-365 { border-color:#E8D3A0; background:radial-gradient(circle at 50% 0,#8b6b36 0,transparent 47%),linear-gradient(145deg,#4B2478,#21142E); }
+.bible-streak-celebration.is-milestone-14,.bible-streak-celebration.is-milestone-60,.bible-streak-celebration.is-milestone-180 { background:radial-gradient(circle at 50% 0,#945f9f 0,transparent 46%),linear-gradient(145deg,#35165C,#21142E); }
+.bible-streak-celebration > .bible-streak-flame-svg { width:4.3rem; height:5.3rem; margin-bottom:.65rem; }
+.bible-streak-celebration-overline { color:#E8D3A0; font-size:.62rem; font-weight:850; letter-spacing:.11em; }
+.bible-streak-celebration h2 { margin:.55rem 0 .25rem; font-size:1.55rem; letter-spacing:-.035em; }
+.bible-streak-celebration p { max-width:23rem; margin:.25rem 0 .8rem; color:#ffffffce; font-size:.8rem; line-height:1.55; }
+.bible-streak-celebration-count { margin:.3rem 0 1rem; color:#E8D3A0; font-size:1.1rem; letter-spacing:.12em; }
+.bible-streak-celebration .bible-btn { min-height:2.8rem; border-color:#E8D3A0; color:#21172B; background:linear-gradient(120deg,#E8D3A0,#D6B66F); }
+.bible-streak-celebration-particles { position:absolute; z-index:-1; inset:0; overflow:hidden; pointer-events:none; }
+.bible-streak-celebration-particles i { position:absolute; top:60%; left:50%; width:.4rem; height:.65rem; border-radius:2px; background:#E8D3A0; opacity:0; animation:bibleParticle .9s ease-out both; }
+.bible-streak-celebration-particles i:nth-child(3n) { background:#B995CF; }
+.bible-streak-celebration-particles i:nth-child(2n) { animation-delay:.08s; }
+.bible-streak-celebration-particles i:nth-child(4n) { animation-delay:.16s; }
+.bible-streak-celebration-particles i:nth-child(1) { --particle-x:-9rem; --particle-y:-9rem; }
+.bible-streak-celebration-particles i:nth-child(2) { --particle-x:-6rem; --particle-y:-12rem; }
+.bible-streak-celebration-particles i:nth-child(3) { --particle-x:-3rem; --particle-y:-8rem; }
+.bible-streak-celebration-particles i:nth-child(4) { --particle-x:0rem; --particle-y:-12rem; }
+.bible-streak-celebration-particles i:nth-child(5) { --particle-x:3rem; --particle-y:-8rem; }
+.bible-streak-celebration-particles i:nth-child(6) { --particle-x:6rem; --particle-y:-12rem; }
+.bible-streak-celebration-particles i:nth-child(7) { --particle-x:9rem; --particle-y:-9rem; }
+.bible-streak-celebration-particles i:nth-child(8) { --particle-x:-11rem; --particle-y:-5rem; }
+.bible-streak-celebration-particles i:nth-child(9) { --particle-x:11rem; --particle-y:-5rem; }
+.bible-streak-celebration-particles i:nth-child(10) { --particle-x:-8rem; --particle-y:-2rem; }
+.bible-streak-celebration-particles i:nth-child(11) { --particle-x:8rem; --particle-y:-2rem; }
+.bible-streak-celebration-particles i:nth-child(12) { --particle-x:-4rem; --particle-y:-4rem; }
+.bible-streak-celebration-particles i:nth-child(13) { --particle-x:4rem; --particle-y:-4rem; }
+.bible-streak-celebration-particles i:nth-child(14) { --particle-x:0rem; --particle-y:-7rem; }
+@keyframes bibleParticle { 0% { opacity:0; transform:translate(0,0) rotate(0) scale(.5); } 15% { opacity:1; } 100% { opacity:0; transform:translate(var(--particle-x),var(--particle-y)) rotate(220deg) scale(1.05); } }
+@keyframes bibleCelebrationFade { from { opacity:0; } to { opacity:1; } }
+@keyframes bibleCelebrationRise { from { opacity:.4; transform:translateY(12px) scale(.97); } to { opacity:1; transform:translateY(0) scale(1); } }
+@media(max-width:760px) {
+  .bible-streak-primary { flex-wrap:wrap; gap:.3rem .6rem; padding:.5rem 0; }
+  .bible-streak-flame-wrap { width:3.75rem; height:4.65rem; }
+  .bible-streak-count { font-size:3.4rem; }
+  .bible-streak-today { flex:1 1 100%; max-width:none; margin:0; }
+  .bible-streak-metrics { grid-template-columns:repeat(2,minmax(0,1fr)); }
+  .bible-streak-week { gap:.28rem; }
+  .bible-streak-week-day { min-height:3.9rem; }
+  .bible-streak-next-milestone { grid-template-columns:1fr; gap:.55rem; }
+  .bible-streak-milestone-track { grid-row:1; }
+  .bible-streak-achievement-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
+  .bible-streak-section-heading { flex-direction:column; }
+}
+@media(max-width:480px) {
+  .bible-streak-card { padding:.95rem; border-radius:1rem; }
+  .bible-streak-card-topline { gap:.45rem; }
+  .bible-streak-live { padding:.35rem .45rem; font-size:.58rem; }
+  .bible-streak-week-day { min-height:3.55rem; gap:.16rem; }
+  .bible-streak-week-day > span,.bible-streak-week-day > small { font-size:.55rem; }
+  .bible-streak-calendar-grid { gap:.22rem; }
+  .bible-streak-calendar-day { min-height:2.65rem; padding:.28rem; }
+  .bible-streak-calendar-day > span { font-size:.68rem; }
+  .bible-streak-calendar-day > i { width:.8rem; height:.8rem; font-size:.57rem; }
+  .bible-streak-calendar-blank { min-height:2.65rem; }
+  .bible-streak-calendar-legend { gap:.38rem .6rem; }
+  .bible-streak-achievement-grid { grid-template-columns:1fr; }
+  .bible-streak-achievement { min-height:0; }
+  .bible-streak-footer { align-items:flex-start; flex-direction:column; }
+  .bible-streak-freeze { justify-content:flex-start; text-align:left; }
+  .bible-streak-month-nav { align-self:stretch; justify-content:space-between; width:100%; }
+  .bible-streak-month-nav strong { flex:1; }
+  .bible-streak-selected-day-heading { flex-wrap:wrap; }
+}
+@media(prefers-reduced-motion:reduce) {
+  .bible-streak-flame-wrap,.bible-streak-flame-svg,.bible-streak-card.is-celebrating,.bible-streak-count,.bible-streak-calendar-day,.bible-streak-week-day,.bible-streak-celebration-backdrop,.bible-streak-celebration,.bible-streak-celebration-particles i { animation:none!important; transition:none!important; }
+  .bible-streak-week-day:hover,.bible-streak-calendar-day:hover { transform:none; }
+}
+
+@media(max-width:900px) {
+  .personal-bible-overview { grid-template-columns:repeat(2,minmax(0,1fr)); }
+  .personal-bible-content-grid,.personal-bible-lower-grid { grid-template-columns:1fr; }
+  .personal-bible-side-column { grid-template-columns:repeat(2,minmax(0,1fr)); align-items:start; }
+}
+@media(max-width:620px) {
+  .bible-journey-switcher,.bible-group-overview { grid-template-columns:1fr; }
+  .bible-journey-switcher button { min-height:4.7rem; }
+  .bible-group-overview article { min-height:0; }
+  .personal-bible-overview { gap:.5rem; }
+  .personal-bible-overview > article { min-height:5.6rem; padding:.7rem; }
+  .personal-bible-progress-copy { gap:.15rem .45rem; }
+  .personal-bible-progress-copy > strong { font-size:1.2rem; }
+  .personal-bible-overview > article > strong { font-size:1.05rem; }
+  .personal-bible-overview > article > small { font-size:.63rem; }
+  .personal-bible-side-column { grid-template-columns:1fr; }
+  .personal-bible-note-fields { grid-template-columns:1fr; }
+  .personal-bible-reader-actions { justify-content:stretch; }
+  .personal-bible-reader-actions .bible-btn { flex:1 1 100%; }
+  .personal-bible-section-heading { align-items:flex-start; }
+}
+
+.bible-group-consistency { display:grid; gap:1.15rem; margin:0 0 1.2rem; padding:clamp(1rem,2.5vw,1.5rem); }
+.bible-group-consistency-header { display:flex; align-items:flex-start; justify-content:space-between; gap:1rem; }
+.bible-group-consistency-header > div { display:grid; gap:.24rem; }
+.bible-group-consistency-header small,.bible-group-consistency-footer small { color:var(--primary-strong); font-size:.66rem; font-weight:800; letter-spacing:.1em; }
+.bible-group-consistency-header h2 { margin:.1rem 0; font-size:clamp(1.35rem,3vw,1.8rem); }
+.bible-group-consistency-header p { max-width:52rem; margin:0; color:var(--text-muted); font-size:.83rem; line-height:1.5; }
+.bible-group-streak-mark { display:grid; flex:none; width:3.2rem; height:3.2rem; place-items:center; border:1px solid color-mix(in srgb,var(--highlight,#D6B66F) 48%,var(--border)); border-radius:1rem; color:var(--highlight,#D6B66F); background:color-mix(in srgb,var(--highlight,#D6B66F) 12%,var(--surface-strong)); font-size:1.4rem; }
+.bible-group-consistency-metrics { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:.55rem; }
+.bible-group-consistency-metrics article { display:grid; align-content:start; gap:.18rem; min-width:0; min-height:5.2rem; padding:.72rem; border:1px solid var(--border); border-radius:.8rem; background:var(--surface-muted); }
+.bible-group-consistency-metrics article > span,.bible-group-consistency-metrics article > small { color:var(--text-muted); font-size:.68rem; }
+.bible-group-consistency-metrics article > strong { font-size:1.05rem; }
+.bible-group-week { display:grid; grid-template-columns:repeat(7,minmax(0,1fr)); gap:.38rem; }
+.bible-group-week-day { display:grid; justify-items:center; gap:.23rem; min-height:4rem; padding:.48rem .2rem; border:1px solid var(--border); border-radius:.7rem; background:var(--surface-muted); }
+.bible-group-week-day > span,.bible-group-week-day > small { color:var(--text-muted); font-size:.65rem; }
+.bible-group-week-day > i { display:grid; width:1.45rem; height:1.45rem; place-items:center; border-radius:50%; color:var(--primary-strong); background:var(--primary-soft); font-size:.8rem; font-style:normal; font-weight:800; }
+.bible-group-week-day.is-completed > i { color:#fff; background:var(--primary-strong); }
+.bible-group-week-day.is-pending > i { color:var(--warning-strong,var(--warning)); background:var(--warning-soft); }
+.bible-group-week-day.is-upcoming > i { background:var(--surface-strong); }
+.bible-group-week-day.is-no-reading { opacity:.64; }
+.bible-group-week-day.is-today { outline:2px solid color-mix(in srgb,var(--primary) 42%,transparent); outline-offset:1px; }
+.bible-group-consistency-footer { display:grid; grid-template-columns:1fr 1fr; gap:.8rem; padding-top:.85rem; border-top:1px solid var(--border); }
+.bible-group-consistency-footer > div { display:grid; gap:.2rem; min-width:0; }
+.bible-group-consistency-footer strong { font-size:.9rem; }
+.bible-group-consistency-footer span { color:var(--text-muted); font-size:.76rem; }
+.bible-group-recent { display:grid; gap:.4rem; padding-top:.75rem; border-top:1px solid var(--border); }
+.bible-group-recent > strong { font-size:.82rem; }
+.bible-group-recent > p { margin:0; color:var(--text-muted); font-size:.78rem; }
+.bible-group-recent ul { display:grid; gap:.35rem; margin:0; padding:0; list-style:none; }
+.bible-group-recent li { display:flex; justify-content:space-between; gap:.7rem; padding:.55rem .65rem; border-radius:.6rem; background:var(--surface-muted); font-size:.75rem; }
+.bible-group-recent li small { color:var(--text-muted); text-align:right; }
+@media(max-width:740px) { .bible-group-consistency-metrics { grid-template-columns:repeat(2,minmax(0,1fr)); } .bible-group-consistency-footer { grid-template-columns:1fr; } }
+@media(max-width:480px) { .bible-group-week { gap:.2rem; } .bible-group-week-day { min-height:3.5rem; } .bible-group-week-day > span,.bible-group-week-day > small { font-size:.56rem; } .bible-group-recent li { flex-direction:column; gap:.15rem; } .bible-group-recent li small { text-align:left; } }
+
+/* Group reading plan editorial content and accountability dashboard */
+.bible-daily-content-area { display:grid; gap:.85rem; margin:1rem 0; }
+.bible-daily-content-form > label,.bible-daily-content-form fieldset label { display:grid; gap:.35rem; color:var(--text-muted); font-size:.77rem; font-weight:700; }
+.bible-daily-content-form fieldset { display:grid; grid-template-columns:1fr 2fr; gap:.65rem; margin:0; padding:.8rem; border:1px solid var(--border); border-radius:.8rem; }
+.bible-daily-content-form fieldset legend { padding:0 .35rem; color:var(--primary-strong); font-size:.78rem; font-weight:800; }
+.bible-daily-content-form fieldset label:nth-of-type(2),.bible-daily-content-form fieldset label:nth-of-type(3) { grid-column:1/-1; }
+.bible-daily-content-form input,.bible-daily-content-form textarea,.bible-activity-filters input,.bible-activity-filters select { width:100%; min-height:2.55rem; padding:.55rem .68rem; border:1px solid var(--border); border-radius:.65rem; color:var(--text); background:var(--surface-strong); font:inherit; }
+.bible-daily-content-form textarea { resize:vertical; }
+.bible-verse-feature { position:relative; overflow:hidden; padding:clamp(1.3rem,3vw,2.2rem); border:1px solid color-mix(in srgb,var(--primary) 27%,var(--border)); border-radius:1.15rem; color:var(--text); background:linear-gradient(145deg,color-mix(in srgb,var(--primary) 9%,var(--surface-strong)),var(--surface-strong) 65%); box-shadow:var(--shadow-md); animation:bibleDailyReveal .45s ease-out both; }
+.bible-verse-feature:before { position:absolute; right:-3rem; top:-4rem; width:13rem; aspect-ratio:1; border-radius:50%; background:color-mix(in srgb,var(--highlight,#D6B66F) 17%,transparent); filter:blur(1px); content:""; pointer-events:none; }
+.bible-verse-decoration { position:absolute; top:-.8rem; right:1.5rem; color:color-mix(in srgb,var(--primary) 10%,transparent); font:12rem/1 Georgia,serif; pointer-events:none; }
+.bible-verse-feature > :not(.bible-verse-decoration) { position:relative; }
+.bible-verse-feature blockquote,.bible-daily-archive blockquote { max-width:58rem; margin:.45rem 0 .25rem; color:var(--primary-strong); font:clamp(1.35rem,3vw,2.15rem)/1.45 Georgia,"Times New Roman",serif; letter-spacing:-.018em; }
+.bible-verse-feature cite,.bible-daily-archive cite { color:var(--text-muted); font-size:.85rem; font-style:normal; font-weight:800; }
+.bible-verse-reflection { max-width:55rem; color:var(--text-muted); line-height:1.65; }
+.bible-verse-actions { display:flex; flex-wrap:wrap; gap:.45rem; margin:.8rem 0 1rem; }
+.bible-verse-actions button,.bible-takeaway-moderation button,.bible-plan-admin-actions button { min-height:2.35rem; padding:.4rem .7rem; border:1px solid var(--border); border-radius:.6rem; color:var(--text); background:var(--surface-strong); font-size:.74rem; font-weight:750; cursor:pointer; }
+.bible-daily-encouragement { margin-top:1rem; padding:1rem 0 .3rem; border-top:1px solid var(--border); }
+.bible-daily-encouragement h2 { margin:.2rem 0 .4rem; font-size:1.12rem; }
+.bible-daily-encouragement > p:last-child { max-width:58rem; color:var(--text-muted); line-height:1.7; }
+.bible-daily-encouragement~p { color:var(--text-muted); line-height:1.55; }
+.bible-daily-response-actions { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:.5rem; margin-top:1rem; padding-top:.75rem; border-top:1px solid var(--border); }
+.bible-daily-response-actions > small { color:var(--text-muted); }
+.bible-daily-reactions { display:flex; flex-wrap:wrap; gap:.35rem; }
+.bible-daily-reactions button { display:flex; align-items:center; gap:.25rem; min-width:2.65rem; min-height:2.3rem; justify-content:center; border:1px solid var(--border); border-radius:999px; color:var(--text-muted); background:var(--surface-strong); cursor:pointer; transition:transform .15s ease,border-color .15s ease; }
+.bible-daily-reactions button:hover { transform:translateY(-1px); border-color:var(--primary); }
+.bible-daily-reactions button.selected { color:var(--primary-strong); border-color:var(--primary); background:var(--primary-soft); }
+.bible-daily-reactions b { font-size:.68rem; }
+.bible-daily-comments { display:grid; gap:.55rem; margin-top:.7rem; }
+.bible-daily-comments > article { display:flex; align-items:flex-start; gap:.6rem; padding:.65rem; border-radius:.75rem; background:var(--surface-muted); }
+.bible-daily-comments > article > div { flex:1; min-width:0; }
+.bible-daily-comments strong { font-size:.78rem; }
+.bible-daily-comments p { margin:.18rem 0; color:var(--text); font-size:.84rem; line-height:1.5; white-space:pre-wrap; }
+.bible-daily-comments small { color:var(--text-muted); font-size:.66rem; }
+.bible-daily-comments form { display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:start; gap:.5rem; }
+.bible-daily-comments form .bible-mention-wrap { min-width:0; }
+.bible-daily-comments form textarea { min-height:2.6rem; width:100%; padding:.6rem; border:1px solid var(--border); border-radius:.65rem; color:var(--text); background:var(--surface-strong); font:inherit; }
+.bible-daily-empty { margin:0; padding:1rem; border:1px dashed var(--border); border-radius:.9rem; color:var(--text-muted); background:var(--surface-muted); }
+.bible-upcoming-content { display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,15rem),1fr)); gap:.55rem; }
+.bible-upcoming-content h3 { grid-column:1/-1; margin:0; font-size:.9rem; }
+.bible-upcoming-content article { display:grid; gap:.28rem; padding:.75rem; border:1px solid var(--border); border-radius:.75rem; background:var(--surface-strong); }
+.bible-upcoming-content time,.bible-upcoming-content span { color:var(--text-muted); font-size:.73rem; line-height:1.5; }
+.bible-upcoming-content strong { font-size:.83rem; }
+.bible-daily-admin-list,.bible-daily-archive { display:grid; gap:.5rem; }
+.bible-daily-admin-list h3 { margin:.3rem 0; font-size:.88rem; }
+.bible-daily-admin-list article { display:flex; align-items:center; flex-wrap:wrap; gap:.4rem; padding:.55rem; border:1px solid var(--border); border-radius:.7rem; background:var(--surface-strong); }
+.bible-daily-admin-list article > div { display:grid; flex:1 1 15rem; gap:.18rem; }
+.bible-daily-admin-list article span { color:var(--text-muted); font-size:.68rem; text-transform:capitalize; }
+.bible-daily-admin-list button { min-height:2.2rem; padding:.35rem .6rem; border:1px solid var(--border); border-radius:.55rem; color:var(--text); background:var(--surface-muted); font-size:.7rem; cursor:pointer; }
+.bible-daily-archive { padding:.8rem; border:1px solid var(--border); border-radius:.8rem; background:var(--surface-muted); }
+.bible-daily-archive > summary { font-size:.8rem; font-weight:800; cursor:pointer; }
+.bible-daily-archive article { margin-top:.7rem; padding:.8rem; border-radius:.7rem; background:var(--surface-strong); }
+.bible-daily-archive article > small { color:var(--text-muted); }
+.bible-daily-archive blockquote { font-size:1.1rem; }
+.bible-daily-archive h3 { margin:.3rem 0; font-size:.88rem; }
+.bible-daily-archive p { color:var(--text-muted); font-size:.8rem; line-height:1.55; }
+.bible-plan-row.is-archived { opacity:.7; }
+.bible-plan-admin-actions { display:flex; flex-wrap:wrap; gap:.3rem; }
+.bible-plan-admin-actions .danger { color:var(--danger); }
+.bible-reference-field { display:grid; gap:.3rem; color:var(--text-muted); font-size:.73rem; font-weight:750; }
+.bible-reference-field input { min-height:2.5rem; padding:.55rem .65rem; border:1px solid var(--border); border-radius:.65rem; color:var(--text); background:var(--surface-strong); font:inherit; }
+.bible-takeaway-reference { width:max-content; max-width:100%; margin:.45rem 0; padding:.28rem .5rem; border-radius:.45rem; color:var(--primary-strong)!important; background:var(--primary-soft); font-size:.72rem!important; font-weight:800; }
+.bible-takeaway-badges { display:flex; flex-wrap:wrap; gap:.3rem; margin:.35rem 0; }
+.bible-takeaway-badges span { padding:.22rem .45rem; border-radius:999px; color:var(--primary-strong); background:var(--primary-soft); font-size:.63rem; font-weight:800; }
+.bible-takeaway.is-highlighted { border-color:color-mix(in srgb,var(--highlight,#D6B66F) 65%,var(--border)); background:color-mix(in srgb,var(--highlight,#D6B66F) 7%,var(--surface-strong)); }
+.bible-takeaway.is-pinned { box-shadow:inset 3px 0 0 var(--primary-strong); }
+.bible-takeaway-moderation { display:flex; flex-wrap:wrap; gap:.3rem; margin:.35rem 0 .6rem; }
+.bible-takeaway-moderation button { min-height:2rem; padding:.3rem .5rem; font-size:.65rem; }
+.bible-activity-metrics { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:.65rem; margin:0 0 .85rem; }
+.bible-activity-metrics article { display:grid; align-content:start; gap:.3rem; min-height:6rem; padding:.85rem; border:1px solid var(--border); border-radius:.85rem; background:var(--surface-strong); }
+.bible-activity-metrics small,.bible-activity-report header small { color:var(--primary-strong); font-size:.64rem; font-weight:850; letter-spacing:.07em; }
+.bible-activity-metrics strong { font-size:1.5rem; font-variant-numeric:tabular-nums; }
+.bible-activity-metrics span { color:var(--text-muted); font-size:.68rem; }
+.bible-activity-report { display:grid; gap:.85rem; }
+.bible-activity-report h2 { font-size:1.15rem; }
+.bible-activity-filters { display:grid; grid-template-columns:1fr 1.5fr 1fr; gap:.6rem; }
+.bible-activity-filters label { display:grid; gap:.3rem; color:var(--text-muted); font-size:.7rem; font-weight:750; }
+.bible-activity-stats { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:.5rem; }
+.bible-activity-stats article { display:grid; gap:.22rem; padding:.65rem; border-radius:.7rem; background:var(--surface-muted); }
+.bible-activity-stats span,.bible-activity-stats small { color:var(--text-muted); font-size:.65rem; }
+.bible-activity-stats strong { font-size:.95rem; }
+.bible-activity-progress { height:.35rem; overflow:hidden; border-radius:999px; background:var(--surface-strong); box-shadow:inset 0 0 0 1px var(--border); }
+.bible-activity-progress i { display:block; height:100%; border-radius:inherit; background:var(--primary-strong); transition:width .35s ease; }
+.bible-activity-table-wrap { overflow:auto; }
+.bible-activity-table { width:100%; min-width:55rem; border-collapse:collapse; font-size:.75rem; }
+.bible-activity-table th,.bible-activity-table td { padding:.65rem .55rem; border-bottom:1px solid var(--border); text-align:left; vertical-align:top; }
+.bible-activity-table th { color:var(--text-muted); font-size:.65rem; letter-spacing:.04em; text-transform:uppercase; }
+.bible-activity-table td small { display:block; margin-top:.18rem; color:var(--text-muted); font-size:.64rem; }
+.bible-activity-member { display:flex; align-items:center; gap:.45rem; min-width:9rem; }
+.bible-activity-member .bible-identity { width:2rem; height:2rem; }
+.bible-activity-status { display:inline-flex; padding:.25rem .45rem; border-radius:999px; background:var(--surface-muted); color:var(--text-muted); font-size:.65rem; font-weight:800; white-space:nowrap; }
+.bible-activity-status.is-completed { color:var(--success-strong,var(--success)); background:var(--success-soft); }
+.bible-activity-status.is-reading { color:var(--primary-strong); background:var(--primary-soft); }
+.bible-activity-status.is-missed { color:var(--danger); background:var(--danger-soft); }
+.bible-activity-status.is-pending { color:var(--warning-strong,var(--warning)); background:var(--warning-soft); }
+.bible-activity-table details { position:relative; }
+.bible-activity-table details summary { color:var(--primary-strong); font-weight:750; cursor:pointer; }
+.bible-activity-table details ul { position:absolute; z-index:3; right:0; width:18rem; max-height:16rem; overflow:auto; margin:.35rem 0; padding:.45rem; border:1px solid var(--border); border-radius:.65rem; background:var(--surface-strong); box-shadow:var(--shadow-md); list-style:none; }
+.bible-activity-table details li { padding:.4rem; border-bottom:1px solid var(--border); }
+@keyframes bibleDailyReveal { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:translateY(0); } }
+@media(max-width:760px) { .bible-activity-metrics,.bible-activity-stats { grid-template-columns:repeat(2,minmax(0,1fr)); } .bible-activity-filters { grid-template-columns:1fr 1fr; } .bible-activity-filters label:first-child { grid-column:1/-1; } }
+@media(max-width:540px) { .bible-daily-content-form fieldset { grid-template-columns:1fr; } .bible-daily-content-form fieldset label,.bible-daily-content-form fieldset label:nth-of-type(2),.bible-daily-content-form fieldset label:nth-of-type(3) { grid-column:auto; } .bible-daily-comments form { grid-template-columns:1fr; } .bible-activity-filters { grid-template-columns:1fr; } .bible-activity-filters label:first-child { grid-column:auto; } .bible-activity-metrics strong { font-size:1.25rem; } .bible-takeaway-moderation button { flex:1 1 auto; } }
+@media(prefers-reduced-motion:reduce) { .bible-verse-feature { animation:none; } .bible-daily-reactions button { transition:none; } }
+@media(prefers-reduced-motion:reduce) { .bible-activity-progress i { transition:none; } }
+.bible-thread-nested { display:grid; gap:.35rem; margin:.35rem 0 .35rem .75rem; padding-left:.65rem; border-left:1px solid var(--border); }
+.bible-thread-reply.is-nested { padding:.45rem; border-radius:.55rem; background:var(--surface-muted); }
+.bible-nested-reply-form { display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:start; gap:.4rem; margin:.25rem 0 .3rem .75rem; }
+.bible-nested-reply-form .bible-mention-wrap { min-width:0; }
+.bible-nested-reply-form textarea { min-height:2.3rem; width:100%; padding:.5rem; border:1px solid var(--border); border-radius:.55rem; color:var(--text); background:var(--surface-strong); font:inherit; }
+@media(max-width:540px) { .bible-nested-reply-form { grid-template-columns:1fr; } }
+
+/* Takeaways read like saved reflections, with reactions and conversation kept close. */
+.bible-study .bible-feed .bible-takeaway {
+  position: relative; align-items: flex-start; gap: .9rem; margin: .65rem 0; padding: 1.1rem 1.15rem;
+  overflow: visible; border: 1px solid color-mix(in srgb, var(--primary-strong) 13%, var(--border)); border-radius: 1.05rem;
+  background: linear-gradient(145deg, color-mix(in srgb, var(--surface-strong) 93%, var(--primary-soft)), var(--surface-strong));
+  box-shadow: 0 8px 24px color-mix(in srgb, var(--text) 6%, transparent), inset 0 1px 0 color-mix(in srgb, #fff 60%, transparent);
+  transition: transform .18s ease, border-color .18s ease, box-shadow .18s ease;
+}
+.bible-study .bible-feed .bible-takeaway:hover { transform: translateY(-2px); border-color: color-mix(in srgb, var(--primary-strong) 29%, var(--border)); box-shadow: 0 14px 30px color-mix(in srgb, var(--text) 9%, transparent), inset 0 1px 0 color-mix(in srgb, #fff 70%, transparent); }
+.bible-study .bible-takeaway > .bible-identity { width: 2.7rem; height: 2.7rem; border: 2px solid color-mix(in srgb, var(--primary-strong) 20%, var(--surface-strong)); box-shadow: 0 3px 9px color-mix(in srgb, var(--text) 12%, transparent); }
+.bible-study .bible-takeaway-content > header { padding-bottom: .65rem; border-bottom: 1px solid color-mix(in srgb, var(--border) 72%, transparent); }
+.bible-study .bible-takeaway-content > header strong { color: var(--text); font-size: .91rem; letter-spacing: -.01em; }
+.bible-study .bible-takeaway-content > header small { font-size: .68rem; }
+.bible-study .bible-takeaway-content > p:not(.bible-takeaway-reference) { margin: .8rem 0; color: var(--text); font-size: .94rem; line-height: 1.7; overflow-wrap: anywhere; }
+.bible-study .bible-takeaway-reference { padding: .35rem .62rem; border: 1px solid color-mix(in srgb, var(--primary-strong) 13%, transparent); border-radius: 999px; }
+.bible-study .bible-takeaway .bible-reaction-row { gap: .4rem; margin-top: .85rem; padding-top: .7rem; border-top: 1px solid color-mix(in srgb, var(--border) 72%, transparent); }
+.bible-study .bible-reaction-count > summary, .bible-study .bible-reaction-picker > summary { min-height: 2.25rem; padding: .35rem .62rem; border-color: color-mix(in srgb, var(--primary-strong) 14%, var(--border)); background: color-mix(in srgb, var(--surface-strong) 82%, var(--primary-soft)); }
+.bible-study .bible-reaction-picker > summary { font-weight: 800; }
+.bible-study .bible-reaction-picker[open] > .bible-text-reactions { z-index: 20; width: min(19rem, calc(100vw - 2.5rem)); padding: .5rem; border-color: color-mix(in srgb, var(--primary-strong) 22%, var(--border)); border-radius: .95rem; background: var(--surface-strong); box-shadow: 0 18px 46px color-mix(in srgb, var(--text) 20%, transparent); }
+.bible-study .bible-reaction-picker .bible-text-reactions button { min-width: 2.55rem; min-height: 2.55rem; border-radius: .72rem; font-size: 1.2rem; }
+.bible-study .bible-reaction-picker .bible-text-reactions button:hover:not(:disabled), .bible-study .bible-reaction-picker .bible-text-reactions button.selected { transform: translateY(-2px) scale(1.04); }
+.bible-study .bible-takeaway .bible-thread { margin-top: .9rem; padding-top: .75rem; }
+.bible-study .bible-takeaway.is-highlighted { border-color: color-mix(in srgb, var(--highlight, #D6B66F) 70%, var(--border)); background: linear-gradient(145deg, color-mix(in srgb, var(--highlight, #D6B66F) 12%, var(--surface-strong)), var(--surface-strong)); }
+.bible-study .bible-takeaway.is-pinned { box-shadow: inset 3px 0 0 var(--primary-strong), 0 8px 24px color-mix(in srgb, var(--text) 6%, transparent); }
+:root[data-theme="dark"] .bible-study .bible-feed .bible-takeaway { border-color: color-mix(in srgb, var(--color-gold) 19%, var(--border)); background: linear-gradient(145deg, color-mix(in srgb, var(--color-surface-accent) 40%, var(--color-surface)), var(--color-surface)); box-shadow: 0 12px 28px #0003, inset 0 1px 0 #ffffff0a; }
+:root[data-theme="dark"] .bible-study .bible-feed .bible-takeaway:hover { border-color: color-mix(in srgb, var(--color-gold) 38%, var(--border)); box-shadow: 0 16px 34px #0005, inset 0 1px 0 #ffffff12; }
+:root[data-theme="dark"] .bible-study .bible-takeaway.is-highlighted { background: linear-gradient(145deg, color-mix(in srgb, var(--color-gold) 13%, var(--color-surface)), var(--color-surface)); }
+
+.personal-bible-plan-form-actions { display: flex; grid-column: 1 / -1; gap: .45rem; }
+.personal-bible-plan-form-actions .bible-btn { flex: 1; }
+.personal-bible-plan-list { gap: .35rem; }
+.personal-bible-plan-row { display: grid; grid-template-columns: minmax(0,1fr) auto; align-items: center; gap: .35rem; padding: .25rem .3rem; border: 1px solid transparent; border-top-color: var(--border); border-radius: .75rem; transition: border-color .16s ease, background .16s ease; }
+.personal-bible-plan-row.selected { border-color: color-mix(in srgb, var(--primary-strong) 18%, var(--border)); background: color-mix(in srgb, var(--primary-soft) 72%, var(--surface-strong)); }
+.personal-bible-plan-select { display: flex; min-width: 0; align-items: center; gap: .5rem; padding: .4rem .2rem; border: 0; color: var(--text); background: transparent; text-align: left; cursor: pointer; }
+.personal-bible-plan-select > span:nth-child(2) { display: grid; min-width: 0; flex: 1; gap: .1rem; }
+.personal-bible-plan-select .personal-bible-status { white-space: nowrap; }
+.personal-bible-plan-actions { display: flex; gap: .2rem; }
+.personal-bible-plan-actions button { min-height: 2.15rem; padding: .3rem .48rem; border: 1px solid var(--border); border-radius: .55rem; color: var(--text-muted); background: var(--surface-strong); font: 750 .65rem inherit; cursor: pointer; }
+.personal-bible-plan-actions button:hover:not(:disabled) { border-color: var(--primary-strong); color: var(--primary-strong); }
+.personal-bible-plan-actions button.danger { color: var(--danger); }
+.personal-bible-plan-actions button:disabled { opacity: .55; cursor: wait; }
+@media (max-width: 520px) {
+  .bible-study .bible-feed .bible-takeaway { gap: .6rem; padding: .85rem .72rem; border-radius: .85rem; }
+  .bible-study .bible-takeaway > .bible-identity { width: 2.3rem; height: 2.3rem; }
+  .bible-study .bible-reaction-picker[open] > .bible-text-reactions { right: 0; left: auto; }
+  .personal-bible-plan-row { grid-template-columns: 1fr; }
+  .personal-bible-plan-actions { padding-left: 1.6rem; }
+  .personal-bible-plan-actions button { flex: 1; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .bible-study .bible-feed .bible-takeaway, .personal-bible-plan-row { transition: none; }
+  .bible-study .bible-feed .bible-takeaway:hover { transform: none; }
+}
+
+.bible-today-reading-actions { display:flex; align-items:center; flex-wrap:wrap; gap:.38rem; padding:.22rem; border:1px solid color-mix(in srgb,var(--primary-strong) 13%,var(--border)); border-radius:.82rem; background:color-mix(in srgb,var(--surface-strong) 74%,var(--primary-soft)); }
+.bible-action-feedback { margin:.55rem 0; }
+.bible-today-reading-actions .bible-btn { min-height:2.55rem; }
+.bible-group-calendar { display:grid; gap:.9rem; margin:0 0 1.2rem; }
+.bible-group-calendar-header { align-items:center; gap:.8rem; }
+.bible-group-calendar-header > div:first-child { display:grid; gap:.22rem; }
+.bible-group-calendar-header > div:first-child > small { color:var(--primary-strong); font-size:.65rem; font-weight:850; letter-spacing:.09em; }
+.bible-group-calendar-header h2 { margin:.1rem 0; font-size:1.2rem; }
+.bible-group-calendar-header p { margin:0; font-size:.75rem; }
+.bible-group-calendar-nav { display:flex; align-items:center; gap:.55rem; padding:.25rem; border:1px solid var(--border); border-radius:.75rem; background:var(--surface-muted); }
+.bible-group-calendar-nav strong { min-width:8.5rem; text-align:center; font-size:.82rem; }
+.bible-group-calendar-nav button { display:grid; width:2.1rem; height:2.1rem; place-items:center; border:1px solid transparent; border-radius:.55rem; color:var(--text); background:var(--surface-strong); font-size:1.35rem; line-height:1; cursor:pointer; }
+.bible-group-calendar-nav button.bible-group-calendar-today { width:auto; padding:0 .6rem; font-family:inherit; font-size:.7rem; font-weight:700; }
+.bible-group-calendar-nav button:hover { border-color:var(--primary-strong); color:var(--primary-strong); }
+.bible-group-calendar-grid { display:grid; grid-template-columns:repeat(7,minmax(0,1fr)); gap:.35rem; }
+.bible-group-calendar-weekday { display:grid; min-height:1.5rem; place-items:center; color:var(--text-muted); font-size:.65rem; font-weight:800; }
+.bible-group-calendar-day { position:relative; display:flex; min-width:0; min-height:3.15rem; flex-direction:column; align-items:center; justify-content:center; gap:.15rem; border:1px solid var(--border); border-radius:.65rem; color:var(--text); background:var(--surface-strong); font-family:inherit; font-size:.76rem; font-weight:700; cursor:pointer; transition:border-color .15s ease,background .15s ease,transform .15s ease; }
+.bible-group-calendar-day:hover { border-color:var(--primary-strong); transform:translateY(-1px); }
+.bible-group-calendar-day.outside-month { opacity:.48; }
+.bible-group-calendar-day.is-today { box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--primary-strong) 55%,transparent); }
+.bible-group-calendar-day.is-selected { border-color:var(--primary-strong); color:var(--primary-strong); background:var(--primary-soft); }
+.bible-group-calendar-day.is-complete > i { color:var(--success-strong,var(--success)); background:var(--success-soft); }
+.bible-group-calendar-day.is-archived > i { color:var(--text-muted); background:var(--surface-muted); }
+.bible-group-calendar-day > i { display:grid; min-width:1.15rem; height:1.15rem; place-items:center; padding:0 .2rem; border-radius:999px; color:var(--primary-strong); background:var(--primary-soft); font-size:.61rem; font-style:normal; font-weight:850; }
+.bible-group-calendar-selection { display:grid; gap:.5rem; padding-top:.75rem; border-top:1px solid var(--border); }
+.bible-group-calendar-selection-heading { display:flex; align-items:center; gap:.5rem; }
+.bible-group-calendar-selection-heading strong { font-size:.85rem; }
+.bible-group-calendar-selection-heading > span { padding:.18rem .42rem; border-radius:999px; color:var(--primary-strong); background:var(--primary-soft); font-size:.62rem; font-weight:800; }
+.bible-group-calendar-reading-list { display:grid; gap:.4rem; }
+.bible-group-calendar-reading-list article { display:flex; align-items:center; flex-wrap:wrap; gap:.45rem; padding:.55rem .65rem; border:1px solid var(--border); border-radius:.72rem; background:var(--surface-muted); }
+.bible-group-calendar-reading-list article > div { display:grid; flex:1 1 9rem; gap:.1rem; }
+.bible-group-calendar-reading-list article > div strong { font-size:.8rem; }
+.bible-group-calendar-reading-list article > div small { color:var(--text-muted); font-size:.65rem; text-transform:capitalize; }
+.bible-group-calendar-reading-list article > .bible-btn { min-height:2.15rem; padding:.4rem .62rem; font-size:.69rem; }
+.bible-group-calendar-reading-list article.is-archived { opacity:.68; }
+.bible-reflection-prayer-link { display:inline-flex; align-items:center; gap:.35rem; width:max-content; max-width:100%; margin:.3rem 0 .1rem; padding:.42rem .62rem; border:1px solid color-mix(in srgb,var(--primary-strong) 18%,var(--border)); border-radius:999px; color:var(--primary-strong); background:var(--primary-soft); font-family:inherit; font-size:.7rem; font-weight:750; cursor:pointer; }
+.bible-reflection-prayer-link:hover { border-color:var(--primary-strong); }
+.bible-partner-notice { margin:.35rem 0; padding:.55rem .7rem; border:1px solid color-mix(in srgb,var(--success) 30%,var(--border)); border-radius:.65rem; color:var(--success-strong,var(--success)); background:var(--success-soft); font-size:.74rem; }
+@media(max-width:620px) {
+  .bible-today-reading-actions { width:100%; }
+  .bible-today-reading-actions .bible-btn { flex:1; }
+  .bible-group-calendar-header { align-items:stretch; flex-direction:column; }
+  .bible-group-calendar-nav { justify-content:space-between; }
+  .bible-group-calendar-day { min-height:2.7rem; border-radius:.5rem; font-size:.7rem; }
+  .bible-group-calendar-grid { gap:.22rem; }
+  .bible-group-calendar-reading-list article > .bible-btn { flex:1; }
+}
+@media(prefers-reduced-motion:reduce) {
+  .bible-group-calendar-day { transition:none; }
+  .bible-group-calendar-day:hover { transform:none; }
+}
+
+/* Partner Streaks: a warm, relationship-first extension of the purple and gold brand. */
+.partner-experience { --partner-ink:#2a1d34; --partner-muted:#786e81; --partner-line:#e9e2ed; --partner-plum:#35165c; --partner-purple:#74469b; --partner-lilac:#e9ddf0; --partner-gold:#d6b66f; display:grid; gap:1.25rem; color:var(--partner-ink); }
+.partner-experience button,.partner-experience input,.partner-experience select,.partner-experience textarea { font:inherit; }
+.partner-experience button { -webkit-tap-highlight-color:transparent; }
+.partner-hero { position:relative; isolation:isolate; display:grid; grid-template-columns:minmax(0,1fr) minmax(12rem,.65fr) auto; align-items:center; gap:1.2rem; min-height:19rem; overflow:hidden; padding:clamp(1.3rem,3.2vw,2.5rem); border:1px solid #50316e; border-radius:1.35rem; color:#fff; background:radial-gradient(ellipse at 74% 16%,#6e50934f,transparent 38%),linear-gradient(117deg,#261237 0%,#35165c 55%,#4a286c 100%); box-shadow:0 20px 54px #35165c26; }
+.partner-hero::before,.partner-hero::after { position:absolute; z-index:-1; content:""; border:1px solid #ffffff0c; border-radius:50%; pointer-events:none; }
+.partner-hero::before { width:27rem; height:27rem; top:-16rem; right:10%; }
+.partner-hero::after { width:34rem; height:34rem; right:-7rem; bottom:-29rem; }
+.partner-hero-copy { position:relative; z-index:2; max-width:37rem; }
+.partner-eyebrow { display:flex; align-items:center; gap:.45rem; color:#e8d3a0; font-size:.64rem; font-weight:850; letter-spacing:.13em; }
+.partner-eyebrow > svg { width:1rem; height:1rem; }
+.partner-live { margin-left:.35rem; padding:.26rem .45rem; border:1px solid #ffffff35; border-radius:99px; color:#ffffffbc; font-size:.54rem; letter-spacing:.08em; }
+.partner-live::before { display:inline-block; width:.38rem; height:.38rem; margin-right:.3rem; border-radius:50%; background:#c9b8d9; content:""; }
+.partner-live--live::before { background:#9dd5ad; box-shadow:0 0 0 3px #9dd5ad28; }
+.partner-live--offline::before { background:#e9a59c; }
+.partner-hero h2 { margin:.8rem 0 .6rem; color:#fff; font-size:clamp(2.05rem,4vw,3.5rem); line-height:.99; letter-spacing:-.065em; }
+.partner-hero h2 em { color:#e8d3a0; font-family:Georgia,serif; font-weight:500; letter-spacing:-.045em; }
+.partner-hero-copy > p { max-width:34rem; margin:0; color:#ffffffbf; font-size:.82rem; line-height:1.65; }
+.partner-hero-actions { display:flex; align-items:center; flex-wrap:wrap; gap:.75rem; margin-top:1.25rem; }
+.partner-hero-actions > span { color:#ffffff9f; font-size:.65rem; }
+.partner-primary-action { display:inline-flex; align-items:center; justify-content:center; gap:.55rem; min-height:2.65rem; padding:.62rem .9rem; border:1px solid #754e90; border-radius:.72rem; color:#fff; background:linear-gradient(145deg,#80569b,#684187); box-shadow:0 5px 15px #1a0d2527; font-size:.73rem!important; font-weight:800!important; cursor:pointer; transition:transform .2s ease,box-shadow .2s ease,background .2s ease; }
+.partner-primary-action:hover:not(:disabled) { transform:translateY(-2px); box-shadow:0 9px 21px #1a0d2540; background:linear-gradient(145deg,#8b61a5,#744a92); }
+.partner-primary-action:disabled { opacity:.55; cursor:not-allowed; }
+.partner-primary-action svg { width:1rem; height:1rem; flex:none; }
+.partner-hero-actions .partner-primary-action { color:#2b1c35; border-color:#ecd8a7; background:linear-gradient(135deg,#f0dfb4,#d6b66f); }
+.partner-hero-actions .partner-primary-action:hover:not(:disabled) { background:linear-gradient(135deg,#f5e8c8,#e2c77f); }
+.partner-hero-art { position:relative; display:grid; align-items:end; justify-items:center; align-self:stretch; min-height:13.5rem; }
+.partner-angel { position:relative; width:clamp(10rem,16vw,14rem); max-width:100%; transform-origin:50% 92%; animation:partnerAngelFloat 4s ease-in-out infinite; filter:drop-shadow(0 11px 12px #13081c2e); }
+.partner-angel svg { display:block; width:100%; overflow:visible; }
+.partner-angel-shadow { fill:#20152d27; }
+.partner-angel-halo { fill:none; stroke:#e8c56f; stroke-width:5; filter:drop-shadow(0 0 5px #e8c56f85); transform-box:fill-box; transform-origin:center; animation:partnerHaloGlow 3.4s ease-in-out infinite; }
+.partner-angel-wing { fill:#fffdf8; stroke:#e5d8c7; stroke-width:2; stroke-linejoin:round; transform-box:fill-box; transform-origin:50% 14%; }
+.partner-angel-wing--left { animation:partnerAngelWingLeft 4s ease-in-out infinite; }
+.partner-angel-wing--right { animation:partnerAngelWingRight 4s ease-in-out infinite; }
+.partner-angel-wing-feather { fill:none; stroke:#e1d5c5; stroke-width:2; stroke-linecap:round; }
+.partner-angel-robe { fill:#fffaf0; stroke:#e4d8c9; stroke-width:2; stroke-linejoin:round; }
+.partner-angel-sash { fill:#dfbd69; stroke:#c69e45; stroke-width:1; stroke-linejoin:round; }
+.partner-angel-arm { fill:#fffaf0; stroke:#e4d8c9; stroke-width:2; stroke-linejoin:round; transform-box:fill-box; transform-origin:50% 12%; }
+.partner-angel-face { fill:#fff1df; stroke:#e2d2be; stroke-width:1.8; }
+.partner-angel-hair { fill:#e4c783; stroke:#c8a95f; stroke-width:1.8; stroke-linejoin:round; }
+.partner-angel-hair-lock { fill:none; stroke:#c8a95f; stroke-width:2; stroke-linecap:round; }
+.partner-angel-eyes { fill:#443748; transform-box:fill-box; transform-origin:center; animation:partnerAngelBlink 5.8s ease-in-out infinite; }
+.partner-angel-eyes circle { fill:#fff; }
+.partner-angel-cheek { fill:#efb9aa; opacity:.8; }
+.partner-angel-smile,.partner-angel-neck { fill:none; stroke:#a46e68; stroke-width:1.8; stroke-linecap:round; }
+.partner-angel-neck { stroke:#e1b99d; stroke-width:3; }
+.partner-angel--welcome { animation:partnerAngelWave 3.2s ease-in-out infinite; }
+.partner-angel--welcome .partner-angel-arm--right { animation:partnerAngelWaveArm 1.2s ease-in-out infinite; }
+.partner-angel--happy { animation:partnerAngelBounce .48s ease-in-out 3; }
+.partner-angel--celebrate { animation:partnerAngelDance .65s ease-in-out infinite alternate; }
+.partner-angel--celebrate .partner-angel-wing { animation:partnerAngelDanceWing .36s ease-in-out infinite alternate; }
+.partner-angel--encourage { animation:partnerAngelEncourage 1.8s ease-in-out infinite; }
+.partner-angel--encourage .partner-angel-arm--left { animation:partnerAngelOffer .95s ease-in-out infinite alternate; }
+.partner-speech-bubble { position:absolute; top:.1rem; left:50%; width:max-content; max-width:14.5rem; padding:.62rem .75rem; border:1px solid #ffffff76; border-radius:.85rem .85rem .85rem .25rem; color:#392b41; background:#fffaf2; box-shadow:0 7px 18px #10071930; font-size:.64rem; font-weight:750; line-height:1.45; transform:translateX(-22%); }
+.partner-speech-bubble::after { position:absolute; bottom:-.36rem; left:.65rem; width:.65rem; height:.65rem; border-right:1px solid #ffffff76; border-bottom:1px solid #ffffff76; background:#fffaf2; content:""; transform:rotate(45deg); }
+.partner-hero-spark { position:absolute; color:#f0d887; animation:partnerSpark 2.5s ease-in-out infinite; }
+.partner-hero-spark svg { width:1.15rem; height:1.15rem; }
+.partner-hero-spark--one { top:30%; left:9%; }
+.partner-hero-spark--two { top:53%; right:4%; animation-delay:.8s; }
+.partner-hero-streak { display:flex; align-items:center; gap:.8rem; align-self:end; min-width:12rem; padding:.75rem .85rem; border:1px solid #ffffff26; border-radius:.9rem; background:#ffffff0d; backdrop-filter:blur(8px); }
+.partner-flame-mark { display:grid; place-items:center; width:2.6rem; height:2.6rem; border:1px solid #e6c36c63; border-radius:.8rem; color:#f0cc73; background:#e4bc631c; }
+.partner-flame-mark svg { width:1.5rem; height:1.5rem; fill:#e8be6522; }
+.partner-hero-streak small,.partner-hero-streak strong,.partner-hero-streak p { display:block; }
+.partner-hero-streak small { color:#e8d3a0; font-size:.51rem; font-weight:800; letter-spacing:.1em; }
+.partner-hero-streak strong { margin:.12rem 0; color:#fff; font-size:1.45rem; font-variant-numeric:tabular-nums; letter-spacing:-.04em; }
+.partner-hero-streak strong span { font-size:.72rem; font-weight:600; }
+.partner-hero-streak p { margin:0; color:#ffffffa8; font-size:.59rem; }
+.partner-section-nav { position:sticky; z-index:5; top:.35rem; display:flex; flex-wrap:wrap; gap:.3rem; width:max-content; max-width:100%; margin:0 auto; padding:.35rem; border:1px solid var(--partner-line); border-radius:99px; background:#ffffffed; box-shadow:0 5px 20px #26123712; backdrop-filter:blur(12px); }
+.partner-section-nav button { display:inline-flex; align-items:center; justify-content:center; gap:.4rem; min-height:2.2rem; padding:.42rem .75rem; border:0; border-radius:99px; color:var(--partner-muted); background:transparent; font-size:.68rem!important; font-weight:750!important; cursor:pointer; }
+.partner-section-nav button svg { width:.92rem; height:.92rem; }
+.partner-section-nav button.is-active { color:#fff; background:var(--partner-plum); box-shadow:0 4px 12px #35165c2d; }
+.partner-feedback { margin:0; padding:.72rem .85rem; border:1px solid var(--partner-line); border-radius:.8rem; font-size:.75rem; line-height:1.5; }
+.partner-feedback--error { border-color:#d79aa0; color:#942633; background:#fff6f6; }
+.partner-feedback--success { border-color:#b0d6b8; color:#226a45; background:#f3fbf5; }
+.partner-overview,.partner-circle-section,.partner-challenge-section,.partner-moments-section,.partner-invitation-stack,.partner-pending-outgoing { scroll-margin-top:5rem; }
+.partner-overview { display:grid; gap:.9rem; }
+.partner-overview-heading,.partner-section-title { display:flex; align-items:end; justify-content:space-between; gap:1rem; }
+.partner-overview-heading small,.partner-section-title small,.partner-create-copy small,.partner-challenge-create > small { color:var(--partner-purple); font-size:.58rem; font-weight:850; letter-spacing:.12em; }
+.partner-overview-heading h3,.partner-section-title h3 { margin:.16rem 0 0; font-size:1.22rem; letter-spacing:-.04em; }
+.partner-overview-heading p,.partner-section-title > p { max-width:27rem; margin:0; color:var(--partner-muted); font-size:.67rem; line-height:1.5; }
+.partner-metric-grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:.7rem; }
+.partner-metric { position:relative; display:grid; align-content:start; min-height:9.6rem; padding:.9rem; border:1px solid var(--partner-line); border-radius:1rem; background:linear-gradient(145deg,#fff,#fdfbfd); box-shadow:0 5px 16px #35165c08; }
+.partner-metric--feature { color:#fff; border-color:#553275; background:linear-gradient(145deg,#35165c,#4d2b70); }
+.partner-metric--together { background:linear-gradient(145deg,#fffcf4,#f7f0df); border-color:#e6d8b7; }
+.partner-metric-icon { display:grid; place-items:center; width:2rem; height:2rem; margin-bottom:.6rem; border:1px solid #74469b1c; border-radius:.65rem; color:var(--partner-purple); background:#f4edf8; }
+.partner-metric-icon svg { width:1rem; height:1rem; }
+.partner-metric--feature .partner-metric-icon { color:#f5dd9e; border-color:#ffffff2c; background:#ffffff12; }
+.partner-metric--together .partner-metric-icon { color:#8a6424; border-color:#d5b96f63; background:#e8d8ad4d; }
+.partner-metric > small { color:var(--partner-muted); font-size:.52rem; font-weight:850; letter-spacing:.09em; }
+.partner-metric--feature > small { color:#ffffffaa; }
+.partner-metric > strong { margin:.15rem 0 .16rem; font-size:1.72rem; line-height:1.05; letter-spacing:-.06em; font-variant-numeric:tabular-nums; }
+.partner-metric > strong span { font-size:.73rem; font-weight:650; letter-spacing:0; }
+.partner-metric > span:not(.partner-metric-icon) { color:var(--partner-muted); font-size:.61rem; }
+.partner-metric--feature > span:not(.partner-metric-icon) { color:#ffffffb6; }
+.partner-metric--feature > .partner-unavailable-note { max-width:6rem; font-size:.47rem; line-height:1.35; }
+.partner-ring { --ring-size:4.25rem; position:relative; display:grid; flex:none; place-items:center; width:var(--ring-size); height:var(--ring-size); border-radius:50%; background:conic-gradient(var(--partner-ring-color,#d6b66f) var(--partner-ring-value,0%),#ffffff2e 0); }
+.partner-ring::before { position:absolute; inset:.28rem; border-radius:50%; background:var(--partner-ring-hole,#fff); content:""; }
+.partner-ring > span { position:relative; display:grid; justify-items:center; gap:.06rem; text-align:center; }
+.partner-ring strong { color:var(--partner-ring-text,var(--partner-ink)); font-size:.78rem; font-variant-numeric:tabular-nums; }
+.partner-ring small { color:var(--partner-ring-muted,var(--partner-muted)); font-size:.44rem; font-weight:750; }
+.partner-ring--small { --ring-size:3.25rem; --partner-ring-color:#74469b; --partner-ring-hole:#fff; }
+.partner-ring--small strong { font-size:.64rem; }
+.partner-ring--small small { font-size:.39rem; }
+.partner-metric--feature .partner-ring { --partner-ring-color:#e8d3a0; --partner-ring-hole:#462668; --partner-ring-text:#fff; --partner-ring-muted:#ffffffad; }
+.partner-metric--feature .partner-ring { position:absolute; right:.8rem; bottom:.75rem; }
+.partner-mini-track { height:.34rem; margin-top:auto; overflow:hidden; border-radius:99px; background:#eee7f1; }
+.partner-mini-track i,.partner-milestone-line i,.partner-shared-progress i,.partner-challenge-track i { display:block; height:100%; border-radius:inherit; background:linear-gradient(90deg,#74469b,#b995cf); transition:width .5s cubic-bezier(.2,.8,.2,1); }
+.partner-mini-track--gold i { background:linear-gradient(90deg,#c39a4a,#e7cd87); }
+.partner-metric--together .partner-mini-track { margin-top:.8rem; background:#eadfc3; }
+.partner-milestone-line { display:grid; gap:.3rem; margin-top:auto; padding-top:.65rem; }
+.partner-milestone-line > span { color:#776333; font-size:.56rem; }
+.partner-milestone-line > div { height:.34rem; overflow:hidden; border-radius:99px; background:#eadfc3; }
+.partner-milestone-line i { background:linear-gradient(90deg,#b58a45,#e3ca81); }
+.partner-consistency-note { display:flex; align-items:center; gap:.72rem; padding:.72rem .8rem; border:1px solid #e7dfed; border-radius:.9rem; background:linear-gradient(105deg,#f6f1f9,#fff); }
+.partner-consistency-note > div { display:grid; flex:1; gap:.12rem; }
+.partner-consistency-note > div strong { font-size:.72rem; }
+.partner-consistency-note > div span { color:var(--partner-muted); font-size:.59rem; line-height:1.45; }
+.partner-consistency-note > button { display:inline-flex; align-items:center; gap:.3rem; padding:.4rem .5rem; border:0; color:var(--partner-purple); background:transparent; font-size:.61rem!important; font-weight:800!important; cursor:pointer; }
+.partner-consistency-note > button svg { width:.88rem; height:.88rem; }
+.partner-section-title { align-items:center; margin-bottom:.15rem; }
+.partner-section-count,.partner-live-label { display:inline-flex; align-items:center; gap:.4rem; color:var(--partner-muted); font-size:.62rem; font-weight:750; }
+.partner-section-count { padding:.38rem .55rem; border:1px solid var(--partner-line); border-radius:99px; }
+.partner-section-count svg { width:.85rem; height:.85rem; color:var(--partner-purple); }
+.partner-circle-section,.partner-challenge-section,.partner-moments-section { display:grid; gap:.9rem; }
+.partner-partnership-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); align-items:start; gap:.75rem; }
+.partner-partnership-card { display:grid; gap:.65rem; min-width:0; padding:.9rem; border:1px solid var(--partner-line); border-radius:1rem; background:#fff; box-shadow:0 7px 22px #35165c0b; transition:transform .18s ease,box-shadow .18s ease; }
+.partner-partnership-card:hover { transform:translateY(-2px); box-shadow:0 12px 26px #35165c12; }
+.partner-partnership-card-head { display:flex; align-items:flex-start; justify-content:space-between; gap:.6rem; }
+.partner-partnership-card-head > div { min-width:0; }
+.partner-partnership-card-head small { color:var(--partner-purple); font-size:.53rem; font-weight:850; letter-spacing:.1em; }
+.partner-partnership-card-head h4 { overflow:hidden; margin:.16rem 0 0; font-size:.9rem; text-overflow:ellipsis; white-space:nowrap; }
+.partner-active-badge { display:inline-flex; align-items:center; gap:.3rem; flex:none; padding:.27rem .43rem; border:1px solid #d8eadc; border-radius:99px; color:#36714b; background:#f3faf4; font-size:.52rem; font-weight:800; }
+.partner-active-badge i,.partner-live-label i { width:.38rem; height:.38rem; border-radius:50%; background:#56a66b; box-shadow:0 0 0 3px #56a66b1a; }
+.partner-shared-streak { display:grid; grid-template-columns:auto 1fr; align-items:center; gap:.65rem; padding:.65rem .7rem; border:1px solid #ecdfc3; border-radius:.78rem; background:linear-gradient(105deg,#fffbf0,#faf7ee); }
+.partner-shared-streak > div:first-child { display:grid; grid-template-columns:auto auto; align-items:center; column-gap:.18rem; }
+.partner-streak-flame { display:grid; place-items:center; width:1.65rem; height:1.65rem; grid-row:span 2; border-radius:.5rem; color:#9a702d; background:#d6b66f3b; }
+.partner-streak-flame svg { width:1rem; height:1rem; fill:#bd8e3633; }
+.partner-shared-streak > div:first-child strong { color:#50351d; font-size:1.4rem; line-height:1; }
+.partner-shared-streak > div:first-child small { grid-column:2; color:#806d4f; font-size:.48rem; }
+.partner-shared-progress { display:grid; gap:.27rem; min-width:0; }
+.partner-shared-progress > span { color:#6e5a3b; font-size:.54rem; font-weight:750; }
+.partner-shared-progress > div,.partner-challenge-track { height:.36rem; overflow:hidden; border-radius:99px; background:#ecdfc3; }
+.partner-shared-progress i { background:linear-gradient(90deg,#b58a45,#e1c778); }
+.partner-shared-progress > small { overflow:hidden; color:#88775c; font-size:.5rem; text-overflow:ellipsis; white-space:nowrap; }
+.partner-roster { display:grid; gap:.4rem; }
+.partner-roster-member { display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:center; gap:.26rem .55rem; padding:.43rem .48rem; border:1px solid #f0ebf2; border-radius:.72rem; background:#fff; }
+.partner-roster-profile { display:inline-flex; align-items:center; gap:.48rem; min-width:0; padding:0; border:0; text-align:left; color:inherit; background:transparent; cursor:pointer; }
+.partner-identity { display:grid; place-items:center; flex:none; width:2.15rem; height:2.15rem; overflow:hidden; border:2px solid #fff; border-radius:50%; color:#5b3876; background:linear-gradient(145deg,#f1e8f6,#e2d4ed); box-shadow:0 1px 5px #26123715; font-size:.64rem; font-weight:850; }
+.partner-identity--small { width:1.72rem; height:1.72rem; font-size:.53rem; }
+.partner-identity--large { width:3.5rem; height:3.5rem; font-size:.95rem; }
+.partner-profile-comparison { display:grid; gap:.65rem; margin:1rem 0; padding:.9rem; border:1px solid color-mix(in srgb,var(--color-accent) 28%,var(--border)); border-radius:1rem; background:color-mix(in srgb,var(--color-accent) 5%,var(--surface-strong)); }
+.partner-profile-comparison-heading { display:flex; align-items:end; justify-content:space-between; flex-wrap:wrap; gap:.4rem; }
+.partner-profile-comparison-heading > div { display:grid; gap:.2rem; }.partner-profile-comparison-heading small { color:var(--color-accent); font-size:.6rem; font-weight:850; letter-spacing:.1em; }.partner-profile-comparison-heading strong { color:var(--text); font-size:.92rem; }.partner-profile-comparison-heading > span { color:var(--text-muted); font-size:.67rem; font-weight:700; }
+.partner-profile-comparison-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:.55rem; }
+.partner-profile-compare-person { display:grid; align-content:start; gap:.55rem; min-width:0; padding:.7rem; border:1px solid var(--border); border-radius:.8rem; background:var(--surface-strong); }
+.partner-profile-compare-person > div:first-child { display:flex; align-items:center; gap:.45rem; min-width:0; }.partner-profile-compare-person > div:first-child > span { display:grid; min-width:0; gap:.12rem; }.partner-profile-compare-person > div:first-child strong { overflow:hidden; color:var(--text); font-size:.7rem; text-overflow:ellipsis; white-space:nowrap; }.partner-profile-compare-person > div:first-child small { color:var(--text-muted); font-size:.57rem; line-height:1.35; }
+.partner-profile-compare-bar { display:grid; gap:.24rem; }.partner-profile-compare-bar > small { display:flex; justify-content:space-between; color:var(--text-muted); font-size:.58rem; }.partner-profile-compare-bar > small b { color:var(--text); }.partner-profile-compare-bar > i { display:block; height:.3rem; overflow:hidden; border-radius:999px; background:color-mix(in srgb,var(--color-accent) 12%,var(--surface-muted)); }.partner-profile-compare-bar em { display:block; height:100%; border-radius:inherit; background:linear-gradient(90deg,var(--color-accent),var(--color-gold)); transition:width 450ms ease; }
+.partner-profile-compare-chapters { color:var(--text-muted); font-size:.59rem; }.partner-profile-comparison > p { margin:0; color:var(--text-muted); font-size:.64rem; line-height:1.45; }
+@media(max-width:520px) { .partner-profile-comparison-grid { grid-template-columns:1fr; }.partner-profile-comparison { padding:.7rem; } }
+@media(prefers-reduced-motion:reduce) { .partner-profile-compare-bar em { transition:none; } }
+.partner-roster-profile > span:last-child { display:grid; min-width:0; gap:.12rem; }
+.partner-roster-profile strong { overflow:hidden; font-size:.65rem; text-overflow:ellipsis; white-space:nowrap; }
+.partner-roster-profile small { overflow:hidden; color:var(--partner-muted); font-size:.52rem; text-overflow:ellipsis; white-space:nowrap; }
+.partner-today-status { display:inline-flex; align-items:center; gap:.3rem; color:#8a7e8f; font-size:.51rem; white-space:nowrap; }
+.partner-today-status i { display:grid; place-items:center; width:.95rem; height:.95rem; border:1px solid #d9d1df; border-radius:50%; font-size:.7rem; font-style:normal; }
+.partner-today-status.is-complete { color:#397448; }
+.partner-today-status.is-complete i { border-color:#aed3b5; background:#e9f4eb; }
+.partner-profile-link { display:inline-flex; grid-column:1/-1; align-items:center; justify-content:flex-end; gap:.25rem; padding:.12rem .18rem 0; border:0; color:#74469b; background:transparent; font-size:.53rem!important; font-weight:800!important; cursor:pointer; }
+.partner-profile-link svg { width:.75rem; height:.75rem; }
+.partner-card-footer { display:flex; align-items:center; gap:.5rem; padding-top:.55rem; border-top:1px solid #eee8f1; }
+.partner-card-footer > div:first-child { display:grid; flex:1; gap:.12rem; }
+.partner-card-footer > div:first-child small { color:var(--partner-muted); font-size:.48rem; font-weight:800; letter-spacing:.06em; }
+.partner-card-footer > div:first-child strong { font-size:.88rem; }
+.partner-encourage-button,.partner-end-button { display:inline-flex; align-items:center; justify-content:center; gap:.3rem; min-height:2.1rem; padding:.38rem .58rem; border:1px solid #ded0e8; border-radius:.62rem; color:#603779; background:#f8f3fa; font-size:.57rem!important; font-weight:800!important; cursor:pointer; }
+.partner-encourage-button svg { width:.86rem; height:.86rem; }
+.partner-end-button { padding:.38rem .4rem; border-color:transparent; color:#887f8c; background:transparent; }
+.partner-end-button:disabled { opacity:.45; }
+.partner-empty-card { display:grid; grid-template-columns:9rem minmax(0,1fr); align-items:center; gap:1rem; padding:1rem 1.2rem; border:1px dashed #cfc0da; border-radius:1rem; background:linear-gradient(110deg,#f8f3fa,#fff); }
+.partner-empty-angel { display:grid; place-items:center; min-height:8rem; overflow:hidden; border-radius:.85rem; background:radial-gradient(circle at 50% 75%,#eadff2,transparent 65%); }
+.partner-empty-angel .partner-angel { width:7rem; }
+.partner-empty-card small { color:var(--partner-purple); font-size:.54rem; font-weight:850; letter-spacing:.1em; }
+.partner-empty-card h4 { margin:.2rem 0; font-size:1.05rem; }
+.partner-empty-card p { max-width:36rem; margin:.3rem 0 .65rem; color:var(--partner-muted); font-size:.68rem; line-height:1.5; }
+.partner-empty-card .partner-primary-action { min-height:2.35rem; }
+.partner-create-card { display:grid; grid-template-columns:minmax(11rem,.68fr) minmax(0,1.4fr); gap:1.1rem; padding:1rem; border:1px solid #e9e1ed; border-radius:1rem; background:#fbf9fc; }
+.partner-create-copy { display:flex; align-items:flex-start; gap:.55rem; }
+.partner-create-icon,.partner-challenge-create-mark { display:grid; place-items:center; flex:none; width:2rem; height:2rem; border:1px solid #e2d4ec; border-radius:.65rem; color:#74469b; background:#f1e9f6; }
+.partner-create-icon svg,.partner-challenge-create-mark svg { width:1rem; height:1rem; }
+.partner-create-copy h4 { margin:.14rem 0; font-size:.85rem; }
+.partner-create-copy p { margin:.2rem 0; color:var(--partner-muted); font-size:.62rem; line-height:1.5; }
+.partner-create-form { display:grid; gap:.65rem; }
+.partner-field { display:grid; gap:.3rem; min-width:0; color:#4f4359; font-size:.6rem; font-weight:750; }
+.partner-field > span { display:flex; justify-content:space-between; gap:.5rem; }
+.partner-field > span small { color:#958a9c; font-size:.54rem; font-weight:600; }
+.partner-field input,.partner-field select,.partner-message-form textarea { width:100%; min-width:0; min-height:2.4rem; padding:.52rem .65rem; border:1px solid #ded5e3; border-radius:.65rem; color:var(--partner-ink); background:#fff; font-size:.66rem!important; }
+.partner-field input:focus,.partner-field select:focus,.partner-message-form textarea:focus { outline:0; border-color:#8c64a5; box-shadow:0 0 0 3px #74469b1b; }
+.partner-invite-picker { display:grid; gap:.42rem; margin:0; padding:0; border:0; }
+.partner-invite-picker legend { margin-bottom:.35rem; color:#4f4359; font-size:.6rem; font-weight:800; }
+.partner-invite-picker > div { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:.35rem; max-height:12rem; overflow:auto; padding:.1rem .12rem .18rem; }
+.partner-invite-option { display:grid; grid-template-columns:auto auto minmax(0,1fr) auto; align-items:center; gap:.4rem; min-width:0; padding:.4rem; border:1px solid #e9e1ed; border-radius:.68rem; background:#fff; cursor:pointer; }
+.partner-invite-option.is-selected { border-color:#9e7eb3; background:#f6f0f9; box-shadow:inset 0 0 0 1px #9e7eb344; }
+.partner-invite-option.has-partnership > span:nth-last-child(2) small { color:#82758b; }
+.partner-invite-option input { width:.85rem; height:.85rem; margin:0; accent-color:#74469b; }
+.partner-invite-option > span:nth-last-child(2) { display:grid; min-width:0; gap:.08rem; }
+.partner-invite-option strong,.partner-invite-option small { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.partner-invite-option strong { font-size:.58rem; }
+.partner-invite-option small { color:#8e8295; font-size:.48rem; }
+.partner-invite-option > i { color:#74469b; font-style:normal; font-weight:850; }
+.partner-field-hint { color:#817687; font-size:.53rem; line-height:1.45; }
+.partner-create-form > .partner-primary-action { justify-self:end; }
+.partner-invitation-stack { display:grid; gap:.65rem; }
+.partner-invitation-card { display:grid; grid-template-columns:auto minmax(0,1fr) auto; align-items:center; gap:.65rem; padding:.8rem; border:1px solid #e8dbbd; border-radius:.85rem; background:linear-gradient(110deg,#fffcf4,#fff); }
+.partner-invitation-icon { display:grid; place-items:center; width:2.3rem; height:2.3rem; border-radius:.7rem; color:#8a682b; background:#f2e7ca; }
+.partner-invitation-icon svg { width:1.1rem; height:1.1rem; }
+.partner-invitation-card > div:nth-child(2) { display:grid; gap:.15rem; }
+.partner-invitation-card strong { font-size:.72rem; }
+.partner-invitation-card > div:nth-child(2) span { color:#61566a; font-size:.61rem; line-height:1.4; }
+.partner-invitation-card > div:nth-child(2) small { color:#92869a; font-size:.53rem; }
+.partner-invitation-actions { display:grid; justify-items:end; gap:.22rem; }
+.partner-invitation-actions .partner-primary-action { min-height:2.25rem; }
+.partner-text-action { min-height:1.8rem; padding:.3rem .45rem; border:0; color:#7f7386; background:transparent; font-size:.57rem!important; font-weight:750!important; cursor:pointer; }
+.partner-challenge-layout { display:grid; grid-template-columns:minmax(14rem,.72fr) minmax(0,1.4fr); align-items:start; gap:.75rem; }
+.partner-challenge-create { display:grid; gap:.45rem; padding:.9rem; border:1px solid #e7dfeb; border-radius:1rem; background:linear-gradient(150deg,#f8f3fa,#fff); }
+.partner-challenge-create-mark { margin-bottom:.1rem; }
+.partner-challenge-create > small { font-size:.52rem; }
+.partner-challenge-create h4 { margin:0; font-size:.9rem; }
+.partner-challenge-create > p { margin:0; color:var(--partner-muted); font-size:.62rem; line-height:1.5; }
+.partner-challenge-create form { display:grid; gap:.55rem; margin-top:.2rem; }
+.partner-challenge-create .partner-primary-action { justify-self:start; }
+.partner-inline-empty { display:grid; gap:.15rem; padding:.65rem; border:1px dashed #d4c8dc; border-radius:.65rem; color:#65596e; background:#fff; }
+.partner-inline-empty strong { font-size:.65rem; }
+.partner-inline-empty span { font-size:.57rem; line-height:1.4; }
+.partner-challenge-list { display:grid; gap:.65rem; }
+.partner-milestone-shelf,.partner-challenge-empty { padding:.75rem; border:1px solid #ebe3ef; border-radius:.9rem; background:#fff; }
+.partner-milestone-shelf > small { color:var(--partner-purple); font-size:.52rem; font-weight:850; letter-spacing:.1em; }
+.partner-milestone-shelf > div { display:grid; grid-template-columns:repeat(6,minmax(0,1fr)); gap:.4rem; margin:.55rem 0 .4rem; }
+.partner-milestone-shelf article { display:grid; justify-items:center; gap:.1rem; min-width:0; padding:.42rem .2rem; border:1px solid #eee8f0; border-radius:.65rem; background:#fbf9fc; }
+.partner-milestone-shelf article > span { display:grid; place-items:center; width:1.5rem; height:1.5rem; border-radius:50%; color:#aaa0ae; background:#eee9f0; }
+.partner-milestone-shelf article svg { width:.77rem; height:.77rem; }
+.partner-milestone-shelf article > strong { font-size:.68rem; }
+.partner-milestone-shelf article > small { color:#8c818f; font-size:.46rem; }
+.partner-milestone-shelf article.is-earned { border-color:#e3d2a8; background:#fffbef; }
+.partner-milestone-shelf article.is-earned > span { color:#73531b; background:linear-gradient(140deg,#efdfa9,#d6b66f); box-shadow:0 3px 8px #b58a4533; }
+.partner-milestone-shelf article.is-earned > small { color:#83652b; }
+.partner-milestone-shelf > p { margin:.15rem 0 0; color:var(--partner-muted); font-size:.57rem; line-height:1.4; }
+.partner-active-challenges { display:grid; gap:.55rem; }
+.partner-challenge-card { display:grid; gap:.48rem; padding:.75rem; border:1px solid var(--partner-line); border-radius:.9rem; background:#fff; }
+.partner-challenge-card.is-finished { border-color:#e4d5ae; background:#fffdf5; }
+.partner-challenge-card-heading { display:flex; align-items:center; gap:.5rem; }
+.partner-challenge-badge { display:grid; place-items:center; width:2rem; height:2rem; flex:none; border-radius:.65rem; color:#74469b; background:#f1e9f5; }
+.partner-challenge-card.is-finished .partner-challenge-badge { color:#87611d; background:#f1e4bd; }
+.partner-challenge-badge svg { width:1rem; height:1rem; }
+.partner-challenge-card-heading > div { flex:1; min-width:0; }
+.partner-challenge-card-heading > div small { color:#8d7d94; font-size:.47rem; font-weight:850; letter-spacing:.08em; }
+.partner-challenge-card-heading h4 { overflow:hidden; margin:.08rem 0 0; font-size:.72rem; text-overflow:ellipsis; white-space:nowrap; }
+.partner-challenge-card-heading > strong { font-size:.82rem; }
+.partner-challenge-track { background:#eee9f1; }
+.partner-challenge-card.is-finished .partner-challenge-track { background:#efe7d1; }
+.partner-challenge-dates { display:flex; justify-content:space-between; gap:.4rem; color:var(--partner-muted); font-size:.52rem; }
+.partner-challenge-contributors { display:grid; gap:.3rem; }
+.partner-challenge-contributors > div { display:flex; align-items:center; gap:.4rem; min-width:0; padding:.34rem .42rem; border-radius:.6rem; background:#faf8fb; }
+.partner-challenge-contributors > div > span { overflow:hidden; flex:1; font-size:.55rem; text-overflow:ellipsis; white-space:nowrap; }
+.partner-challenge-contributors > div > strong { color:#64596b; font-size:.53rem; white-space:nowrap; }
+.partner-challenge-contributors > div > i { display:grid; place-items:center; color:#438055; font-style:normal; }
+.partner-challenge-contributors > div > i svg { width:.8rem; height:.8rem; }
+.partner-challenge-card > .partner-text-action { justify-self:end; }
+.partner-challenge-empty { display:grid; justify-items:center; gap:.3rem; min-height:9rem; text-align:center; }
+.partner-challenge-empty-mark { display:grid; place-items:center; width:2rem; height:2rem; border-radius:.7rem; color:#79569a; background:#f0e8f5; }
+.partner-challenge-empty-mark svg { width:1rem; height:1rem; }
+.partner-challenge-empty > strong { font-size:.67rem; }
+.partner-challenge-empty > span { max-width:19rem; color:var(--partner-muted); font-size:.57rem; line-height:1.45; }
+.partner-moments-layout { display:grid; grid-template-columns:minmax(15rem,.76fr) minmax(0,1.35fr); align-items:start; gap:.75rem; }
+.partner-message-panel,.partner-activity-panel { display:grid; gap:.55rem; min-width:0; padding:.85rem; border:1px solid var(--partner-line); border-radius:1rem; background:#fff; box-shadow:0 5px 16px #35165c08; }
+.partner-message-heading,.partner-activity-heading { display:flex; align-items:center; gap:.5rem; padding-bottom:.55rem; border-bottom:1px solid #f0ebf2; }
+.partner-message-icon,.partner-activity-mark { display:grid; place-items:center; width:2rem; height:2rem; flex:none; border-radius:.65rem; color:#74469b; background:#f1e9f6; }
+.partner-message-icon svg,.partner-activity-mark svg { width:1rem; height:1rem; }
+.partner-message-heading > div,.partner-activity-heading > div { display:grid; gap:.08rem; }
+.partner-message-heading strong,.partner-activity-heading strong { font-size:.67rem; }
+.partner-message-heading small,.partner-activity-heading small { color:var(--partner-muted); font-size:.54rem; }
+.partner-quick-messages { display:flex; flex-wrap:wrap; gap:.3rem; }
+.partner-quick-messages button { padding:.35rem .48rem; border:1px solid #e7deeb; border-radius:99px; color:#654779; background:#fcf9fd; font-size:.52rem!important; line-height:1.3; cursor:pointer; }
+.partner-quick-messages button:hover { border-color:#bda5cc; background:#f6eff9; }
+.partner-message-form { display:grid; gap:.32rem; }
+.partner-message-form textarea { min-height:4rem; resize:vertical; }
+.partner-message-form > div { display:flex; align-items:center; justify-content:space-between; gap:.4rem; }
+.partner-message-form > div > small { color:#9b91a1; font-size:.51rem; }
+.partner-message-form .partner-primary-action { min-height:2rem; padding:.4rem .58rem; }
+.partner-moments-empty { margin:.1rem 0; padding:.5rem; border-radius:.6rem; color:var(--partner-muted); background:#faf8fb; font-size:.58rem; line-height:1.5; }
+.partner-recent-messages { display:grid; gap:.4rem; padding-top:.48rem; border-top:1px solid #f0ebf2; }
+.partner-recent-messages > small { color:var(--partner-purple); font-size:.5rem; font-weight:850; letter-spacing:.08em; }
+.partner-recent-messages > article { display:flex; align-items:flex-start; gap:.42rem; padding:.38rem; border-radius:.65rem; background:#faf8fb; }
+.partner-recent-messages > article > div { display:grid; grid-template-columns:minmax(0,1fr) auto; gap:.1rem .35rem; flex:1; min-width:0; }
+.partner-recent-messages > article strong { overflow:hidden; font-size:.55rem; text-overflow:ellipsis; white-space:nowrap; }
+.partner-recent-messages > article time { color:#968a9d; font-size:.48rem; }
+.partner-recent-messages > article p { grid-column:1/-1; margin:.08rem 0; color:#5d5364; font-size:.56rem; line-height:1.4; overflow-wrap:anywhere; }
+.partner-reaction-row { display:flex; flex-wrap:wrap; gap:.2rem; }
+.partner-reaction-row button { display:inline-flex; align-items:center; gap:.13rem; min-width:1.48rem; min-height:1.35rem; padding:.1rem .22rem; border:1px solid #e8e1eb; border-radius:99px; background:#fff; font-size:.68rem!important; line-height:1; cursor:pointer; transition:transform .15s ease,border-color .15s ease,background .15s ease; }
+.partner-reaction-row button:hover { transform:translateY(-1px) scale(1.05); }
+.partner-reaction-row button[aria-pressed="true"] { border-color:#bd9bce; background:#f4ebf8; }
+.partner-reaction-row button small { color:#776d7e; font-size:.48rem; }
+.partner-activity-feed { display:grid; }
+.partner-activity-item { display:grid; grid-template-columns:auto minmax(0,1fr) auto; align-items:start; gap:.46rem; padding:.54rem .1rem; border-bottom:1px solid #f0ebf2; }
+.partner-activity-item:last-child { border-bottom:0; }
+.partner-activity-copy { display:grid; gap:.12rem; min-width:0; }
+.partner-activity-copy > p { margin:0; color:#695d70; font-size:.58rem; line-height:1.45; }
+.partner-activity-copy > p strong { color:#302338; }
+.partner-activity-copy > time { color:#9a8fa0; font-size:.48rem; }
+.partner-activity-copy .partner-reaction-row { margin-top:.16rem; }
+.partner-activity-event-icon { display:grid; place-items:center; width:1.55rem; height:1.55rem; border:1px solid #e9dba9; border-radius:.52rem; color:#8a682b; background:#fcf6e6; }
+.partner-activity-event-icon svg { width:.8rem; height:.8rem; }
+.partner-live-label { padding:.32rem .48rem; border:1px solid #dcecdf; border-radius:99px; color:#36714b; background:#f5fbf5; font-size:.54rem; }
+.partner-live-label i { width:.33rem; height:.33rem; }
+.partner-pending-outgoing { display:grid; gap:.45rem; padding:.8rem; border:1px solid #e9e2ed; border-radius:.9rem; background:#faf8fb; }
+.partner-pending-outgoing > small { color:#805d29; font-size:.52rem; font-weight:850; letter-spacing:.1em; }
+.partner-pending-outgoing article { display:flex; align-items:center; gap:.5rem; }
+.partner-pending-icon { display:grid; place-items:center; width:1.9rem; height:1.9rem; border-radius:.6rem; color:#70498c; background:#eee5f3; }
+.partner-pending-icon svg { width:.95rem; height:.95rem; }
+.partner-pending-outgoing article > div { display:grid; flex:1; gap:.1rem; }
+.partner-pending-outgoing article strong { font-size:.62rem; }
+.partner-pending-outgoing article small { color:var(--partner-muted); font-size:.54rem; }
+.partner-pending-count { padding:.28rem .42rem; border:1px solid #eadcb7; border-radius:99px; color:#7d6027; background:#fffaf0; font-size:.5rem; }
+.partner-profile-backdrop { position:fixed; z-index:1500; inset:0; display:flex; justify-content:flex-end; background:#21172bb0; backdrop-filter:blur(5px); animation:partnerFadeIn .18s ease-out both; }
+.partner-profile-sheet { display:grid; align-content:start; gap:.8rem; width:min(100%,42rem); height:100%; overflow:auto; padding:1.1rem; color:var(--partner-ink); background:#fff; box-shadow:-20px 0 60px #140c1d33; animation:partnerSheetIn .28s cubic-bezier(.2,.8,.25,1) both; }
+.partner-profile-header { display:flex; align-items:center; justify-content:space-between; gap:.7rem; padding:.1rem 0 .75rem; border-bottom:1px solid var(--partner-line); }
+.partner-profile-person { display:flex; align-items:center; gap:.7rem; }
+.partner-profile-person > div { display:grid; gap:.12rem; }
+.partner-profile-person small { color:var(--partner-purple); font-size:.52rem; font-weight:850; letter-spacing:.09em; }
+.partner-profile-person h2 { margin:0; font-size:1.2rem; letter-spacing:-.04em; }
+.partner-profile-person span { color:var(--partner-muted); font-size:.59rem; }
+.partner-sheet-close { display:grid; place-items:center; width:2.35rem; height:2.35rem; border:1px solid var(--partner-line); border-radius:.7rem; color:#64596b; background:#fff; cursor:pointer; }
+.partner-sheet-close svg { width:1.05rem; height:1.05rem; }
+.partner-profile-stats { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:.45rem; }
+.partner-profile-stats article { display:grid; align-content:start; gap:.2rem; min-width:0; min-height:5.2rem; padding:.55rem; border:1px solid var(--partner-line); border-radius:.75rem; background:#fff; }
+.partner-profile-stats article.is-highlight { border-color:#e7d5a7; background:#fffaf0; }
+.partner-profile-stats article > small { color:#82778a; font-size:.46rem; font-weight:850; letter-spacing:.06em; }
+.partner-profile-stats article > strong { display:flex; align-items:center; gap:.2rem; font-size:1.1rem; letter-spacing:-.04em; font-variant-numeric:tabular-nums; }
+.partner-profile-stats article > strong svg { width:.86rem; height:.86rem; color:#a3792e; }
+.partner-profile-stats article > strong span { color:#81768a; font-size:.54rem; font-weight:650; }
+.partner-profile-stats article > span { color:var(--partner-muted); font-size:.49rem; line-height:1.35; }
+.partner-profile-today { display:flex; align-items:center; gap:.5rem; padding:.6rem; border:1px solid #e7e0ea; border-radius:.75rem; background:#faf8fb; }
+.partner-profile-today-mark { display:grid; place-items:center; width:1.9rem; height:1.9rem; flex:none; border-radius:.6rem; color:#74518e; background:#eee6f3; font-size:1rem; }
+.partner-profile-today-mark svg { width:.95rem; height:.95rem; }
+.partner-profile-today-mark.is-completed { color:#347349; background:#e7f2e9; }
+.partner-profile-today > div { display:grid; gap:.12rem; min-width:0; }
+.partner-profile-today > div small { color:#79678a; font-size:.49rem; font-weight:850; letter-spacing:.08em; }
+.partner-profile-today > div strong { font-size:.65rem; }
+.partner-profile-today > div span { overflow:hidden; color:var(--partner-muted); font-size:.54rem; text-overflow:ellipsis; white-space:nowrap; }
+.partner-calendar { display:grid; gap:.55rem; padding:.72rem; border:1px solid var(--partner-line); border-radius:.9rem; }
+.partner-calendar-heading { display:flex; align-items:center; justify-content:space-between; gap:.5rem; }
+.partner-calendar-heading > div:first-child { display:grid; gap:.12rem; }
+.partner-calendar-heading small { color:var(--partner-purple); font-size:.5rem; font-weight:850; letter-spacing:.09em; }
+.partner-calendar-heading h3 { margin:0; font-size:.87rem; }
+.partner-calendar-tools { display:flex; align-items:center; gap:.3rem; }
+.partner-calendar-view-toggle { display:flex; gap:.12rem; padding:.15rem; border:1px solid var(--partner-line); border-radius:.6rem; background:#faf8fb; }
+.partner-calendar-view-toggle button { min-height:1.7rem; padding:.28rem .45rem; border:0; border-radius:.42rem; color:#786d81; background:transparent; font-size:.51rem!important; font-weight:750!important; cursor:pointer; }
+.partner-calendar-view-toggle button.is-active { color:#fff; background:#593675; }
+.partner-calendar-nav { display:flex; gap:.3rem; }
+.partner-calendar-nav button { display:grid; place-items:center; width:2rem; height:2rem; border:1px solid var(--partner-line); border-radius:.58rem; color:#584968; background:#fff; cursor:pointer; }
+.partner-calendar-nav button:disabled { opacity:.35; cursor:not-allowed; }
+.partner-calendar-nav button svg { width:.9rem; height:.9rem; }
+.partner-calendar-grid { display:grid; grid-template-columns:repeat(7,minmax(0,1fr)); gap:.28rem; }
+.partner-calendar-weekday { padding:.18rem; color:#928798; font-size:.5rem; font-weight:800; text-align:center; }
+.partner-calendar-blank { min-height:2.45rem; }
+.partner-calendar-day { display:flex; align-items:center; justify-content:space-between; min-width:0; min-height:2.45rem; padding:.3rem .35rem; border:1px solid #e9e3eb; border-radius:.53rem; color:#51475a; background:#fff; cursor:pointer; transition:transform .15s ease,border-color .15s ease,background .15s ease; }
+.partner-calendar-day:hover { transform:translateY(-1px); border-color:#9b7bb0; }
+.partner-calendar-day > span { font-size:.62rem; font-weight:750; font-variant-numeric:tabular-nums; }
+.partner-calendar-day > i { display:grid; place-items:center; width:.83rem; height:.83rem; border-radius:50%; color:#a59aa8; font-size:.58rem; font-style:normal; font-weight:900; }
+.partner-calendar-day.is-completed { border-color:#c5ddc9; color:#286c43; background:#f2faf3; }
+.partner-calendar-day.is-completed > i { color:#fff; background:#4d9361; }
+.partner-calendar-day.is-pending { border-color:#d4b668; box-shadow:inset 0 0 0 1px #d4b668; background:#fffaf0; }
+.partner-calendar-day.is-missed { color:#877d89; background:#f5f3f6; }
+.partner-calendar-day.is-missed > i { background:#dcd5de; }
+.partner-calendar-day.is-in-progress { border-color:#a788bc; background:#f7f1fa; }
+.partner-calendar-day.is-protected { border-color:#d3b866; background:#fff9e8; }
+.partner-calendar-day.is-upcoming { border-style:dashed; color:#958b99; background:#fcfbfc; }
+.partner-calendar-day.is-untracked { color:#b0a8b3; border-color:#f1edf2; }
+.partner-calendar-day.is-today { outline:2px solid #d6b66f8a; outline-offset:1px; }
+.partner-calendar-day.is-selected { box-shadow:0 0 0 2px #74469b; }
+.partner-calendar-legend { display:flex; flex-wrap:wrap; gap:.38rem .7rem; }
+.partner-calendar-legend > span { display:inline-flex; align-items:center; gap:.23rem; color:#827889; font-size:.49rem; }
+.partner-calendar-legend i { width:.58rem; height:.58rem; border:1px solid #d8d0dc; border-radius:50%; background:#fff; }
+.partner-calendar-legend i.is-complete { border-color:#4d9361; background:#4d9361; }
+.partner-calendar-legend i.is-pending { border-color:#d4b668; background:#fff6dc; }
+.partner-calendar-legend i.is-missed { border-color:#d4ccd7; background:#e5e0e7; }
+.partner-calendar-legend i.is-future { border-style:dashed; }
+.partner-calendar-selected { display:flex; align-items:center; justify-content:space-between; gap:.5rem; padding:.48rem .55rem; border-radius:.58rem; background:#f8f5f9; }
+.partner-calendar-selected strong { font-size:.56rem; }
+.partner-calendar-selected span { color:#776d7e; font-size:.52rem; text-align:right; }
+.partner-profile-note { display:flex; align-items:flex-start; gap:.4rem; padding:.55rem; border:1px solid #e7dfeb; border-radius:.68rem; color:#756a7d; background:#faf8fb; font-size:.54rem; line-height:1.45; }
+.partner-profile-note svg { width:.86rem; height:.86rem; flex:none; color:#8b69a0; }
+.partner-profile-private-state { display:grid; justify-items:center; gap:.4rem; max-width:23rem; margin:2rem auto; color:#706578; text-align:center; }
+.partner-profile-private-state svg { width:2.3rem; height:2.3rem; color:#8b69a0; }
+.partner-profile-private-state strong { color:var(--partner-ink); font-size:.82rem; }
+.partner-profile-private-state span { font-size:.62rem; line-height:1.55; }
+.partner-loading { display:grid; gap:.8rem; padding:1rem; }
+.partner-loading > span { color:var(--partner-muted); font-size:.65rem; text-align:center; }
+.partner-skeleton { overflow:hidden; border-radius:1rem; background:linear-gradient(100deg,#eee8f1 15%,#f8f5f9 35%,#eee8f1 55%); background-size:220% 100%; animation:partnerSkeleton 1.4s linear infinite; }
+.partner-skeleton--hero { min-height:11rem; }
+.partner-skeleton-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:.5rem; }
+.partner-skeleton-grid i { min-height:5rem; border-radius:.8rem; background:linear-gradient(100deg,#eee8f1 15%,#f8f5f9 35%,#eee8f1 55%); background-size:220% 100%; animation:partnerSkeleton 1.4s linear infinite; }
+@keyframes partnerAngelFloat { 0%,100% { transform:translateY(0) rotate(-1deg); } 50% { transform:translateY(-8px) rotate(1deg); } }
+@keyframes partnerAngelWingLeft { 0%,100% { transform:rotate(0); } 50% { transform:rotate(-5deg); } }
+@keyframes partnerAngelWingRight { 0%,100% { transform:rotate(0); } 50% { transform:rotate(5deg); } }
+@keyframes partnerAngelBlink { 0%,43%,47%,100% { transform:scaleY(1); } 45% { transform:scaleY(.08); } }
+@keyframes partnerHaloGlow { 0%,100% { opacity:.82; transform:translateY(0) scaleX(1); } 50% { opacity:1; transform:translateY(-2px) scaleX(1.04); } }
+@keyframes partnerAngelWave { 0%,100% { transform:translateY(0) rotate(0); } 50% { transform:translateY(-4px) rotate(2deg); } }
+@keyframes partnerAngelWaveArm { 0%,100% { transform:rotate(0); } 35%,75% { transform:rotate(-22deg); } }
+@keyframes partnerAngelBounce { 0%,100% { transform:translateY(0) scale(1); } 35% { transform:translateY(-11px) scale(1.035); } 60% { transform:translateY(1px) scale(.99); } }
+@keyframes partnerAngelDance { from { transform:translateY(0) rotate(-5deg) scale(1); } to { transform:translateY(-6px) rotate(5deg) scale(1.02); } }
+@keyframes partnerAngelDanceWing { from { transform:rotate(-12deg); } to { transform:rotate(12deg); } }
+@keyframes partnerAngelEncourage { 0%,100% { transform:translateY(0) rotate(0); } 50% { transform:translateY(-4px) rotate(-1.5deg); } }
+@keyframes partnerAngelOffer { from { transform:rotate(0); } to { transform:rotate(-9deg); } }
+@keyframes partnerSpark { 0%,100% { opacity:.5; transform:scale(.8) rotate(-10deg); } 50% { opacity:1; transform:scale(1.08) rotate(10deg); } }
+@keyframes partnerSkeleton { to { background-position-x:-220%; } }
+@keyframes partnerFadeIn { from { opacity:0; } to { opacity:1; } }
+@keyframes partnerSheetIn { from { opacity:.65; transform:translateX(1.5rem); } to { opacity:1; transform:translateX(0); } }
+@media(max-width:1000px) {
+  .partner-hero { grid-template-columns:minmax(0,1fr) minmax(10rem,.55fr); }
+  .partner-hero-art { grid-column:2; grid-row:1; }
+  .partner-hero-streak { grid-column:1/-1; justify-self:start; }
+  .partner-metric-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
+  .partner-challenge-layout,.partner-moments-layout { grid-template-columns:1fr 1.35fr; }
+}
+@media(max-width:720px) {
+  .partner-experience { gap:1rem; }
+  .partner-hero { grid-template-columns:minmax(0,1fr) 8rem; gap:.45rem; min-height:0; padding:1.15rem; border-radius:1.05rem; }
+  .partner-hero-art { grid-column:2; grid-row:1; min-height:9.5rem; align-self:center; }
+  .partner-angel { width:9.1rem; }
+  .partner-speech-bubble { top:.1rem; left:45%; max-width:10rem; padding:.48rem .55rem; font-size:.53rem; transform:translateX(-22%); }
+  .partner-hero h2 { margin:.65rem 0 .45rem; font-size:clamp(1.9rem,7vw,2.8rem); }
+  .partner-hero-copy > p { max-width:28rem; font-size:.7rem; }
+  .partner-hero-actions { align-items:flex-start; flex-direction:column; gap:.42rem; margin-top:.8rem; }
+  .partner-hero-actions > span { font-size:.56rem; }
+  .partner-hero-streak { grid-column:1/-1; width:max-content; min-width:0; margin-top:.3rem; padding:.55rem .65rem; }
+  .partner-section-nav { position:static; display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); width:100%; border-radius:.8rem; }
+  .partner-section-nav button { flex-direction:column; gap:.18rem; min-height:3.1rem; padding:.35rem .2rem; font-size:.57rem!important; }
+  .partner-overview-heading,.partner-section-title { align-items:flex-start; }
+  .partner-overview-heading { flex-direction:column; gap:.25rem; }
+  .partner-overview-heading p,.partner-section-title > p { font-size:.61rem; }
+  .partner-partnership-grid { grid-template-columns:1fr; }
+  .partner-challenge-layout,.partner-moments-layout { grid-template-columns:1fr; }
+  .partner-create-card { grid-template-columns:1fr; gap:.7rem; }
+  .partner-invite-picker > div { grid-template-columns:1fr; max-height:13rem; }
+  .partner-section-count { flex:none; }
+  .partner-invitation-card { grid-template-columns:auto minmax(0,1fr); }
+  .partner-invitation-actions { grid-column:1/-1; display:flex; justify-content:flex-end; }
+  .partner-invitation-actions .partner-primary-action { min-width:8rem; }
+  .partner-profile-sheet { width:100%; padding:.85rem; }
+}
+@media(max-width:480px) {
+  .partner-hero { grid-template-columns:minmax(0,1fr) 6.2rem; padding:1rem; }
+  .partner-eyebrow { flex-wrap:wrap; font-size:.53rem; }
+  .partner-live { font-size:.46rem; }
+  .partner-hero-art { min-height:8rem; }
+  .partner-angel { width:7.2rem; }
+  .partner-speech-bubble { top:0; max-width:8rem; padding:.42rem .47rem; font-size:.47rem; }
+  .partner-hero-copy > p { font-size:.64rem; }
+  .partner-hero h2 { font-size:1.86rem; }
+  .partner-hero-streak strong { font-size:1.2rem; }
+  .partner-metric-grid { gap:.45rem; }
+  .partner-metric { min-height:8.7rem; padding:.67rem; border-radius:.82rem; }
+  .partner-metric > strong { font-size:1.45rem; }
+  .partner-metric-icon { width:1.7rem; height:1.7rem; margin-bottom:.45rem; }
+  .partner-metric--feature .partner-ring { --ring-size:2.8rem; right:.48rem; bottom:.48rem; }
+  .partner-metric--feature .partner-ring strong { font-size:.55rem; }
+  .partner-metric--feature .partner-ring small { font-size:.34rem; }
+  .partner-ring--small { --ring-size:2.8rem; }
+  .partner-ring--small strong { font-size:.55rem; }
+  .partner-consistency-note { align-items:flex-start; flex-wrap:wrap; gap:.45rem; padding:.6rem; }
+  .partner-consistency-note .partner-ring { --ring-size:2.65rem; }
+  .partner-consistency-note .partner-ring strong { font-size:.52rem; }
+  .partner-consistency-note .partner-ring small { font-size:.34rem; }
+  .partner-consistency-note > div { flex-basis:calc(100% - 3.2rem); }
+  .partner-consistency-note > button { margin-left:auto; }
+  .partner-section-title h3,.partner-overview-heading h3 { font-size:1.05rem; }
+  .partner-roster-member { grid-template-columns:minmax(0,1fr) auto; gap:.25rem; }
+  .partner-today-status { font-size:.47rem; }
+  .partner-card-footer { gap:.28rem; }
+  .partner-card-footer .partner-ring { --ring-size:2.5rem; }
+  .partner-card-footer .partner-ring strong { font-size:.5rem; }
+  .partner-card-footer .partner-ring small { font-size:.32rem; }
+  .partner-encourage-button { padding:.35rem .42rem; font-size:.52rem!important; }
+  .partner-end-button { padding:.35rem .25rem; font-size:.5rem!important; }
+  .partner-empty-card { grid-template-columns:1fr; gap:.4rem; padding:.8rem; }
+  .partner-empty-angel { min-height:5rem; }
+  .partner-empty-angel .partner-angel { width:5.9rem; }
+  .partner-create-form > .partner-primary-action { width:100%; }
+  .partner-milestone-shelf > div { gap:.22rem; }
+  .partner-milestone-shelf article { padding:.32rem .12rem; }
+  .partner-milestone-shelf article > span { width:1.25rem; height:1.25rem; }
+  .partner-milestone-shelf article > strong { font-size:.61rem; }
+  .partner-profile-stats { grid-template-columns:repeat(2,minmax(0,1fr)); }
+  .partner-profile-stats article { min-height:4.5rem; }
+  .partner-calendar { padding:.55rem; }
+  .partner-calendar-grid { gap:.2rem; }
+  .partner-calendar-day { min-height:2.1rem; padding:.2rem; }
+  .partner-calendar-day > span { font-size:.55rem; }
+  .partner-calendar-day > i { width:.7rem; height:.7rem; font-size:.5rem; }
+  .partner-calendar-blank { min-height:2.1rem; }
+  .partner-calendar-legend { gap:.3rem .48rem; }
+  .partner-calendar-legend > span { font-size:.43rem; }
+}
+@media(prefers-reduced-motion:reduce) {
+  .partner-experience *, .partner-profile-backdrop,.partner-profile-sheet { scroll-behavior:auto!important; animation:none!important; transition:none!important; }
+  .partner-angel,.partner-angel-wing,.partner-angel-eyes,.partner-angel-halo,.partner-hero-spark { animation:none!important; }
+  .partner-calendar-day:hover,.partner-primary-action:hover,.partner-partnership-card:hover,.partner-reaction-row button:hover { transform:none; }
+}
+
+/* Spacious Partner Streak experience with independently tuned app themes. */
+.partner-experience {
+  --partner-page:#f6f4ef;
+  --partner-surface:#fff;
+  --partner-raised:#fbfaf7;
+  --partner-soft:#f2f0eb;
+  --partner-ink:#292630;
+  --partner-muted:#6c6872;
+  --partner-line:#e4e0d8;
+  --partner-plum:#503b5e;
+  --partner-purple:#785a8f;
+  --partner-gold:#bd984d;
+  --partner-positive:#327348;
+  --partner-positive-soft:#eef7ef;
+  --partner-warning:#8a681f;
+  --partner-warning-soft:#fbf5e7;
+  --partner-danger:#a64249;
+  --partner-shadow:0 12px 34px #392d2210;
+  width:min(100%, 1240px);
+  margin:0 auto;
+  padding:clamp(1rem,2.3vw,2rem);
+  gap:clamp(1.5rem,3vw,2.6rem);
+  border-radius:1.5rem;
+  color:var(--partner-ink);
+  background:var(--partner-page);
+  font-size:1rem;
+  color-scheme:light;
+}
+:root[data-theme="dark"] .partner-experience {
+  --partner-page:#1c1b21;
+  --partner-surface:#26252d;
+  --partner-raised:#2d2c34;
+  --partner-soft:#34323b;
+  --partner-ink:#f4f1f6;
+  --partner-muted:#c0bbc6;
+  --partner-line:#45424d;
+  --partner-plum:#453653;
+  --partner-purple:#d0bce0;
+  --partner-gold:#e3c579;
+  --partner-positive:#9bd2a8;
+  --partner-positive-soft:#25372d;
+  --partner-warning:#e3c579;
+  --partner-warning-soft:#393222;
+  --partner-danger:#f0a5a8;
+  --partner-shadow:0 15px 36px #09080d44;
+  color-scheme:dark;
+}
+.partner-experience :where(*, *::before, *::after) { box-sizing:border-box; }
+.partner-experience button,.partner-experience input,.partner-experience select,.partner-experience textarea { color:inherit; }
+.partner-experience button:focus-visible,.partner-experience a:focus-visible,.partner-experience input:focus-visible,.partner-experience select:focus-visible,.partner-experience textarea:focus-visible { outline:3px solid color-mix(in srgb,var(--partner-gold) 72%,white); outline-offset:2px; }
+.partner-experience :is(.partner-overview,.partner-tab-panel,.partner-circle-section,.partner-challenge-section,.partner-moments-section) { gap:clamp(1.2rem,2.6vw,2rem); scroll-margin-top:1rem; }
+.partner-hero {
+  grid-template-columns:minmax(0,1.2fr) minmax(13rem,.72fr) minmax(14.5rem,.6fr);
+  gap:clamp(1.1rem,2vw,2rem);
+  min-height:25rem;
+  padding:clamp(1.6rem,3vw,3rem);
+  overflow:hidden;
+  border:1px solid #e5dcc9;
+  border-radius:1.65rem;
+  color:var(--partner-ink);
+  background:linear-gradient(116deg,#fbf8f1 0%,#f2edf5 58%,#eee6d6 100%);
+  box-shadow:var(--partner-shadow);
+}
+:root[data-theme="dark"] .partner-hero {
+  border-color:#4a4251;
+  color:var(--partner-ink);
+  background:linear-gradient(116deg,#29262f 0%,#342b3a 58%,#302c29 100%);
+  box-shadow:0 18px 44px #09080d45,inset 0 1px 0 #ffffff08;
+}
+:root[data-theme="dark"] .partner-experience .partner-hero-streak { border-color:#625440; color:var(--partner-ink); background:#39333d; }
+:root[data-theme="dark"] .partner-experience .partner-hero-streak strong { color:var(--partner-ink); }
+.partner-hero::before,.partner-hero::after { border-color:color-mix(in srgb,var(--partner-gold) 13%,transparent); }
+.partner-hero-copy { max-width:43rem; }
+.partner-eyebrow { flex-wrap:wrap; gap:.55rem; color:var(--partner-warning); font-size:.78rem; letter-spacing:.1em; }
+:root[data-theme="dark"] .partner-eyebrow { color:var(--partner-gold); }
+.partner-live { padding:.34rem .58rem; color:var(--partner-muted); border-color:var(--partner-line); background:var(--partner-surface); font-size:.72rem; letter-spacing:.04em; }
+.partner-hero h2 { margin:1.1rem 0 .85rem; color:var(--partner-ink); font-size:clamp(2.4rem,4vw,3.5rem); line-height:1.03; letter-spacing:-.055em; }
+.partner-hero h2 em { color:var(--partner-purple); }
+.partner-hero-copy > p { max-width:37rem; color:var(--partner-muted); font-size:1.05rem; line-height:1.7; }
+.partner-hero-actions { margin-top:1.65rem; gap:1rem; }
+.partner-hero-actions > span { color:var(--partner-muted); font-size:.88rem; }
+.partner-hero-actions .partner-primary-action { border-color:#c6a451; color:#302719; background:linear-gradient(135deg,#f3e2b1,#dfc275); }
+.partner-hero-art { align-self:center; min-height:19rem; }
+.partner-angel { width:clamp(12rem,19vw,16rem); }
+.partner-speech-bubble { top:.2rem; left:48%; max-width:16rem; padding:.8rem 1rem; border-color:#dfd4bf; color:#332d39; background:#fffdf8; box-shadow:0 9px 26px #271e2c18; font-size:.9rem; line-height:1.5; transform:translateX(-10%); }
+.partner-speech-bubble::after { border-color:#dfd4bf; background:#fffdf8; }
+.partner-hero-spark { color:var(--partner-gold); }
+.partner-hero-stats { display:grid; align-content:center; gap:.75rem; }
+.partner-hero-streak { align-self:auto; min-width:0; gap:.9rem; padding:1rem; border-color:#d8c89f; border-radius:1.05rem; color:var(--partner-ink); background:#ffffff9c; backdrop-filter:blur(7px); }
+.partner-flame-mark { width:3rem; height:3rem; border-color:#e3d1a4; color:#80611d; background:#f5e9c7; }
+.partner-hero-streak small { color:var(--partner-warning); font-size:.72rem; letter-spacing:.06em; }
+.partner-hero-streak strong { color:var(--partner-ink); font-size:2.2rem; }
+.partner-hero-streak strong span { font-size:.95rem; }
+.partner-hero-streak p { color:var(--partner-muted); font-size:.82rem; }
+.partner-hero-stat { display:flex; align-items:center; gap:.8rem; min-height:4.6rem; padding:.8rem 1rem; border:1px solid color-mix(in srgb,var(--partner-line) 80%,transparent); border-radius:1rem; color:var(--partner-ink); background:color-mix(in srgb,var(--partner-surface) 88%,transparent); }
+.partner-hero-stat > svg { width:1.35rem; height:1.35rem; flex:none; color:var(--partner-purple); }
+.partner-hero-stat > div { display:flex; align-items:baseline; gap:.55rem; min-width:0; }
+.partner-hero-stat strong { font-size:1.35rem; font-variant-numeric:tabular-nums; }
+.partner-hero-stat span { color:var(--partner-muted); font-size:.88rem; }
+.partner-section-nav { position:static; display:flex; justify-content:center; gap:.45rem; width:max-content; margin:0 auto; padding:.45rem; border-color:var(--partner-line); border-radius:1rem; background:var(--partner-surface); box-shadow:var(--partner-shadow); }
+.partner-section-nav button { gap:.55rem; min-height:3.1rem; padding:.62rem 1.1rem; color:var(--partner-muted); font-size:.94rem!important; font-weight:750!important; transition:background .18s ease,color .18s ease,transform .18s ease; }
+.partner-section-nav button svg { width:1.15rem; height:1.15rem; }
+.partner-section-nav button.is-active { color:#fff; background:var(--partner-plum); box-shadow:none; }
+.partner-section-nav button:not(.is-active):hover { color:var(--partner-ink); background:var(--partner-soft); }
+.partner-feedback { padding:1rem 1.15rem; border-radius:.95rem; font-size:.95rem; }
+.partner-overview { display:grid; }
+.partner-overview-heading,.partner-section-title { align-items:end; gap:1.5rem; }
+.partner-overview-heading small,.partner-section-title small,.partner-create-copy small,.partner-challenge-create > small { color:var(--partner-purple); font-size:.78rem; font-weight:800; letter-spacing:.07em; }
+.partner-overview-heading h3,.partner-section-title h3 { margin:.35rem 0 0; color:var(--partner-ink); font-size:clamp(1.45rem,2.5vw,1.75rem); line-height:1.2; letter-spacing:-.035em; }
+.partner-overview-heading p,.partner-section-title > p { max-width:36rem; color:var(--partner-muted); font-size:.98rem; line-height:1.6; }
+.partner-metric-grid { grid-template-columns:repeat(3,minmax(0,1fr)); gap:1rem; }
+.partner-metric,.partner-partnership-card,.partner-challenge-create,.partner-milestone-shelf,.partner-challenge-empty,.partner-message-panel,.partner-activity-panel,.partner-calendar,.partner-profile-sheet,.partner-invitation-card,.partner-create-card,.partner-inline-empty { border-color:var(--partner-line); color:var(--partner-ink); background:var(--partner-surface); box-shadow:var(--partner-shadow); }
+.partner-metric { min-height:13rem; padding:1.25rem; gap:.6rem; border-radius:1.1rem; }
+.partner-metric-icon { width:2.6rem; height:2.6rem; margin-bottom:.3rem; color:var(--partner-purple); background:var(--partner-soft); }
+.partner-metric small,.partner-card-footer > div:first-child small { color:var(--partner-muted); font-size:.78rem; font-weight:750; letter-spacing:.045em; }
+.partner-metric > strong { color:var(--partner-ink); font-size:2.4rem; line-height:1.08; font-variant-numeric:tabular-nums; }
+.partner-metric > strong span { color:var(--partner-muted); font-size:.95rem; font-weight:600; }
+.partner-metric > span:not(.partner-metric-icon) { color:var(--partner-muted); font-size:.9rem; line-height:1.45; }
+.partner-metric .partner-ring { --ring-size:4rem; right:1rem; bottom:1rem; }
+.partner-metric .partner-ring strong { font-size:.78rem; }
+.partner-metric .partner-ring small { font-size:.56rem; }
+.partner-metric-link { display:inline-flex; align-items:center; gap:.4rem; justify-self:start; margin-top:auto; padding:.45rem 0 0; border:0; color:var(--partner-purple); background:transparent; font-size:.88rem!important; font-weight:750!important; cursor:pointer; }
+.partner-metric-link svg { width:1rem; height:1rem; }
+.partner-mini-track,.partner-shared-progress > div,.partner-challenge-track { height:.55rem; border-radius:99px; background:var(--partner-soft); }
+.partner-mini-track i,.partner-shared-progress i,.partner-challenge-track i { background:linear-gradient(90deg,#9673a8,#d2ad58); }
+.partner-consistency-note { gap:1rem; padding:1.1rem 1.25rem; border-color:var(--partner-line); border-radius:1.05rem; background:linear-gradient(105deg,var(--partner-soft),var(--partner-surface)); box-shadow:none; }
+.partner-consistency-note .partner-ring { --ring-size:4rem; }
+.partner-consistency-note .partner-ring strong { font-size:.75rem; }
+.partner-consistency-note .partner-ring small { font-size:.55rem; }
+.partner-consistency-note > div strong { color:var(--partner-ink); font-size:1.03rem; }
+.partner-consistency-note > div span { color:var(--partner-muted); font-size:.9rem; line-height:1.55; }
+.partner-consistency-note > button { min-height:2.75rem; padding:.55rem .75rem; border-radius:.7rem; color:var(--partner-purple); font-size:.88rem!important; }
+.partner-overview-invitations { display:flex; align-items:center; gap:.8rem; padding:1rem 1.1rem; border:1px solid color-mix(in srgb,var(--partner-gold) 38%,var(--partner-line)); border-radius:1rem; color:var(--partner-ink); background:var(--partner-warning-soft); }
+.partner-overview-invitations > svg { width:1.35rem; height:1.35rem; flex:none; color:var(--partner-warning); }
+.partner-overview-invitations > span { display:grid; flex:1; gap:.15rem; }
+.partner-overview-invitations strong { font-size:1rem; }
+.partner-overview-invitations small { color:var(--partner-muted); font-size:.85rem; }
+.partner-overview-invitations button { display:inline-flex; align-items:center; gap:.35rem; padding:.5rem; border:0; color:var(--partner-purple); background:transparent; font-size:.9rem!important; font-weight:750!important; cursor:pointer; }
+.partner-overview-invitations button svg { width:1rem; height:1rem; }
+.partner-section-title { margin-bottom:.35rem; }
+.partner-section-title > p { margin:0; }
+.partner-section-count { gap:.5rem; padding:.55rem .75rem; border-color:var(--partner-line); color:var(--partner-muted); background:var(--partner-surface); font-size:.85rem; }
+.partner-section-count svg { width:1.05rem; height:1.05rem; color:var(--partner-purple); }
+.partner-partnership-grid { grid-template-columns:repeat(2,minmax(0,1fr)); gap:1.2rem; }
+.partner-partnership-card { gap:1.1rem; padding:1.35rem; border-radius:1.2rem; transition:transform .2s ease,box-shadow .2s ease; }
+.partner-partnership-card:hover { box-shadow:var(--partner-shadow); }
+.partner-partnership-card-head small { color:var(--partner-purple); font-size:.78rem; letter-spacing:.05em; }
+.partner-partnership-card-head h4 { color:var(--partner-ink); font-size:1.28rem; white-space:normal; }
+.partner-active-badge { padding:.4rem .6rem; border-color:color-mix(in srgb,var(--partner-positive) 32%,var(--partner-line)); color:var(--partner-positive); background:var(--partner-positive-soft); font-size:.8rem; }
+.partner-shared-streak { gap:1rem; padding:1rem; border-color:color-mix(in srgb,var(--partner-gold) 38%,var(--partner-line)); background:var(--partner-warning-soft); }
+.partner-shared-streak > div:first-child strong { color:var(--partner-ink); font-size:2rem; }
+.partner-shared-streak > div:first-child small { color:var(--partner-muted); font-size:.78rem; }
+.partner-shared-progress > span { color:var(--partner-ink); font-size:.88rem; }
+.partner-shared-progress > small { color:var(--partner-muted); font-size:.78rem; white-space:normal; }
+.partner-roster { gap:.55rem; }
+.partner-roster-member { grid-template-columns:minmax(0,1fr) auto; gap:.4rem .75rem; padding:.75rem; border-color:var(--partner-line); border-radius:.9rem; color:var(--partner-ink); background:var(--partner-raised); }
+.partner-roster-profile { gap:.75rem; }
+.partner-identity { width:3.2rem; height:3.2rem; border-color:var(--partner-surface); color:var(--partner-purple); background:var(--partner-soft); font-size:.9rem; }
+.partner-identity--small { width:2.45rem; height:2.45rem; font-size:.72rem; }
+.partner-identity--large { width:5rem; height:5rem; font-size:1.35rem; }
+.partner-roster-profile strong { color:var(--partner-ink); font-size:1.05rem; }
+.partner-roster-profile small { color:var(--partner-muted); font-size:.86rem; }
+.partner-today-status { gap:.45rem; color:var(--partner-muted); font-size:.83rem; }
+.partner-today-status i { width:1.25rem; height:1.25rem; border-color:var(--partner-line); font-size:.85rem; }
+.partner-today-status.is-complete { color:var(--partner-positive); }
+.partner-today-status.is-complete i { border-color:var(--partner-positive); color:var(--partner-positive); background:var(--partner-positive-soft); }
+.partner-profile-link { grid-column:2; justify-content:center; gap:.35rem; min-height:2.8rem; padding:.45rem .65rem; border:1px solid var(--partner-line); border-radius:.7rem; color:var(--partner-purple); background:var(--partner-surface); font-size:.86rem!important; }
+.partner-profile-link svg { width:1rem; height:1rem; }
+.partner-card-footer { flex-wrap:wrap; gap:.75rem; padding-top:.9rem; border-color:var(--partner-line); }
+.partner-card-footer > div:first-child small { font-size:.76rem; }
+.partner-card-footer > div:first-child strong { color:var(--partner-ink); font-size:1.15rem; }
+.partner-encourage-button,.partner-end-button { min-height:2.8rem; padding:.55rem .78rem; border-color:var(--partner-line); border-radius:.75rem; color:var(--partner-purple); background:var(--partner-soft); font-size:.84rem!important; }
+.partner-end-button { color:var(--partner-muted); }
+.partner-empty-card { grid-template-columns:11rem minmax(0,1fr); gap:1.5rem; padding:1.5rem; border-color:var(--partner-line); border-radius:1.2rem; background:var(--partner-surface); box-shadow:var(--partner-shadow); }
+.partner-empty-angel { min-height:11rem; background:radial-gradient(circle at 50% 75%,#eadff2,transparent 67%); }
+.partner-empty-angel .partner-angel { width:9rem; }
+.partner-empty-card small { color:var(--partner-purple); font-size:.78rem; letter-spacing:.07em; }
+.partner-empty-card h4 { margin:.3rem 0; color:var(--partner-ink); font-size:1.5rem; }
+.partner-empty-card p { margin:.45rem 0 1rem; color:var(--partner-muted); font-size:.98rem; line-height:1.65; }
+.partner-create-card { gap:1.5rem; padding:1.4rem; border-radius:1.2rem; background:var(--partner-raised); box-shadow:none; }
+.partner-create-copy { gap:.85rem; }
+.partner-create-icon,.partner-challenge-create-mark { width:2.8rem; height:2.8rem; border-color:var(--partner-line); color:var(--partner-purple); background:var(--partner-soft); }
+.partner-create-copy h4 { color:var(--partner-ink); font-size:1.2rem; }
+.partner-create-copy p { color:var(--partner-muted); font-size:.92rem; line-height:1.55; }
+.partner-field { gap:.45rem; color:var(--partner-ink); font-size:.9rem!important; }
+.partner-field > span small { color:var(--partner-muted); font-size:.8rem; }
+.partner-field input,.partner-field select,.partner-message-form textarea { min-height:3rem; padding:.7rem .8rem; border-color:var(--partner-line); border-radius:.75rem; color:var(--partner-ink); background:var(--partner-surface); font-size:.95rem!important; }
+.partner-field input::placeholder,.partner-message-form textarea::placeholder { color:var(--partner-muted); opacity:.8; }
+.partner-invite-picker legend { color:var(--partner-ink); font-size:.92rem; }
+.partner-invite-picker > div { gap:.55rem; max-height:18rem; }
+.partner-invite-option { gap:.65rem; padding:.6rem; border-color:var(--partner-line); color:var(--partner-ink); background:var(--partner-surface); }
+.partner-invite-option.is-selected { border-color:var(--partner-purple); background:var(--partner-soft); }
+.partner-invite-option strong { color:var(--partner-ink); font-size:.9rem; }
+.partner-invite-option small,.partner-field-hint { color:var(--partner-muted); font-size:.78rem; }
+.partner-invite-option > i { color:var(--partner-purple); }
+.partner-primary-action { min-height:3rem; padding:.72rem 1rem; border-color:var(--partner-plum); border-radius:.78rem; color:#fff; background:var(--partner-plum); font-size:.95rem!important; }
+.partner-hero-actions .partner-primary-action { color:#302719; }
+.partner-text-action { min-height:2.5rem; padding:.5rem .65rem; color:var(--partner-muted); font-size:.9rem!important; }
+.partner-invitation-card { gap:1rem; padding:1.1rem; border-radius:1rem; background:var(--partner-warning-soft); box-shadow:none; }
+.partner-invitation-icon { width:3rem; height:3rem; color:var(--partner-warning); background:color-mix(in srgb,var(--partner-gold) 17%,var(--partner-surface)); }
+.partner-invitation-card strong { color:var(--partner-ink); font-size:1rem; }
+.partner-invitation-card > div:nth-child(2) span { color:var(--partner-muted); font-size:.9rem; }
+.partner-invitation-card > div:nth-child(2) small { color:var(--partner-muted); font-size:.8rem; }
+.partner-invitation-actions { gap:.4rem; }
+.partner-challenge-layout { grid-template-columns:minmax(17rem,.7fr) minmax(0,1.3fr); gap:1.3rem; }
+.partner-challenge-create { gap:.7rem; padding:1.35rem; border-radius:1.2rem; background:var(--partner-surface); }
+.partner-challenge-create h4 { color:var(--partner-ink); font-size:1.25rem; }
+.partner-challenge-create > p { color:var(--partner-muted); font-size:.94rem; line-height:1.6; }
+.partner-inline-empty { padding:.85rem; color:var(--partner-muted); background:var(--partner-raised); }
+.partner-inline-empty strong { color:var(--partner-ink); font-size:.9rem; }
+.partner-inline-empty span { font-size:.85rem; }
+.partner-milestone-shelf,.partner-challenge-empty { padding:1.25rem; border-radius:1.1rem; background:var(--partner-surface); }
+.partner-milestone-shelf > small { color:var(--partner-purple); font-size:.78rem; }
+.partner-milestone-shelf > div { gap:.6rem; margin:.8rem 0 .6rem; }
+.partner-milestone-shelf article { gap:.25rem; padding:.7rem .35rem; border-color:var(--partner-line); background:var(--partner-raised); }
+.partner-milestone-shelf article > span { width:2rem; height:2rem; color:var(--partner-muted); background:var(--partner-soft); }
+.partner-milestone-shelf article > strong { color:var(--partner-ink); font-size:1rem; }
+.partner-milestone-shelf article > small { color:var(--partner-muted); font-size:.75rem; }
+.partner-milestone-shelf article.is-earned { border-color:color-mix(in srgb,var(--partner-gold) 50%,var(--partner-line)); background:var(--partner-warning-soft); }
+.partner-milestone-shelf article.is-earned > span { color:#604912; background:var(--partner-gold); }
+.partner-milestone-shelf article.is-earned > strong,.partner-milestone-shelf article.is-earned > small { color:var(--partner-warning); }
+.partner-milestone-shelf > p { color:var(--partner-muted); font-size:.88rem; line-height:1.5; }
+.partner-active-challenges { gap:.9rem; }
+.partner-challenge-card { gap:.8rem; padding:1.1rem; border-color:var(--partner-line); border-radius:1rem; color:var(--partner-ink); background:var(--partner-surface); box-shadow:none; }
+.partner-challenge-card.is-finished { border-color:color-mix(in srgb,var(--partner-gold) 45%,var(--partner-line)); background:var(--partner-warning-soft); }
+.partner-challenge-badge { width:2.6rem; height:2.6rem; color:var(--partner-purple); background:var(--partner-soft); }
+.partner-challenge-card-heading > div small { color:var(--partner-muted); font-size:.77rem; }
+.partner-challenge-card-heading h4 { color:var(--partner-ink); font-size:1.05rem; white-space:normal; }
+.partner-challenge-card-heading > strong { color:var(--partner-ink); font-size:1.05rem; }
+.partner-challenge-track { background:var(--partner-soft); }
+.partner-challenge-card.is-finished .partner-challenge-track { background:var(--partner-warning-soft); }
+.partner-challenge-dates { color:var(--partner-muted); font-size:.82rem; }
+.partner-challenge-contributors > div { gap:.6rem; padding:.55rem; color:var(--partner-ink); background:var(--partner-raised); }
+.partner-challenge-contributors > div > span { color:var(--partner-ink); font-size:.88rem; }
+.partner-challenge-contributors > div > strong { color:var(--partner-muted); font-size:.82rem; }
+.partner-challenge-empty { gap:.55rem; min-height:12rem; color:var(--partner-muted); }
+.partner-challenge-empty > strong { color:var(--partner-ink); font-size:1rem; }
+.partner-challenge-empty > span { color:var(--partner-muted); font-size:.9rem; line-height:1.5; }
+.partner-moments-layout { grid-template-columns:minmax(18rem,.8fr) minmax(0,1.2fr); gap:1.25rem; }
+.partner-message-panel,.partner-activity-panel { gap:.9rem; padding:1.25rem; border-radius:1.15rem; box-shadow:var(--partner-shadow); }
+.partner-message-heading,.partner-activity-heading { gap:.75rem; padding-bottom:.85rem; border-color:var(--partner-line); }
+.partner-message-icon,.partner-activity-mark { width:2.8rem; height:2.8rem; color:var(--partner-purple); background:var(--partner-soft); }
+.partner-message-heading strong,.partner-activity-heading strong { color:var(--partner-ink); font-size:1.08rem; }
+.partner-message-heading small,.partner-activity-heading small { color:var(--partner-muted); font-size:.85rem; }
+.partner-quick-messages { gap:.5rem; }
+.partner-quick-messages button { padding:.55rem .7rem; border-color:var(--partner-line); color:var(--partner-purple); background:var(--partner-raised); font-size:.82rem!important; }
+.partner-quick-messages button:hover { border-color:var(--partner-purple); background:var(--partner-soft); }
+.partner-message-form textarea { min-height:6rem; }
+.partner-message-form > div > small { color:var(--partner-muted); font-size:.8rem; }
+.partner-moments-empty { padding:.8rem; color:var(--partner-muted); background:var(--partner-raised); font-size:.9rem; }
+.partner-recent-messages { gap:.6rem; padding-top:.8rem; border-color:var(--partner-line); }
+.partner-recent-messages > small { color:var(--partner-purple); font-size:.78rem; }
+.partner-recent-messages > article { gap:.65rem; padding:.6rem; background:var(--partner-raised); }
+.partner-recent-messages > article strong { color:var(--partner-ink); font-size:.88rem; }
+.partner-recent-messages > article time { color:var(--partner-muted); font-size:.76rem; }
+.partner-recent-messages > article p { color:var(--partner-ink); font-size:.9rem; line-height:1.5; }
+.partner-reaction-row { gap:.3rem; }
+.partner-reaction-row button { min-width:2.25rem; min-height:2.1rem; padding:.28rem .42rem; border-color:var(--partner-line); color:var(--partner-ink); background:var(--partner-surface); font-size:1rem!important; }
+.partner-reaction-row button[aria-pressed="true"] { border-color:var(--partner-purple); background:var(--partner-soft); }
+.partner-reaction-row button small { color:var(--partner-muted); font-size:.72rem; }
+.partner-activity-item { gap:.75rem; padding:.85rem .2rem; border-color:var(--partner-line); }
+.partner-activity-copy > p { color:var(--partner-muted); font-size:.9rem; line-height:1.55; }
+.partner-activity-copy > p strong { color:var(--partner-ink); }
+.partner-activity-copy > time { color:var(--partner-muted); font-size:.78rem; }
+.partner-activity-event-icon { width:2.25rem; height:2.25rem; border-color:color-mix(in srgb,var(--partner-gold) 40%,var(--partner-line)); color:var(--partner-warning); background:var(--partner-warning-soft); }
+.partner-live-label { padding:.45rem .7rem; border-color:color-mix(in srgb,var(--partner-positive) 35%,var(--partner-line)); color:var(--partner-positive); background:var(--partner-positive-soft); font-size:.82rem; }
+.partner-pending-outgoing { gap:.65rem; padding:1rem; border-color:var(--partner-line); border-radius:1rem; background:var(--partner-surface); }
+.partner-pending-outgoing > small { color:var(--partner-purple); font-size:.78rem; }
+.partner-pending-outgoing article { gap:.75rem; color:var(--partner-ink); background:var(--partner-raised); }
+.partner-pending-outgoing article strong { color:var(--partner-ink); font-size:.95rem; }
+.partner-pending-outgoing article small { color:var(--partner-muted); font-size:.84rem; }
+.partner-pending-count { color:var(--partner-muted); font-size:.82rem; }
+.partner-profile-backdrop { background:#15111bc4; backdrop-filter:blur(5px); }
+.partner-profile-sheet { width:min(100%,58rem); max-height:min(92vh,58rem); gap:1.2rem; padding:clamp(1rem,2.4vw,1.8rem); border-radius:1.35rem; color:var(--partner-ink); background:var(--partner-surface); }
+.partner-profile-header { padding-bottom:1rem; border-color:var(--partner-line); }
+.partner-profile-person > div small { color:var(--partner-purple); font-size:.78rem; }
+.partner-profile-person h2 { color:var(--partner-ink); font-size:1.7rem; }
+.partner-profile-person > div span { color:var(--partner-muted); font-size:.9rem; }
+.partner-sheet-close { width:2.8rem; height:2.8rem; border-color:var(--partner-line); color:var(--partner-ink); background:var(--partner-raised); }
+.partner-profile-stats { gap:.7rem; }
+.partner-profile-stats article { min-height:7rem; padding:.85rem; border-color:var(--partner-line); color:var(--partner-ink); background:var(--partner-raised); }
+.partner-profile-stats article > small { color:var(--partner-muted); font-size:.76rem; }
+.partner-profile-stats article > strong { color:var(--partner-ink); font-size:1.5rem; }
+.partner-profile-stats article > span { color:var(--partner-muted); font-size:.82rem; }
+.partner-profile-stats article.is-highlight { border-color:color-mix(in srgb,var(--partner-gold) 42%,var(--partner-line)); background:var(--partner-warning-soft); }
+.partner-profile-today,.partner-profile-note { border-color:var(--partner-line); color:var(--partner-ink); background:var(--partner-raised); }
+.partner-profile-today > div small { color:var(--partner-purple); font-size:.77rem; }
+.partner-profile-today > div strong { color:var(--partner-ink); font-size:.98rem; }
+.partner-profile-today > div span { color:var(--partner-muted); font-size:.84rem; }
+.partner-calendar { padding:1rem; gap:.85rem; }
+.partner-calendar-heading small { color:var(--partner-purple); font-size:.75rem; }
+.partner-calendar-heading h3 { color:var(--partner-ink); font-size:1.18rem; }
+.partner-calendar-view-toggle { border-color:var(--partner-line); background:var(--partner-raised); }
+.partner-calendar-view-toggle button { min-height:2.25rem; padding:.4rem .65rem; color:var(--partner-muted); font-size:.82rem!important; }
+.partner-calendar-view-toggle button.is-active { color:#fff; background:var(--partner-plum); }
+.partner-calendar-nav button { width:2.5rem; height:2.5rem; border-color:var(--partner-line); color:var(--partner-ink); background:var(--partner-surface); }
+.partner-calendar-weekday { padding:.35rem; color:var(--partner-muted); font-size:.8rem; }
+.partner-calendar-day { min-height:3.1rem; padding:.45rem .55rem; border-color:var(--partner-line); color:var(--partner-ink); background:var(--partner-raised); }
+.partner-calendar-day > span { font-size:.95rem; }
+.partner-calendar-day.is-completed { border-color:#78ac83; color:var(--partner-positive); background:var(--partner-positive-soft); }
+.partner-calendar-day.is-pending { border-color:var(--partner-gold); color:var(--partner-ink); background:var(--partner-warning-soft); }
+.partner-calendar-day.is-missed { color:var(--partner-muted); background:var(--partner-soft); }
+.partner-calendar-day.is-in-progress,.partner-calendar-day.is-protected { border-color:var(--partner-purple); color:var(--partner-ink); background:var(--partner-soft); }
+.partner-calendar-day.is-upcoming { color:var(--partner-muted); background:var(--partner-surface); }
+.partner-calendar-day.is-untracked { color:var(--partner-muted); border-color:var(--partner-line); }
+.partner-calendar-day.is-today { outline-color:var(--partner-gold); }
+.partner-calendar-day.is-selected { box-shadow:0 0 0 2px var(--partner-purple); }
+.partner-calendar-legend { gap:.5rem 1rem; }
+.partner-calendar-legend > span { gap:.35rem; color:var(--partner-muted); font-size:.78rem; }
+.partner-calendar-legend i { border-color:var(--partner-line); background:var(--partner-surface); }
+.partner-calendar-legend i.is-complete { border-color:var(--partner-positive); background:var(--partner-positive); }
+.partner-calendar-legend i.is-pending { border-color:var(--partner-gold); background:var(--partner-warning-soft); }
+.partner-calendar-legend i.is-missed { border-color:var(--partner-muted); background:var(--partner-soft); }
+.partner-calendar-selected { padding:.7rem .8rem; color:var(--partner-ink); background:var(--partner-soft); }
+.partner-calendar-selected strong { color:var(--partner-ink); font-size:.88rem; }
+.partner-calendar-selected span { color:var(--partner-muted); font-size:.83rem; }
+.partner-profile-note { gap:.6rem; padding:.75rem; font-size:.84rem; line-height:1.55; }
+.partner-profile-note svg,.partner-profile-private-state svg { color:var(--partner-purple); }
+.partner-profile-private-state { color:var(--partner-muted); }
+.partner-profile-private-state strong { color:var(--partner-ink); font-size:1.05rem; }
+.partner-profile-private-state span { font-size:.9rem; line-height:1.55; }
+.partner-skeleton,.partner-skeleton-grid i { background:linear-gradient(100deg,var(--partner-soft) 15%,var(--partner-raised) 35%,var(--partner-soft) 55%); background-size:220% 100%; }
+.partner-loading > span { color:var(--partner-muted); font-size:.9rem; }
+
+:root[data-theme="dark"] .partner-experience :is(.partner-metric-icon,.partner-create-icon,.partner-challenge-create-mark,.partner-challenge-badge,.partner-message-icon,.partner-activity-mark) { color:var(--partner-purple); background:var(--partner-soft); }
+:root[data-theme="dark"] .partner-experience :is(.partner-roster-member,.partner-invite-option,.partner-recent-messages > article,.partner-challenge-contributors > div,.partner-inline-empty) { border-color:var(--partner-line); color:var(--partner-ink); background:var(--partner-raised); }
+:root[data-theme="dark"] .partner-experience :is(.partner-shared-streak,.partner-invitation-card,.partner-overview-invitations,.partner-milestone-shelf article.is-earned,.partner-challenge-card.is-finished,.partner-profile-stats article.is-highlight,.partner-profile-today-mark) { border-color:color-mix(in srgb,var(--partner-gold) 35%,var(--partner-line)); color:var(--partner-ink); background:var(--partner-warning-soft); }
+:root[data-theme="dark"] .partner-experience :is(.partner-calendar-day.is-completed,.partner-profile-today-mark.is-completed) { border-color:#598969; color:var(--partner-positive); background:var(--partner-positive-soft); }
+:root[data-theme="dark"] .partner-experience :is(.partner-active-badge,.partner-live-label) { border-color:color-mix(in srgb,var(--partner-positive) 36%,var(--partner-line)); color:var(--partner-positive); background:var(--partner-positive-soft); }
+:root[data-theme="dark"] .partner-experience .partner-feedback--error { border-color:#70464a; color:#ffc3c6; background:#39262b; }
+:root[data-theme="dark"] .partner-experience .partner-feedback--success { border-color:#456d52; color:#b6e4bf; background:#24352a; }
+:root[data-theme="dark"] .partner-experience .partner-invite-option.has-partnership > span:nth-last-child(2) small { color:var(--partner-muted); }
+:root[data-theme="dark"] .partner-experience .partner-calendar-nav button:disabled { color:var(--partner-muted); }
+:root[data-theme="dark"] .partner-experience .partner-speech-bubble { border-color:#574b61; color:#302b34; background:#fffdf8; }
+:root[data-theme="dark"] .partner-experience .partner-speech-bubble::after { border-color:#574b61; background:#fffdf8; }
+
+@media(max-width:1000px) {
+  .partner-hero { grid-template-columns:minmax(0,1fr) minmax(12rem,.65fr); }
+  .partner-hero-art { grid-column:2; grid-row:1; }
+  .partner-hero-stats { grid-column:1/-1; grid-template-columns:repeat(3,minmax(0,1fr)); }
+  .partner-partnership-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
+  .partner-challenge-layout,.partner-moments-layout { grid-template-columns:1fr 1.2fr; }
+}
+@media(max-width:720px) {
+  .partner-experience { padding:.75rem; gap:1.2rem; border-radius:1rem; }
+  .partner-hero { grid-template-columns:minmax(0,1fr) minmax(9rem,.55fr); gap:.75rem; min-height:0; padding:1.25rem; border-radius:1.2rem; }
+  .partner-hero-copy { grid-column:1/-1; }
+  .partner-hero-art { grid-column:1/-1; grid-row:auto; min-height:12rem; }
+  .partner-angel { width:12rem; }
+  .partner-speech-bubble { top:.1rem; left:50%; max-width:15rem; padding:.65rem .8rem; font-size:.84rem; }
+  .partner-hero h2 { margin:.8rem 0 .65rem; font-size:clamp(2rem,8vw,2.8rem); }
+  .partner-hero-copy > p { font-size:.98rem; }
+  .partner-hero-actions { align-items:flex-start; flex-direction:row; }
+  .partner-hero-actions > span { align-self:center; font-size:.82rem; }
+  .partner-hero-stats { grid-column:1/-1; display:grid; grid-template-columns:1fr 1fr; gap:.6rem; }
+  .partner-hero-streak { grid-column:1/-1; padding:.85rem; }
+  .partner-hero-streak strong { font-size:1.8rem; }
+  .partner-hero-stat { min-height:4.25rem; padding:.65rem; }
+  .partner-hero-stat > div { display:grid; gap:.05rem; }
+  .partner-section-nav { justify-content:flex-start; width:100%; max-width:100%; overflow-x:auto; border-radius:.9rem; }
+  .partner-section-nav button { flex:1 0 auto; min-width:7rem; min-height:3rem; padding:.55rem .7rem; }
+  .partner-overview-heading,.partner-section-title { align-items:flex-start; flex-direction:column; gap:.45rem; }
+  .partner-overview-heading p,.partner-section-title > p { font-size:.92rem; }
+  .partner-metric-grid,.partner-partnership-grid,.partner-challenge-layout,.partner-moments-layout { grid-template-columns:1fr; }
+  .partner-metric { min-height:0; padding:1.1rem; }
+  .partner-metric .partner-ring { --ring-size:3.65rem; }
+  .partner-consistency-note { align-items:center; flex-wrap:wrap; padding:.9rem; }
+  .partner-consistency-note .partner-ring { --ring-size:3.6rem; }
+  .partner-consistency-note > div strong { font-size:.98rem; }
+  .partner-consistency-note > div span { font-size:.84rem; }
+  .partner-consistency-note > button { margin-left:auto; }
+  .partner-overview-invitations { align-items:flex-start; }
+  .partner-partnership-grid { gap:.9rem; }
+  .partner-partnership-card { padding:1rem; }
+  .partner-roster-member { grid-template-columns:minmax(0,1fr); }
+  .partner-profile-link { grid-column:1; justify-self:start; }
+  .partner-card-footer { align-items:center; }
+  .partner-create-card { grid-template-columns:1fr; padding:1rem; }
+  .partner-invite-picker > div { grid-template-columns:1fr; max-height:16rem; }
+  .partner-invitation-card { grid-template-columns:auto minmax(0,1fr); }
+  .partner-invitation-actions { grid-column:1/-1; display:flex; flex-wrap:wrap; justify-content:flex-start; }
+  .partner-empty-card { grid-template-columns:1fr; padding:1rem; }
+  .partner-empty-angel { min-height:8rem; }
+  .partner-empty-angel .partner-angel { width:7rem; }
+  .partner-milestone-shelf > div { grid-template-columns:repeat(3,minmax(0,1fr)); }
+  .partner-calendar-heading { align-items:flex-start; flex-direction:column; }
+  .partner-calendar-tools { width:100%; justify-content:space-between; }
+  .partner-calendar-day { min-height:2.8rem; padding:.3rem; }
+  .partner-calendar-selected { align-items:flex-start; flex-direction:column; }
+  .partner-calendar-selected span { text-align:left; }
+  .partner-profile-sheet { width:100%; max-height:94vh; padding:1rem; }
+  .partner-profile-stats { grid-template-columns:repeat(2,minmax(0,1fr)); }
+}
+@media(max-width:420px) {
+  .partner-hero { padding:1rem; }
+  .partner-hero-art { min-height:10rem; }
+  .partner-angel { width:10.5rem; }
+  .partner-speech-bubble { left:46%; max-width:12rem; font-size:.78rem; }
+  .partner-hero-actions { align-items:stretch; flex-direction:column; }
+  .partner-hero-actions > span { align-self:flex-start; }
+  .partner-hero-stats { grid-template-columns:1fr; }
+  .partner-hero-streak { grid-column:auto; }
+  .partner-hero-stat { min-height:3.75rem; }
+  .partner-section-nav button { min-width:6.2rem; font-size:.83rem!important; }
+  .partner-card-footer { gap:.45rem; }
+  .partner-encourage-button { flex:1; }
+  .partner-profile-stats { grid-template-columns:1fr 1fr; }
+  .partner-profile-person h2 { font-size:1.35rem; }
+  .partner-calendar-grid { gap:.15rem; }
+  .partner-calendar-day { min-height:2.4rem; }
+}
+
+/* Keep the angel's message inside the clipped hero at every breakpoint. */
+.partner-experience .partner-hero-art { z-index:1; min-width:0; overflow:visible; }
+.partner-experience .partner-speech-bubble {
+  z-index:3;
+  inset-block-start:.35rem;
+  inset-inline-start:50%;
+  width:max-content;
+  max-width:calc(100% - 1rem);
+  transform:translateX(-50%);
+  overflow-wrap:anywhere;
+}
+.partner-activity-profile-action {
+  display:inline-flex;
+  align-items:center;
+  gap:.35rem;
+  margin-top:.4rem;
+  padding:.3rem 0;
+  border:0;
+  color:var(--partner-purple);
+  background:transparent;
+  font:inherit;
+  font-size:.82rem;
+  font-weight:750;
+  cursor:pointer;
+}
+.partner-activity-profile-action svg { width:1rem; height:1rem; }
+.partner-activity-profile-action:hover { color:var(--partner-ink); }
+.partner-activity-profile-action:focus-visible { outline:3px solid var(--partner-gold); outline-offset:3px; border-radius:.25rem; }
+
+@media(max-width:720px) {
+  .partner-experience .partner-speech-bubble { max-width:min(18rem,calc(100% - 1rem)); }
+}
+
+.bible-streak-count-ring { position:relative; display:grid; flex:0 0 4.25rem; width:4.25rem; height:4.25rem; place-items:center; border-radius:50%; background:conic-gradient(#E8D3A0 var(--bible-ring-progress),#ffffff26 0); transition:background 700ms cubic-bezier(.2,.8,.2,1); }
+.bible-streak-count-ring::before { position:absolute; inset:.34rem; border:1px solid #ffffff26; border-radius:50%; background:linear-gradient(145deg,#4a315d,#362344); content:""; }
+.bible-streak-count-ring .bible-streak-count { position:relative; z-index:1; display:grid; place-items:center; width:100%; height:100%; color:#fff; font-size:1.45rem; line-height:1; letter-spacing:-.04em; }
+.bible-streak-week-chart { display:grid; grid-template-columns:repeat(7,minmax(0,1fr)); align-items:stretch; gap:.45rem; height:5.2rem; margin:.9rem 0 .35rem; padding:.5rem .75rem .25rem; border:1px solid #ffffff1f; border-radius:.8rem; background:linear-gradient(to bottom,transparent 31%,#ffffff18 32%,transparent 33%,transparent 65%,#ffffff18 66%,transparent 67%); }
+.bible-streak-week-chart-day { display:grid; grid-template-rows:minmax(0,1fr) auto; justify-items:center; gap:.25rem; min-width:0; }
+.bible-streak-week-chart-day > i { align-self:end; width:min(1.15rem,65%); min-height:.2rem; height:var(--week-bar-height); border-radius:.35rem .35rem .12rem .12rem; background:linear-gradient(180deg,#E8D3A0,#B995CF); box-shadow:0 0 12px #d6b66f28; transform-origin:bottom; animation:bible-week-bar-rise 560ms cubic-bezier(.2,.8,.2,1) both; }
+.bible-streak-week-chart-day.is-in_progress > i { background:linear-gradient(180deg,#ecdcae,#c39158); }
+.bible-streak-week-chart-day.is-missed > i { background:linear-gradient(180deg,#b98680,#8e6268); opacity:.68; }
+.bible-streak-week-chart-day.is-future > i,.bible-streak-week-chart-day.is-pending > i { background:#ffffff38; box-shadow:none; }
+.bible-streak-week-chart-day > small { color:#ffffffb8; font-size:.55rem; }
+@keyframes bible-week-bar-rise { from { transform:scaleY(.2); opacity:.45; } to { transform:scaleY(1); opacity:1; } }
+@media(max-width:760px) { .bible-streak-count-ring { flex-basis:3.6rem; width:3.6rem; height:3.6rem; }.bible-streak-count-ring .bible-streak-count { font-size:1.24rem; }.bible-streak-week-chart { gap:.28rem; height:4.7rem; padding-inline:.45rem; } }
+@media(prefers-reduced-motion:reduce) { .bible-streak-count-ring { transition:none; }.bible-streak-week-chart-day > i { animation:none; } }

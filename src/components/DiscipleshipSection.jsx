@@ -28,7 +28,6 @@ import {
   PortalUsefulLinks,
   PortalProfile
 } from "./discipleship/PortalNavPages";
-import { getInitials } from "./discipleship/DiscipleshipPortalLayout";
 
 const emptyClassForm = {
   title: "",
@@ -209,8 +208,7 @@ export function DiscipleshipSection({
   theme = "light",
   onThemeToggle,
   notificationCount = 0,
-  onOpenNotifications,
-  userAvatarUrl = ""
+  onOpenNotifications
 }) {
   const [catalogTab, setCatalogTab] = useState("available");
   const [portalPage, setPortalPage] = useState("overview");
@@ -260,6 +258,7 @@ export function DiscipleshipSection({
     return (
       <DiscipleshipPortalLayout
         userName={userName}
+        currentProfile={currentProfile}
         roles={portalRoles}
         portalPage={activePortalPage}
         onNavigate={setPortalPage}
@@ -281,7 +280,6 @@ export function DiscipleshipSection({
         onOpenHelp={() => setPortalPage("links")}
         theme={theme}
         onThemeToggle={onThemeToggle}
-        userAvatarUrl={userAvatarUrl || currentProfile?.avatar_url}
       >
         {children}
       </DiscipleshipPortalLayout>
@@ -340,11 +338,10 @@ export function DiscipleshipSection({
         {page === "profile" ? (
           <PortalProfile
             userName={userName}
+            member={currentProfile}
             roleLabel={roleLabel}
             courseTitle={classForExtras?.title}
             courseProgress={progress}
-            userAvatarUrl={userAvatarUrl || currentProfile?.avatar_url}
-            getInitials={getInitials}
           />
         ) : null}
 

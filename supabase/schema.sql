@@ -274,6 +274,7 @@ create table if not exists public.profiles (
   id uuid primary key references auth.users (id) on delete cascade,
   email text not null unique,
   full_name text,
+  profile_photo_path text,
   role public.app_role not null default 'user',
   is_active boolean not null default true,
   last_seen_at timestamptz,
@@ -282,10 +283,23 @@ create table if not exists public.profiles (
 );
 
 alter table public.profiles
-add column if not exists avatar_url text;
+add column if not exists last_seen_at timestamptz;
 
 alter table public.profiles
-add column if not exists last_seen_at timestamptz;
+add column if not exists profile_photo_path text;
+
+do $$
+begin
+  if not exists (
+    select 1 from pg_constraint
+    where conname = 'profiles_profile_photo_path_owner_check'
+      and conrelid = 'public.profiles'::regclass
+  ) then
+    alter table public.profiles
+      add constraint profiles_profile_photo_path_owner_check
+      check (profile_photo_path is null or profile_photo_path ~ ('^' || id::text || '/[^/]+$'));
+  end if;
+end $$;
 
 create table if not exists public.events (
   id uuid primary key default gen_random_uuid(),
@@ -338,7 +352,7 @@ create table if not exists public.rsvps (
 create table if not exists public.messages (
   id uuid primary key default gen_random_uuid(),
   sender_id uuid not null references public.profiles (id) on delete cascade,
-  recipient_id uuid references public.profiles (id) on delete cascade,
+  recipient_id uuid not null references public.profiles (id) on delete cascade,
   reply_to_message_id uuid references public.messages (id) on delete set null,
   title text not null default '',
   content text not null check (char_length(trim(content)) between 1 and 2000),
@@ -738,40 +752,8 @@ language plpgsql
 security definer
 set search_path = public
 as $$
-declare
-  bootstrap_admin uuid;
 begin
-  if exists (
-    select 1
-    from public.profiles
-    where role = 'admin'
-      and is_active = true
-  ) then
-    return;
-  end if;
-
-  select id
-  into bootstrap_admin
-  from public.profiles
-  where is_active = true
-  order by created_at asc, id asc
-  limit 1;
-
-  if bootstrap_admin is null then
-    select id
-    into bootstrap_admin
-    from public.profiles
-    order by created_at asc, id asc
-    limit 1;
-  end if;
-
-  if bootstrap_admin is not null then
-    update public.profiles
-    set role = 'admin',
-        is_active = true,
-        updated_at = timezone('utc', now())
-    where id = bootstrap_admin;
-  end if;
+  return;
 end;
 $$;
 
@@ -803,7 +785,6 @@ begin
 
   get diagnostics inserted_count = row_count;
 
-  perform public.ensure_admin_exists();
   return inserted_count;
 end;
 $$;
@@ -841,26 +822,14 @@ begin
       auth_user.raw_user_meta_data ->> 'full_name',
       split_part(coalesce(auth_user.email, ''), '@', 1)
     ),
-    case
-      when exists (
-        select 1
-        from public.profiles
-        where role = 'admin'
-          and is_active = true
-          and id <> auth.uid()
-      ) then 'user'::public.app_role
-      else 'admin'::public.app_role
-    end,
+    'user'::public.app_role,
     true
   )
   on conflict (id) do update
     set email = excluded.email,
         full_name = coalesce(excluded.full_name, public.profiles.full_name),
-        is_active = true,
         updated_at = timezone('utc', now())
   returning * into ensured_profile;
-
-  perform public.ensure_admin_exists();
 
   select *
   into ensured_profile
@@ -878,36 +847,16 @@ security definer
 set search_path = public
 as $$
 declare
-  claimed_profile public.profiles;
+  current_profile public.profiles;
 begin
   if auth.uid() is null then
     raise exception 'Not authenticated.';
   end if;
 
-  perform pg_advisory_xact_lock(20260422::bigint);
-
-  update public.profiles
-  set role = 'admin',
-      is_active = true,
-      updated_at = timezone('utc', now())
-  where id = auth.uid()
-    and not exists (
-      select 1
-      from public.profiles
-      where role = 'admin'
-        and is_active = true
-        and id <> auth.uid()
-    )
-  returning * into claimed_profile;
-
-  if claimed_profile.id is null then
-    select *
-    into claimed_profile
-    from public.profiles
-    where id = auth.uid();
-  end if;
-
-  return to_jsonb(claimed_profile);
+  select * into current_profile
+  from public.profiles
+  where id = auth.uid();
+  return to_jsonb(current_profile);
 end;
 $$;
 
@@ -977,21 +926,11 @@ begin
     new.id,
     coalesce(new.email, ''),
     coalesce(new.raw_user_meta_data ->> 'full_name', split_part(coalesce(new.email, ''), '@', 1)),
-    case
-      when exists (
-        select 1
-        from public.profiles
-        where role = 'admin'
-          and is_active = true
-      ) then 'user'::public.app_role
-      else 'admin'::public.app_role
-    end
+    'user'::public.app_role
   )
   on conflict (id) do update
     set email = excluded.email,
         full_name = excluded.full_name;
-
-  perform public.ensure_admin_exists();
 
   return new;
 end;
@@ -1542,18 +1481,18 @@ $$;
 
 grant execute on function public.toggle_task_completion(uuid, public.task_status) to authenticated;
 grant execute on function public.ensure_current_user_profile() to authenticated;
-grant execute on function public.claim_admin_if_no_active_admin() to authenticated;
-grant execute on function public.admin_delete_user(uuid) to authenticated;
+revoke all on function public.claim_admin_if_no_active_admin() from public, anon, authenticated;
+revoke all on function public.admin_delete_user(uuid) from public, anon, authenticated;
 grant execute on function public.create_scheduled_reminders() to authenticated;
 grant execute on function public.recommend_next_leader(public.leadership_type) to authenticated;
 
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
 values (
-  'avatars',
-  'avatars',
+  'profile-photos',
+  'profile-photos',
   true,
-  1048576,
-  array['image/png', 'image/jpeg', 'image/webp', 'image/gif']
+  5242880,
+  array['image/jpeg', 'image/png', 'image/webp']
 )
 on conflict (id) do update
 set public = excluded.public,
@@ -1711,7 +1650,7 @@ create policy "profiles_insert_self"
 on public.profiles
 for insert
 to authenticated
-with check (auth.uid() = id);
+with check (auth.uid() = id and role = 'user' and is_active = true);
 
 drop policy if exists "profiles_update_self_or_admin" on public.profiles;
 create policy "profiles_update_self_or_admin"
@@ -1875,7 +1814,6 @@ using (
   and (
     public.is_admin()
     or recipient_id = auth.uid()
-    or recipient_id is null
     or sender_id = auth.uid()
   )
 );
@@ -1890,8 +1828,7 @@ with check (
   public.is_active_user()
   and sender_id = auth.uid()
   and (
-    recipient_id is null
-    or recipient_id in (
+    recipient_id in (
       select id
       from public.profiles
       where is_active = true
@@ -2191,37 +2128,41 @@ for delete
 to authenticated
 using (public.is_admin() or user_id = auth.uid());
 
-drop policy if exists "avatars_insert_own" on storage.objects;
-create policy "avatars_insert_own"
+drop policy if exists "profile_photos_insert_own" on storage.objects;
+create policy "profile_photos_insert_own"
 on storage.objects
 for insert
 to authenticated
 with check (
-  bucket_id = 'avatars'
+  bucket_id = 'profile-photos'
+  and public.is_active_user()
   and (storage.foldername(name))[1] = auth.uid()::text
 );
 
-drop policy if exists "avatars_update_own" on storage.objects;
-create policy "avatars_update_own"
+drop policy if exists "profile_photos_update_own" on storage.objects;
+create policy "profile_photos_update_own"
 on storage.objects
 for update
 to authenticated
 using (
-  bucket_id = 'avatars'
+  bucket_id = 'profile-photos'
+  and public.is_active_user()
   and (storage.foldername(name))[1] = auth.uid()::text
 )
 with check (
-  bucket_id = 'avatars'
+  bucket_id = 'profile-photos'
+  and public.is_active_user()
   and (storage.foldername(name))[1] = auth.uid()::text
 );
 
-drop policy if exists "avatars_delete_own" on storage.objects;
-create policy "avatars_delete_own"
+drop policy if exists "profile_photos_delete_own" on storage.objects;
+create policy "profile_photos_delete_own"
 on storage.objects
 for delete
 to authenticated
 using (
-  bucket_id = 'avatars'
+  bucket_id = 'profile-photos'
+  and public.is_active_user()
   and (storage.foldername(name))[1] = auth.uid()::text
 );
 
@@ -3195,7 +3136,6 @@ using (
 );
 
 select public.backfill_profiles_from_auth();
-select public.ensure_admin_exists();
 
 do $$
 begin

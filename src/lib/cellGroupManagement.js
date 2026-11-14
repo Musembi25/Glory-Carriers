@@ -15,19 +15,31 @@ export const DEPARTMENTS = [
   "None"
 ];
 
-export const INACTIVE_MEMBERSHIP_STATUSES = ["removed", "left"];
+export const INACTIVE_MEMBERSHIP_STATUSES = ["inactive", "temporarily_inactive", "left", "removed"];
 
 export const EDITABLE_MEMBERSHIP_STATUSES = [
   { value: "active", label: "Active", pillClass: "cgm-pill success" },
-  { value: "new", label: "New", pillClass: "cgm-pill info" },
-  { value: "temporarily_inactive", label: "Temporarily Inactive", pillClass: "cgm-pill warning" },
-  { value: "left", label: "Left", pillClass: "cgm-pill muted" }
+  { value: "prospective", label: "Prospective", pillClass: "cgm-pill info" },
+  { value: "pending", label: "Pending", pillClass: "cgm-pill warning" },
+  { value: "inactive", label: "Inactive", pillClass: "cgm-pill muted" }
 ];
 
-export const MEMBERSHIP_STATUSES = [
-  ...EDITABLE_MEMBERSHIP_STATUSES,
-  { value: "removed", label: "Removed", pillClass: "cgm-pill danger" }
-];
+export const MEMBERSHIP_STATUSES = EDITABLE_MEMBERSHIP_STATUSES;
+
+export function normalizeMembershipStatus(status) {
+  // Legacy `new` rows already had member access in the database policies.
+  if (status === "new") return "active";
+  if (["temporarily_inactive", "left", "removed"].includes(status)) return "inactive";
+  return EDITABLE_MEMBERSHIP_STATUSES.some((item) => item.value === status) ? status : "prospective";
+}
+
+export function getMemberName(member) {
+  return member?.full_name || member?.profile?.full_name || "";
+}
+
+export function getMemberEmail(member) {
+  return member?.contact_email || member?.profile?.email || "";
+}
 
 export const DISCIPLESHIP_OPTIONS = [
   { value: "yes", label: "Yes" },
@@ -51,7 +63,7 @@ export const MONTHS = [
 
 export const EXPORT_FIELDS = [
   { key: "full_name", label: "Full Name", default: true },
-  { key: "date_of_birth", label: "Date of Birth", default: true },
+  { key: "date_of_birth", label: "Birthday", default: true },
   { key: "department", label: "Department(s)", default: true },
   { key: "custom_department", label: "Custom Department", default: true },
   { key: "favorite_food", label: "Favorite Food", default: true },
@@ -74,7 +86,9 @@ export const MANAGEMENT_TABS = [
 ];
 
 export function isCurrentMember(member) {
-  return member && !INACTIVE_MEMBERSHIP_STATUSES.includes(member.membership_status);
+  return member && member.membership_status_raw !== "removed"
+    && member.membership_status !== "removed"
+    && !INACTIVE_MEMBERSHIP_STATUSES.includes(member.membership_status_raw || member.membership_status);
 }
 
 export function normalizeDiscipleshipStatus(status) {
@@ -140,6 +154,16 @@ export function formatJoinedDate(member) {
   return "Not provided";
 }
 
+export function formatMemberBirthday(member) {
+  const day = Number(member.birth_day || (member.date_of_birth ? member.date_of_birth.slice(8, 10) : 0));
+  const month = Number(member.birth_month || (member.date_of_birth ? member.date_of_birth.slice(5, 7) : 0));
+  if (!day || !month) return "Not provided";
+  const date = new Date(2000, month - 1, day);
+  const label = new Intl.DateTimeFormat(undefined, { day: "numeric", month: "long" }).format(date);
+  const year = member.birth_year || (member.date_of_birth ? member.date_of_birth.slice(0, 4) : "");
+  return year ? `${label}, ${year}` : label;
+}
+
 export function formatDepartments(member) {
   const deps = member.departments ?? [];
   if (!deps.length || deps.includes("None")) return "None";
@@ -159,7 +183,8 @@ export function getDepartmentChips(member) {
 }
 
 export function getMembershipStatusMeta(status) {
-  return MEMBERSHIP_STATUSES.find((s) => s.value === status) ?? EDITABLE_MEMBERSHIP_STATUSES[0];
+  const normalized = normalizeMembershipStatus(status);
+  return MEMBERSHIP_STATUSES.find((s) => s.value === normalized) ?? EDITABLE_MEMBERSHIP_STATUSES[0];
 }
 
 export function getDiscipleshipLabel(status) {
@@ -184,25 +209,40 @@ export function validatePhone(phone) {
   return null;
 }
 
-export function validateMemberForm(form, { isExistingUser = false, isEdit = false } = {}) {
+export function validateMemberForm(form, { isEdit = false } = {}) {
   const errors = {};
 
   if (!form.full_name?.trim()) {
     errors.full_name = "Full name is required";
   }
 
-  if (!isEdit && !isExistingUser) {
-    const emailError = validateEmail(form.email);
-    if (emailError) errors.email = emailError;
+  if (form.mode === "invite" && !isEdit) {
+    if (!form.email?.trim()) errors.email = "Email is required for an invitation";
   }
+  const emailError = validateEmail(form.email);
+  if (emailError) errors.email = emailError;
 
   const phoneError = validatePhone(form.phone);
   if (phoneError) errors.phone = phoneError;
 
-  if (form.date_of_birth) {
-    const dob = new Date(form.date_of_birth);
-    if (Number.isNaN(dob.getTime()) || dob > new Date()) {
-      errors.date_of_birth = "Enter a valid date of birth";
+  const birthdayDay = Number(form.birth_day);
+  const birthdayMonth = Number(form.birth_month);
+  const birthdayYear = form.birth_year ? Number(form.birth_year) : null;
+  if (!form.birth_day) errors.birth_day = "Birthday day is required";
+  if (!form.birth_month) errors.birth_month = "Birthday month is required";
+  if (form.birth_day && form.birth_month) {
+    const maximumDay = new Date(2000, birthdayMonth, 0).getDate();
+    if (!Number.isInteger(birthdayDay) || !Number.isInteger(birthdayMonth) || birthdayMonth < 1 || birthdayMonth > 12 || birthdayDay < 1 || birthdayDay > maximumDay) {
+      errors.birth_day = "Choose a valid day for the selected month";
+    }
+  }
+  if (birthdayYear !== null && (!Number.isInteger(birthdayYear) || birthdayYear < 1900 || birthdayYear > new Date().getFullYear())) {
+    errors.birth_year = "Enter a valid birth year, or leave it blank";
+  }
+  if (birthdayYear !== null && form.birth_day && form.birth_month) {
+    const date = new Date(birthdayYear, birthdayMonth - 1, birthdayDay);
+    if (date.getFullYear() !== birthdayYear || date.getMonth() !== birthdayMonth - 1 || date.getDate() !== birthdayDay) {
+      errors.birth_year = "That birthday does not occur in the selected birth year";
     }
   }
 
@@ -230,9 +270,10 @@ export function validateMemberForm(form, { isExistingUser = false, isEdit = fals
 }
 
 export function emptyMemberForm() {
-  const now = new Date();
   return {
-    mode: "existing",
+    mode: "record",
+    record_id: "",
+    original_membership_status: "",
     user_id: "",
     full_name: "",
     email: "",
@@ -241,31 +282,37 @@ export function emptyMemberForm() {
     bio: "",
     notes: "",
     date_of_birth: "",
+    birth_day: "",
+    birth_month: "",
+    birth_year: "",
     favorite_food: "",
     departments: [],
     custom_department: "",
-    joined_month: now.getMonth() + 1,
-    joined_year: now.getFullYear(),
+    joined_month: "",
+    joined_year: "",
     joined_date: "",
     discipleship_status: "no",
-    membership_status: "new",
-    avatar_file: null,
-    avatar_preview: "",
-    remove_avatar: false
+    membership_status: "prospective"
   };
 }
 
 export function memberToForm(member, profile) {
+  const oldBirthday = member.date_of_birth ? new Date(`${member.date_of_birth}T00:00:00`) : null;
   return {
     mode: "edit",
+    record_id: member.id,
+    original_membership_status: member.membership_status_raw ?? member.membership_status,
     user_id: member.user_id,
-    full_name: profile?.full_name || "",
-    email: profile?.email || "",
+    full_name: profile?.full_name || member.full_name || "",
+    email: profile?.email || member.contact_email || "",
     phone: member.phone || "",
     gender: member.gender || "",
     bio: member.bio || "",
     notes: member.notes || "",
     date_of_birth: member.date_of_birth || "",
+    birth_day: member.birth_day || (oldBirthday && !Number.isNaN(oldBirthday.getTime()) ? oldBirthday.getDate() : ""),
+    birth_month: member.birth_month || (oldBirthday && !Number.isNaN(oldBirthday.getTime()) ? oldBirthday.getMonth() + 1 : ""),
+    birth_year: member.birth_year || (oldBirthday && !Number.isNaN(oldBirthday.getTime()) ? oldBirthday.getFullYear() : ""),
     favorite_food: member.favorite_food || "",
     departments: member.departments?.length ? [...member.departments] : [],
     custom_department: member.custom_department || "",
@@ -273,10 +320,78 @@ export function memberToForm(member, profile) {
     joined_year: member.joined_year || "",
     joined_date: member.joined_date || "",
     discipleship_status: normalizeDiscipleshipStatus(member.discipleship_status),
-    membership_status: member.membership_status || "active",
-    avatar_file: null,
-    avatar_preview: profile?.avatar_url || "",
-    remove_avatar: false
+    membership_status: normalizeMembershipStatus(member.membership_status)
+  };
+}
+
+export function buildMemberPayload(form) {
+  const birthDay = Number(form.birth_day);
+  const birthMonth = Number(form.birth_month);
+  const birthYear = form.birth_year ? Number(form.birth_year) : null;
+  const dateOfBirth = birthYear
+    ? `${String(birthYear).padStart(4, "0")}-${String(birthMonth).padStart(2, "0")}-${String(birthDay).padStart(2, "0")}`
+    : null;
+  const legacyStatus = form.original_membership_status;
+  const keepLegacyStatus = ["new", "temporarily_inactive", "left", "removed"].includes(legacyStatus)
+    && normalizeMembershipStatus(legacyStatus) === form.membership_status;
+
+  return {
+    full_name: form.full_name?.trim() || null,
+    contact_email: form.email?.trim().toLowerCase() || null,
+    date_of_birth: dateOfBirth,
+    birth_day: birthDay,
+    birth_month: birthMonth,
+    birth_year: birthYear,
+    departments: form.departments.includes("None") ? [] : form.departments.filter((department) => department !== "None"),
+    custom_department: form.departments.includes("Other") ? form.custom_department?.trim() || null : null,
+    favorite_food: form.favorite_food?.trim() || null,
+    joined_month: form.joined_month ? Number(form.joined_month) : null,
+    joined_year: form.joined_year ? Number(form.joined_year) : null,
+    joined_date: form.joined_date || null,
+    discipleship_status: normalizeDiscipleshipStatus(form.discipleship_status),
+    membership_status: keepLegacyStatus ? legacyStatus : form.membership_status,
+    phone: form.phone?.trim() || null,
+    gender: form.gender?.trim() || null,
+    bio: form.bio?.trim() || null,
+    notes: form.notes?.trim() || null
+  };
+}
+
+function getDatePartsInTimeZone(date, timeZone) {
+  try {
+    const parts = new Intl.DateTimeFormat("en", {
+      timeZone,
+      year: "numeric",
+      month: "numeric",
+      day: "numeric"
+    }).formatToParts(date);
+    return Object.fromEntries(parts.filter((part) => part.type !== "literal").map((part) => [part.type, Number(part.value)]));
+  } catch {
+    return { year: date.getFullYear(), month: date.getMonth() + 1, day: date.getDate() };
+  }
+}
+
+export function getBirthdayOccurrence(member, referenceDate = new Date(), timeZone = "UTC") {
+  const day = Number(member.birth_day || (member.date_of_birth ? member.date_of_birth.slice(8, 10) : 0));
+  const month = Number(member.birth_month || (member.date_of_birth ? member.date_of_birth.slice(5, 7) : 0));
+  if (!day || !month || month < 1 || month > 12 || day < 1 || day > new Date(2000, month, 0).getDate()) return null;
+
+  const { year: currentYear, month: currentMonth, day: currentDay } = getDatePartsInTimeZone(referenceDate, timeZone);
+  const today = new Date(currentYear, currentMonth - 1, currentDay);
+  const observedDate = (year) => month === 2 && day === 29 && new Date(year, 1, 29).getMonth() !== 1
+    ? new Date(year, 2, 1)
+    : new Date(year, month - 1, day);
+  let nextBirthday = observedDate(currentYear);
+  if (nextBirthday < today) nextBirthday = observedDate(currentYear + 1);
+  const daysUntil = Math.round((nextBirthday - today) / 86400000);
+  const birthYear = Number(member.birth_year || (member.date_of_birth ? member.date_of_birth.slice(0, 4) : 0)) || null;
+
+  return {
+    date: nextBirthday,
+    daysUntil,
+    age: birthYear && birthYear <= nextBirthday.getFullYear() ? nextBirthday.getFullYear() - birthYear : null,
+    displayDate: new Intl.DateTimeFormat(undefined, { month: "long", day: "numeric" }).format(new Date(2000, month - 1, day)),
+    observedLeapDay: month === 2 && day === 29 && nextBirthday.getMonth() === 2
   };
 }
 
@@ -293,68 +408,26 @@ export function toggleDepartmentSelection(current, dept) {
   return { departments: deps };
 }
 
-export async function optimizeImage(file, maxSize = 800, quality = 0.85) {
-  if (!file?.type?.startsWith("image/")) return file;
-
-  return new Promise((resolve, reject) => {
-    const img = new Image();
-    const url = URL.createObjectURL(file);
-
-    img.onload = () => {
-      URL.revokeObjectURL(url);
-      let { width, height } = img;
-      if (width > maxSize || height > maxSize) {
-        const ratio = Math.min(maxSize / width, maxSize / height);
-        width = Math.round(width * ratio);
-        height = Math.round(height * ratio);
-      }
-
-      const canvas = document.createElement("canvas");
-      canvas.width = width;
-      canvas.height = height;
-      const ctx = canvas.getContext("2d");
-      ctx.drawImage(img, 0, 0, width, height);
-
-      canvas.toBlob(
-        (blob) => {
-          if (!blob) {
-            resolve(file);
-            return;
-          }
-          resolve(new File([blob], file.name.replace(/\.\w+$/, ".webp"), { type: "image/webp" }));
-        },
-        "image/webp",
-        quality
-      );
-    };
-
-    img.onerror = () => {
-      URL.revokeObjectURL(url);
-      reject(new Error("Failed to process image"));
-    };
-
-    img.src = url;
-  });
-}
 
 export function filterMembers(
   members,
   { search = "", status = "all", department = "all", discipleship = "all", joinedYear = "all", sort = "name_asc", currentOnly = true } = {}
 ) {
-  let result = currentOnly ? members.filter(isCurrentMember) : [...members];
+  let result = members.filter((member) => member.membership_status_raw !== "removed" && member.membership_status !== "removed");
+  if (currentOnly) result = result.filter(isCurrentMember);
 
   if (search.trim()) {
     const q = search.trim().toLowerCase();
     result = result.filter(
       (m) =>
-        m.profile?.full_name?.toLowerCase().includes(q) ||
-        m.profile?.email?.toLowerCase().includes(q) ||
+        getMemberName(m).toLowerCase().includes(q) ||
+        getMemberEmail(m).toLowerCase().includes(q) ||
         m.phone?.toLowerCase().includes(q)
     );
   }
 
   if (status !== "all") {
-    result = result.filter((m) => m.membership_status === status);
+    result = result.filter((m) => normalizeMembershipStatus(m.membership_status) === status);
   }
 
   if (department !== "all") {
@@ -375,8 +448,8 @@ export function filterMembers(
   }
 
   result.sort((a, b) => {
-    const nameA = (a.profile?.full_name ?? "").toLowerCase();
-    const nameB = (b.profile?.full_name ?? "").toLowerCase();
+    const nameA = getMemberName(a).toLowerCase();
+    const nameB = getMemberName(b).toLowerCase();
     switch (sort) {
       case "name_desc":
         return nameB.localeCompare(nameA);
@@ -398,8 +471,8 @@ export function buildMemberExportRow(member, fields) {
   const row = {};
   const fieldSet = new Set(fields);
 
-  if (fieldSet.has("full_name")) row["Full Name"] = member.profile?.full_name ?? "";
-  if (fieldSet.has("date_of_birth")) row["Date of Birth"] = member.date_of_birth ? formatDate(member.date_of_birth) : "Not provided";
+  if (fieldSet.has("full_name")) row["Full Name"] = getMemberName(member);
+  if (fieldSet.has("date_of_birth")) row.Birthday = formatMemberBirthday(member);
   if (fieldSet.has("department")) row["Department(s)"] = formatDepartments(member);
   if (fieldSet.has("custom_department")) row["Custom Department"] = member.custom_department ?? "";
   if (fieldSet.has("favorite_food")) row["Favorite Food"] = member.favorite_food ?? "";
@@ -416,7 +489,7 @@ export function buildMemberExportRow(member, fields) {
   if (fieldSet.has("membership_status")) {
     row["Membership Status"] = getMembershipStatusMeta(member.membership_status).label;
   }
-  if (fieldSet.has("email")) row["Email"] = member.profile?.email ?? "";
+  if (fieldSet.has("email")) row["Email"] = getMemberEmail(member);
   if (fieldSet.has("phone")) row["Phone"] = member.phone ?? "";
 
   return row;

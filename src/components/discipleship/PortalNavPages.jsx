@@ -1,4 +1,5 @@
 import { DiscipleshipGuidelines } from "../DiscipleshipGuidelines";
+import { MemberInitials } from "../MemberInitials.jsx";
 import { portalIcons } from "./PortalIcons";
 
 export function PortalStudyGroups({ selectedClass, getMemberLabel, classEnrollments }) {
@@ -16,7 +17,7 @@ export function PortalStudyGroups({ selectedClass, getMemberLabel, classEnrollme
             <ul className="dp-study-group-list">
               {members.map((row) => (
                 <li key={row.user_id} className="dp-study-group-member">
-                  <span className="dp-study-group-avatar">{portalIcons.user}</span>
+                  <span className="dp-study-group-identity">{portalIcons.user}</span>
                   <div>
                     <strong>{getMemberLabel(row.user_id)}</strong>
                     <span>Enrolled student</span>
@@ -87,21 +88,15 @@ export function PortalUsefulLinks() {
 
 export function PortalProfile({
   userName,
+  member,
   roleLabel,
   courseTitle,
   courseProgress,
-  userAvatarUrl,
-  getInitials
 }) {
   return (
     <div className="dp-page">
       <section className="dp-panel dp-profile-hero">
-        <div className="dp-profile-hero-avatar">
-          {userAvatarUrl ? (
-            <img src={userAvatarUrl} alt="" />
-          ) : (
-            <span>{getInitials(userName)}</span>
-          )}
+        <div className="dp-profile-hero-identity"><MemberInitials member={member} name={userName} className="dp-identity-art" />
         </div>
         <div>
           <h2>{userName}</h2>

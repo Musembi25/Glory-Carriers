@@ -1,0 +1,468 @@
+/* A single shared art layer keeps the supplied scripture artwork present across the workspace. */
+.app-shell {
+  position: relative;
+  isolation: isolate;
+  min-height: 100dvh;
+  background: transparent;
+}
+
+.app-shell.admin-workspace {
+  background: transparent;
+}
+
+.app-global-background {
+  position: fixed;
+  z-index: -1;
+  inset: 0;
+  overflow: hidden;
+  background: #eee7da;
+  pointer-events: none;
+  contain: strict;
+}
+
+.app-global-background-image {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center 45%;
+  opacity: 0;
+  filter: saturate(.82) contrast(.94);
+  transition: opacity 1500ms cubic-bezier(.22,.61,.36,1);
+}
+
+.app-global-background-image.is-active {
+  opacity: 1;
+}
+
+.app-global-background-overlay {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(128deg, rgb(249 246 240 / 58%), rgb(247 245 250 / 46%) 54%, rgb(244 243 241 / 52%)),
+    linear-gradient(180deg, rgb(255 255 255 / 8%), rgb(43 29 60 / 8%));
+}
+
+:root[data-theme="dark"] .app-global-background {
+  background: #21172a;
+}
+
+:root[data-theme="dark"] .app-global-background-image {
+  filter: saturate(.76) brightness(.84) contrast(.94);
+}
+
+:root[data-theme="dark"] .app-global-background-overlay {
+  background:
+    linear-gradient(128deg, rgb(20 14 27 / 54%), rgb(23 17 31 / 47%) 54%, rgb(19 15 27 / 52%)),
+    linear-gradient(180deg, rgb(10 8 16 / 8%), rgb(10 8 16 / 18%));
+}
+
+.app-global-background[data-page="bible-study"] .app-global-background-overlay {
+  background:
+    linear-gradient(128deg, rgb(249 246 240 / 61%), rgb(247 245 250 / 54%) 54%, rgb(244 243 241 / 59%)),
+    linear-gradient(180deg, rgb(255 255 255 / 8%), rgb(43 29 60 / 10%));
+}
+
+:root[data-theme="dark"] .app-global-background[data-page="bible-study"] .app-global-background-overlay {
+  background:
+    linear-gradient(128deg, rgb(20 14 27 / 52%), rgb(23 17 31 / 44%) 54%, rgb(19 15 27 / 50%)),
+    linear-gradient(180deg, rgb(10 8 16 / 8%), rgb(10 8 16 / 18%));
+}
+
+.main-content,
+.admin-workspace .main-content,
+.admin-workspace .section-stage,
+.admin-workspace .app-footer,
+.admin-workspace .cgm-root,
+.app-footer {
+  background-color: transparent;
+  background-image: none;
+}
+
+.section-stage {
+  position: relative;
+  isolation: isolate;
+  background: transparent;
+}
+
+.section-stage::before,
+.section-art-strip {
+  display: none;
+}
+
+.page-intro--art::before {
+  background:
+    linear-gradient(105deg, color-mix(in srgb, var(--surface-strong) 88%, transparent), color-mix(in srgb, var(--surface-strong) 76%, transparent) 56%, color-mix(in srgb, var(--surface-strong) 56%, transparent));
+}
+
+.workspace-page {
+  background-color: transparent;
+}
+
+.workspace-page--dashboard {
+  overflow: visible;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.workspace-page--dashboard::after {
+  display: none;
+}
+
+.workspace-page--dashboard::before {
+  opacity: .42;
+}
+
+.workspace-page .panel,
+.section-stage > .panel {
+  border-color: color-mix(in srgb, var(--border) 76%, var(--primary) 24%);
+  background: color-mix(in srgb, var(--surface-strong) 87%, transparent);
+  backdrop-filter: blur(11px);
+  -webkit-backdrop-filter: blur(11px);
+}
+
+:root[data-theme="dark"] .workspace-page .panel,
+:root[data-theme="dark"] .section-stage > .panel {
+  background: color-mix(in srgb, var(--surface-strong) 88%, transparent);
+}
+
+.workspace-page--dashboard .dashboard-stat-card,
+.workspace-page--dashboard .dashboard-birthday-board,
+.workspace-page--dashboard .dashboard-overview-grid > .panel,
+.workspace-page--dashboard .dashboard-personal-journey,
+.workspace-page--dashboard .dashboard-partner-progress {
+  background: color-mix(in srgb, var(--surface-strong) 84%, transparent);
+  backdrop-filter: blur(13px);
+  -webkit-backdrop-filter: blur(13px);
+  box-shadow: 0 18px 38px -25px color-mix(in srgb, var(--text) 28%, transparent);
+}
+
+.dashboard-welcome-card--editorial {
+  border-color: color-mix(in srgb, var(--primary) 23%, var(--border));
+  background:
+    radial-gradient(ellipse at 94% 10%, color-mix(in srgb, #b995cf 16%, transparent), transparent 36%),
+    color-mix(in srgb, var(--surface-strong) 90%, transparent);
+  box-shadow: 0 26px 70px -38px color-mix(in srgb, var(--text) 42%, transparent), inset 0 1px 0 rgb(255 255 255 / 48%);
+}
+
+.dashboard-welcome-card--editorial::after {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  border: 1px solid rgb(255 255 255 / 25%);
+  border-radius: inherit;
+  content: "";
+  pointer-events: none;
+}
+
+.dashboard-hero-copy {
+  z-index: 2;
+}
+
+.dashboard-welcome-card--editorial h1 {
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(2.75rem, 5.5vw, 5.1rem);
+  font-weight: 540;
+  letter-spacing: -.065em;
+  line-height: .99;
+}
+
+.dashboard-welcome-card--editorial h1 > strong {
+  align-items: center;
+  font-weight: 650;
+}
+
+.dashboard-welcome-identity {
+  border-width: .035em;
+  box-shadow: 0 7px 22px rgb(31 25 46 / 24%);
+}
+
+.dashboard-hero-verse {
+  display: grid;
+  gap: .28rem;
+  max-width: 39rem;
+  margin: .85rem 0 0;
+  padding: .7rem 0 0 .85rem;
+  border-left: 2px solid color-mix(in srgb, var(--premium-highlight) 74%, transparent);
+  color: var(--text);
+}
+
+.dashboard-hero-verse p {
+  margin: 0;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(.82rem, 1.2vw, .98rem);
+  font-style: italic;
+  line-height: 1.45;
+  text-wrap: pretty;
+}
+
+.dashboard-hero-verse cite {
+  color: var(--text-muted);
+  font-size: .62rem;
+  font-style: normal;
+  font-weight: 820;
+  letter-spacing: .12em;
+}
+
+.dashboard-hero-art-wrap {
+  min-width: 0;
+  z-index: 2;
+}
+
+.dashboard-community-photo {
+  position: relative;
+  width: min(100%, 30rem);
+  height: 100%;
+  min-height: 16rem;
+  margin: 0 auto;
+  overflow: hidden;
+  border: 1px solid rgb(255 255 255 / 54%);
+  border-radius: 1.35rem;
+  background: #382b27;
+  box-shadow: 0 25px 54px -28px rgb(35 23 38 / 58%), inset 0 1px 0 rgb(255 255 255 / 28%);
+  animation: dashboard-art-in 760ms 120ms cubic-bezier(.2,.8,.2,1) both;
+}
+
+.dashboard-community-photo::after {
+  position: absolute;
+  inset: 35% 0 0;
+  background: linear-gradient(180deg, transparent, rgb(14 12 17 / 58%));
+  content: "";
+  pointer-events: none;
+}
+
+.dashboard-community-art {
+  display: block;
+  width: 100%;
+  height: 100%;
+  min-height: inherit;
+  object-fit: cover;
+  object-position: center 52%;
+  filter: saturate(.84) contrast(1.02);
+  animation: none;
+}
+
+.dashboard-hero-art-label {
+  right: .8rem;
+  bottom: .8rem;
+  z-index: 2;
+  border-color: rgb(255 255 255 / 28%);
+  color: #fff;
+  background: rgb(25 20 26 / 58%);
+  box-shadow: 0 8px 24px rgb(0 0 0 / 18%);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+.dashboard-hero-art-label > span {
+  background: #d7c18d;
+}
+
+.dashboard-overview > :is(.dashboard-stat-grid, .dashboard-overview-grid, .admin-dashboard-metrics) > * {
+  animation: workspace-card-in 560ms cubic-bezier(.22,1,.36,1) both;
+}
+
+.dashboard-overview > :is(.dashboard-stat-grid, .dashboard-overview-grid, .admin-dashboard-metrics) > *:nth-child(2) { animation-delay: 70ms; }
+.dashboard-overview > :is(.dashboard-stat-grid, .dashboard-overview-grid, .admin-dashboard-metrics) > *:nth-child(3) { animation-delay: 130ms; }
+.dashboard-overview > :is(.dashboard-stat-grid, .dashboard-overview-grid, .admin-dashboard-metrics) > *:nth-child(4) { animation-delay: 190ms; }
+
+.bible-study {
+  border-radius: 1.45rem;
+  background: color-mix(in srgb, var(--surface-strong) 13%, transparent);
+}
+
+.bible-study .bible-hero,
+.bible-study :is(.bible-panel, .bible-current, .bible-stat, .bible-reading-admin) {
+  border-color: color-mix(in srgb, var(--border) 76%, var(--primary) 24%);
+  background-color: color-mix(in srgb, var(--surface-strong) 91%, transparent);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  box-shadow: 0 14px 35px -24px color-mix(in srgb, var(--text) 35%, transparent);
+}
+
+.bible-study .bible-hero {
+  background-image: linear-gradient(115deg, color-mix(in srgb, var(--surface-strong) 82%, transparent), color-mix(in srgb, var(--surface-strong) 69%, transparent));
+}
+
+.bible-study .bible-feed article,
+.bible-study .bible-plan button.current,
+.bible-study .bible-reading-admin {
+  background-color: color-mix(in srgb, var(--surface-strong) 92%, transparent);
+}
+
+.bible-study .bible-reader,
+.bible-study .bible-reader main {
+  background: var(--surface-strong);
+}
+
+:root[data-theme="dark"] .dashboard-welcome-card--editorial {
+  border-color: color-mix(in srgb, var(--primary) 24%, var(--border));
+  background:
+    radial-gradient(ellipse at 94% 10%, rgb(185 149 207 / 15%), transparent 36%),
+    color-mix(in srgb, var(--surface-strong) 91%, transparent);
+}
+
+:root[data-theme="dark"] .dashboard-welcome-card--editorial::after {
+  border-color: rgb(255 255 255 / 8%);
+}
+
+:root[data-theme="dark"] .dashboard-hero-verse {
+  color: var(--text);
+}
+
+:root[data-theme="dark"] .workspace-page--dashboard .dashboard-stat-card,
+:root[data-theme="dark"] .workspace-page--dashboard .dashboard-birthday-board,
+:root[data-theme="dark"] .workspace-page--dashboard .dashboard-overview-grid > .panel,
+:root[data-theme="dark"] .workspace-page--dashboard .dashboard-personal-journey,
+:root[data-theme="dark"] .workspace-page--dashboard .dashboard-partner-progress {
+  background: color-mix(in srgb, var(--surface-strong) 90%, transparent);
+}
+
+:root[data-theme="dark"] .bible-study {
+  background: color-mix(in srgb, var(--surface-strong) 12%, transparent);
+}
+
+:root[data-theme="dark"] .bible-study .bible-hero,
+:root[data-theme="dark"] .bible-study :is(.bible-panel, .bible-current, .bible-stat, .bible-reading-admin) {
+  background-color: color-mix(in srgb, var(--surface-strong) 92%, transparent);
+}
+
+:root[data-theme="dark"] .bible-study .bible-hero {
+  background-image: linear-gradient(115deg, color-mix(in srgb, var(--surface-strong) 85%, transparent), color-mix(in srgb, var(--surface-strong) 74%, transparent));
+}
+
+@media (max-width: 760px) {
+  .app-global-background-image {
+    object-position: center 43%;
+  }
+
+  .dashboard-welcome-card--editorial {
+    min-height: 0;
+    padding: 1.05rem;
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .dashboard-hero-topline {
+    margin-bottom: 1.1rem;
+  }
+
+  .dashboard-community-photo {
+    min-height: 12rem;
+    max-height: 15rem;
+  }
+
+  .dashboard-hero-art-wrap {
+    min-height: 12rem;
+    margin: .25rem 0 0;
+  }
+
+  .dashboard-hero-actions {
+    margin-top: 1rem;
+  }
+
+  .dashboard-hero-verse {
+    margin-top: .72rem;
+    padding-top: .58rem;
+  }
+}
+
+@media (max-width: 390px) {
+  .dashboard-welcome-card--editorial h1 {
+    font-size: clamp(2.5rem, 12vw, 3.5rem);
+  }
+
+  .dashboard-hero-topline .brand-logo-copy strong {
+    font-size: .69rem;
+  }
+
+  .dashboard-date-chip {
+    max-width: 48%;
+    text-align: right;
+  }
+
+  .dashboard-community-photo {
+    min-height: 10rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .app-global-background-image,
+  .dashboard-welcome-card--editorial *,
+  .dashboard-overview > :is(.dashboard-stat-grid, .dashboard-overview-grid, .admin-dashboard-metrics) > * {
+    animation: none !important;
+    transition: none !important;
+  }
+
+  .dashboard-overview > :is(.dashboard-stat-grid, .dashboard-overview-grid, .admin-dashboard-metrics) > * {
+    opacity: 1;
+    transform: none;
+  }
+
+  .dashboard-community-photo {
+    animation: none;
+  }
+}
+
+
+/* Preserve artwork behind section headers while letting the shared wallpaper remain singular. */
+.workspace-page--events .page-intro--art::before {
+  background:
+    linear-gradient(105deg, color-mix(in srgb, var(--surface-strong) 88%, transparent), color-mix(in srgb, var(--surface-strong) 76%, transparent) 56%, color-mix(in srgb, var(--surface-strong) 56%, transparent));
+}
+
+.workspace-page--announcements::after {
+  display: none;
+}
+
+.gc-pulse-header {
+  background-color: color-mix(in srgb, var(--surface-strong) 86%, transparent);
+  background-image: linear-gradient(105deg, color-mix(in srgb, var(--surface-strong) 89%, transparent), color-mix(in srgb, var(--surface-strong) 73%, transparent) 58%, color-mix(in srgb, var(--surface-strong) 67%, transparent));
+  backdrop-filter: blur(11px);
+  -webkit-backdrop-filter: blur(11px);
+}
+
+.admin-bible-streak-report {
+  background: color-mix(in srgb, var(--surface-strong) 88%, transparent);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+.super-admin-page :is(.super-admin-header, .super-admin-panel, .super-admin-platform-pulse, .super-admin-stat-grid article, .super-admin-activity-grid article) {
+  border-color: color-mix(in srgb, var(--border) 74%, var(--primary) 26%);
+  background: color-mix(in srgb, var(--surface-strong) 88%, transparent);
+  backdrop-filter: blur(11px);
+  -webkit-backdrop-filter: blur(11px);
+}
+
+.discipleship-portal {
+  background: color-mix(in srgb, var(--surface-strong) 17%, transparent);
+}
+
+.discipleship-portal .dp-shell {
+  background: transparent;
+}
+
+:root[data-theme="dark"] .super-admin-page :is(.super-admin-header, .super-admin-panel, .super-admin-platform-pulse, .super-admin-stat-grid article, .super-admin-activity-grid article) {
+  background: color-mix(in srgb, var(--surface-strong) 91%, transparent);
+}
+
+:root[data-theme="dark"] .discipleship-portal {
+  background: color-mix(in srgb, var(--surface-strong) 20%, transparent);
+}
+
+:root[data-theme="dark"] .admin-bible-streak-report {
+  background: color-mix(in srgb, var(--surface-strong) 91%, transparent);
+}
+
+/* Keep workspace photographs out of dashboard cards; the Overview hero owns its images. */
+.app-global-background[data-active-section="dashboard"] .app-global-background-image { display: none; }
+.app-global-background[data-active-section="dashboard"] .app-global-background-overlay {
+  background: #f7f8fa;
+}
+:root[data-theme="dark"] .app-global-background[data-active-section="dashboard"] .app-global-background-overlay { background: #101216; }
+.app-shell .workspace-page--dashboard::after,
+.app-shell.admin-workspace .workspace-page--dashboard::after { display: none; }

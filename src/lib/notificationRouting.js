@@ -23,6 +23,7 @@ const DISCIPLESHIP_NOTIFICATION_TYPES = new Set([
 ]);
 
 const BIBLE_STUDY_NOTIFICATION_TYPES = new Set([
+  "bible_study_reminder",
   "bible_study_takeaway_posted",
   "bible_study_takeaway_reply",
   "bible_study_question_posted",
@@ -37,9 +38,9 @@ export const NOTIFICATION_CATEGORIES = [
   { id: "bible_study", label: "Bible Study" },
   { id: "prayer", label: "Prayer" },
   { id: "messages", label: "Messages" },
-  { id: "announcements", label: "Announcements" },
   { id: "tasks", label: "Tasks" },
-  { id: "attendance", label: "Attendance" }
+  { id: "attendance", label: "Attendance" },
+  { id: "birthdays", label: "Birthdays" }
 ];
 
 export function getNotificationCategory(notificationType) {
@@ -67,12 +68,12 @@ export function getNotificationCategory(notificationType) {
     return "prayer";
   }
 
-  if (notificationType === "new_message") {
-    return "messages";
+  if (notificationType === "birthday_reminder") {
+    return "birthdays";
   }
 
-  if (["announcement_posted", "announcement_reply", "announcement_reaction"].includes(notificationType)) {
-    return "announcements";
+  if (notificationType === "new_message") {
+    return "messages";
   }
 
   if (notificationType === "task_assigned") {
@@ -89,6 +90,10 @@ export function getNotificationCategory(notificationType) {
 export function getSectionForNotification(notification) {
   const targetTable = notification?.entity_table;
   const notificationType = notification?.notification_type;
+
+  if (targetTable === "cell_group_members" || notificationType === "birthday_reminder") {
+    return "birthdays";
+  }
 
   if (targetTable === "events") {
     return "events";
@@ -128,10 +133,6 @@ export function getSectionForNotification(notification) {
 
   if (targetTable.startsWith("bible_study_")) {
     return "bible-study";
-  }
-
-  if (targetTable === "announcements" || notificationType === "announcement_posted" || notificationType === "announcement_reply" || notificationType === "announcement_reaction") {
-    return "announcements";
   }
 
   if (targetTable === "event_check_ins") {

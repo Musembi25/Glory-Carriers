@@ -1,5 +1,6 @@
 import { useMemo, useRef, useState } from "react";
 import { supabase } from "../lib/supabase";
+import { MemberInitials as SharedMemberIdentity } from "./MemberInitials.jsx";
 import {
   MATERIALS_BUCKET,
   SUBMISSION_BUCKET,
@@ -101,14 +102,8 @@ function StatTile({ label, value, hint, tone = "default" }) {
   );
 }
 
-function MemberAvatar({ name }) {
-  const initial = (name?.trim()?.[0] ?? "?").toUpperCase();
-
-  return (
-    <span className="assignment-member-avatar" aria-hidden="true">
-      {initial}
-    </span>
-  );
+function MemberIdentity({ name, member }) {
+  return <SharedMemberIdentity member={{ ...member, full_name: member?.full_name || name }} className="assignment-member-identity" />;
 }
 
 function FileDropZone({ onFile, fileName, disabled, hint }) {
@@ -278,8 +273,9 @@ export function DiscipleshipAssignments({
   }
 
   async function openMaterial(path) {
-    const { data } = supabase.storage.from(MATERIALS_BUCKET).getPublicUrl(path);
-    window.open(data.publicUrl, "_blank", "noopener,noreferrer");
+    const { data, error } = await supabase.storage.from(MATERIALS_BUCKET).createSignedUrl(path, 3600);
+    if (error) throw error;
+    window.open(data.signedUrl, "_blank", "noopener,noreferrer");
   }
 
   function resetAssignmentForm() {
@@ -687,12 +683,13 @@ export function DiscipleshipAssignments({
                 };
 
               const memberName = getMemberLabel(enrollment.user_id);
+              const memberProfile = profiles.find((profile) => profile.id === enrollment.user_id);
 
               return (
                 <article key={enrollment.user_id} className="assignment-roster-card">
                   <div className="assignment-roster-head">
                     <div className="assignment-roster-member">
-                      <MemberAvatar name={memberName} />
+                      <MemberIdentity name={memberName} member={memberProfile} />
                       <strong>{memberName}</strong>
                     </div>
                     <span className={getStatusPillClass(status)}>

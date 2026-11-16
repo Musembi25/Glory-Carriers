@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import groupLogo from "../../../logo.png";
 import { supabase } from "../../lib/supabase";
 import { APP_NAME, CELL_GROUP_NAME } from "../../lib/identity";
@@ -18,6 +19,7 @@ import {
   formatJoinedDate,
   formatRelativeTime,
   formsAreEqual,
+  buildMemberExportRow,
   getBirthdayOccurrence,
   getDepartmentChips,
   getInitials,
@@ -224,6 +226,8 @@ function ReportsExportCenter({ groupName, members, exporting, onExport, isFilter
   const prospective = members.filter((member) => normalizeMembershipStatus(member.membership_status) === "prospective").length;
   const pending = members.filter((member) => normalizeMembershipStatus(member.membership_status) === "pending").length;
   const inactive = members.filter((member) => normalizeMembershipStatus(member.membership_status) === "inactive").length;
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const previewTriggerRef = useRef(null);
 
   return (
     <section className="cgm-reports" aria-label="Membership reports and exports">
@@ -235,7 +239,12 @@ function ReportsExportCenter({ groupName, members, exporting, onExport, isFilter
             <h4>Membership Reports</h4>
           </div>
         </div>
-        <p className="cgm-reports-description">Official membership records and administrative reports.</p>
+        <div className="cgm-reports-heading-actions">
+          <p className="cgm-reports-description">Official membership records and administrative reports.</p>
+          <button ref={previewTriggerRef} type="button" className="cgm-btn cgm-btn-primary cgm-report-preview-trigger" onClick={() => setPreviewOpen(true)}>
+            <Icon name="eye" /> Preview Members Report
+          </button>
+        </div>
       </div>
       <label className="cgm-report-member-search">
         <span>Member full name</span>
@@ -282,7 +291,214 @@ function ReportsExportCenter({ groupName, members, exporting, onExport, isFilter
         </article>
       </div>
       {members.length === 0 ? <p className="cgm-reports-empty">There are no records in this report selection.</p> : null}
+      {previewOpen ? (
+        <MembersReportPreview
+          groupName={groupName || CELL_GROUP_NAME}
+          members={members}
+          stats={{ total: members.length, active, prospective, pending, inactive }}
+          isFiltered={isFiltered}
+          exporting={exporting}
+          onExport={onExport}
+          onClose={() => {
+            setPreviewOpen(false);
+            window.requestAnimationFrame(() => previewTriggerRef.current?.focus());
+          }}
+        />
+      ) : null}
     </section>
+  );
+}
+
+function MembersReportPreview({ groupName, members, stats, isFiltered, exporting, onExport, onClose }) {
+  const closeButtonRef = useRef(null);
+  const dialogRef = useRef(null);
+  const closeTimerRef = useRef(null);
+  const closingRef = useRef(false);
+  const [closing, setClosing] = useState(false);
+  const fields = useMemo(() => EXPORT_FIELDS.filter((field) => field.default).map((field) => field.key), []);
+  const columns = useMemo(() => EXPORT_FIELDS.filter((field) => field.default).map((field) => field.label), []);
+  const reportRows = useMemo(
+    () => members.map((member, index) => ({ id: member.id ?? index, number: index + 1, values: buildMemberExportRow(member, fields) })),
+    [fields, members]
+  );
+  const generatedOn = useMemo(
+    () => new Intl.DateTimeFormat(undefined, { day: "2-digit", month: "long", year: "numeric" }).format(new Date()),
+    []
+  );
+
+  useEffect(() => {
+    const previousBodyOverflow = document.body.style.overflow;
+    const previousDocumentOverflow = document.documentElement.style.overflow;
+    const previousFocus = document.activeElement;
+    document.body.style.overflow = "hidden";
+    document.documentElement.style.overflow = "hidden";
+    closeButtonRef.current?.focus();
+
+    function handleKeyDown(event) {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        requestClose();
+        return;
+      }
+      if (event.key !== "Tab") return;
+      const focusable = Array.from(dialogRef.current?.querySelectorAll(
+        'button:not(:disabled), [href], input:not(:disabled), select:not(:disabled), textarea:not(:disabled), [tabindex]:not([tabindex="-1"])'
+      ) || []).filter((element) => element.offsetParent !== null);
+      if (!focusable.length) {
+        event.preventDefault();
+        return;
+      }
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    }
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      window.clearTimeout(closeTimerRef.current);
+      document.removeEventListener("keydown", handleKeyDown);
+      document.body.style.overflow = previousBodyOverflow;
+      document.documentElement.style.overflow = previousDocumentOverflow;
+      if (previousFocus instanceof HTMLElement) previousFocus.focus();
+    };
+  }, []);
+
+  function requestClose() {
+    if (closingRef.current) return;
+    closingRef.current = true;
+    setClosing(true);
+    closeTimerRef.current = window.setTimeout(onClose, 180);
+  }
+
+  return (
+    <div
+      className={`cgm-report-preview-overlay${closing ? " is-closing" : ""}`}
+      role="presentation"
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget) requestClose();
+      }}
+    >
+      <section
+        ref={dialogRef}
+        className="cgm-report-preview-dialog"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="cgm-report-preview-title"
+      >
+        <header className="cgm-report-preview-toolbar">
+          <div className="cgm-report-preview-heading">
+            <img src={groupLogo} alt="" />
+            <div>
+              <span>OFFICIAL MEMBERSHIP RECORD</span>
+              <h2 id="cgm-report-preview-title">Members Report</h2>
+              <p>{groupName} <i aria-hidden="true">·</i> {stats.total} record{stats.total === 1 ? "" : "s"} <i aria-hidden="true">·</i> {isFiltered ? "Filtered selection" : "All member records"}</p>
+            </div>
+          </div>
+          <div className="cgm-report-preview-actions">
+            <button type="button" className="cgm-btn cgm-btn-secondary" disabled={!!exporting} onClick={() => void onExport("excel")}>
+              <Icon name="file-sheet" /> {exporting === "excel" ? "Preparing..." : "Excel"}
+            </button>
+            <button type="button" className="cgm-btn cgm-btn-primary" disabled={!!exporting || !members.length} onClick={() => void onExport("pdf")}>
+              <Icon name="file-pdf" /> {exporting === "pdf" ? "Preparing..." : "Download PDF"}
+            </button>
+          </div>
+          <button ref={closeButtonRef} type="button" className="cgm-report-preview-close" onClick={requestClose} aria-label="Close Members Report preview">
+            <Icon name="x" size={18} />
+          </button>
+        </header>
+
+        <div className="cgm-report-preview-scroll">
+          <article className="cgm-report-preview-document">
+            <header className="cgm-report-document-heading">
+              <div>
+                <span>MEMBERSHIP RECORDS</span>
+                <h3>{groupName}</h3>
+                <p>{isFiltered ? "Filtered membership report" : "Official membership report"}</p>
+              </div>
+              <div className="cgm-report-document-date">
+                <span>PREPARED</span>
+                <strong>{generatedOn}</strong>
+                <small>{APP_NAME}</small>
+              </div>
+            </header>
+
+            <section className="cgm-report-document-summary" aria-label="Membership totals">
+              {[
+                ["Total records", stats.total, "total"],
+                ["Active", stats.active, "active"],
+                ["Prospective", stats.prospective, "prospective"],
+                ["Pending", stats.pending, "pending"],
+                ["Inactive", stats.inactive, "inactive"]
+              ].map(([label, count, tone]) => (
+                <div className={`cgm-report-document-stat is-${tone}`} key={tone}>
+                  <span>{label}</span>
+                  <strong>{count}</strong>
+                </div>
+              ))}
+            </section>
+
+            {reportRows.length ? (
+              <>
+                <div className="cgm-report-document-table-wrap">
+                  <table className="cgm-report-document-table">
+                    <thead>
+                      <tr><th scope="col">#</th>{columns.map((column) => <th scope="col" key={column}>{column}</th>)}</tr>
+                    </thead>
+                    <tbody>
+                      {reportRows.map((row) => (
+                        <tr key={row.id}>
+                          <td>{row.number}</td>
+                          {columns.map((column) => (
+                            <td key={column} data-label={column}>
+                              {row.values[column] || <span className="cgm-report-document-blank">—</span>}
+                            </td>
+                          ))}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                <div className="cgm-report-document-cards">
+                  {reportRows.map((row) => (
+                    <article className="cgm-report-document-member" key={row.id}>
+                      <div className="cgm-report-document-member-heading">
+                        <span>{String(row.number).padStart(2, "0")}</span>
+                        <strong>{row.values["Full Name"] || "Unnamed member"}</strong>
+                      </div>
+                      <dl>
+                        {columns.filter((column) => column !== "Full Name").map((column) => (
+                          <div key={column}>
+                            <dt>{column}</dt>
+                            <dd>{row.values[column] || "—"}</dd>
+                          </div>
+                        ))}
+                      </dl>
+                    </article>
+                  ))}
+                </div>
+              </>
+            ) : (
+              <div className="cgm-report-document-empty">
+                <span><Icon name="users" size={22} /></span>
+                <h4>No member records in this report</h4>
+                <p>Adjust the membership filters to include records in the preview.</p>
+              </div>
+            )}
+
+            <footer className="cgm-report-document-footer">
+              <span>{APP_NAME} <i aria-hidden="true">·</i> Membership report</span>
+              <span>{stats.total} record{stats.total === 1 ? "" : "s"} <i aria-hidden="true">·</i> {generatedOn}</span>
+            </footer>
+          </article>
+        </div>
+      </section>
+    </div>
   );
 }
 
@@ -1765,67 +1981,130 @@ export function CellGroupManagementSection({
 }
 
 function MemberViewDrawer({ member, onClose, onEdit, onDownload, downloading, onRemove, canEdit }) {
+  const closeButtonRef = useRef(null);
+  const closeTimerRef = useRef(null);
+  const closingRef = useRef(false);
+  const [closing, setClosing] = useState(false);
+
   useEffect(() => {
     const bodyOverflow = document.body.style.overflow;
     const documentOverflow = document.documentElement.style.overflow;
+    const previousFocus = document.activeElement;
     document.body.style.overflow = "hidden";
     document.documentElement.style.overflow = "hidden";
+    closeButtonRef.current?.focus();
     return () => {
+      window.clearTimeout(closeTimerRef.current);
       document.body.style.overflow = bodyOverflow;
       document.documentElement.style.overflow = documentOverflow;
+      if (previousFocus instanceof HTMLElement) previousFocus.focus();
     };
   }, []);
+
+  function requestClose() {
+    if (closingRef.current) return;
+    closingRef.current = true;
+    setClosing(true);
+    closeTimerRef.current = window.setTimeout(onClose, 180);
+  }
+
+  function handleDialogKeyDown(event) {
+    if (event.key === "Escape") {
+      event.preventDefault();
+      requestClose();
+      return;
+    }
+    if (event.key !== "Tab") return;
+    const focusable = Array.from(event.currentTarget.querySelectorAll(
+      'button:not(:disabled), [href], input:not(:disabled), select:not(:disabled), textarea:not(:disabled), [tabindex]:not([tabindex="-1"])'
+    )).filter((element) => element.offsetParent !== null);
+    if (!focusable.length) {
+      event.preventDefault();
+      return;
+    }
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    if (event.shiftKey && document.activeElement === first) {
+      event.preventDefault();
+      last.focus();
+    } else if (!event.shiftKey && document.activeElement === last) {
+      event.preventDefault();
+      first.focus();
+    }
+  }
 
   const statusMeta = getMembershipStatusMeta(member.membership_status);
   const discYes = normalizeDiscipleshipStatus(member.discipleship_status) === "yes";
   const listedDepartments = (member.departments || []).filter((department) => department !== "Other" && department !== "None");
-  const departmentValue = listedDepartments.join(", ") || ((member.departments || []).includes("Other") ? "Other" : "No department assigned");
+  const departmentValue = listedDepartments.join(", ") || ((member.departments || []).includes("Other") ? "Other" : "");
+  const hasDepartmentInfo = Boolean(departmentValue || member.custom_department?.trim());
   const profileDate = (value) => new Intl.DateTimeFormat(undefined, { day: "2-digit", month: "long", year: "numeric" }).format(new Date(`${value}T00:00:00`));
   const birthday = formatMemberBirthday(member);
+  const fullName = member.profile?.full_name?.trim();
+  const hasContactInfo = Boolean(member.profile?.email || member.phone);
+  const hasPersonalInfo = Boolean(member.gender || birthday !== "Not provided" || member.favorite_food);
+  const hasDiscipleshipInfo = member.discipleship_status !== null && member.discipleship_status !== undefined && member.discipleship_status !== "";
 
-  return (
-    <div className="cgm-overlay cgm-drawer-overlay cgm-profile-workspace" onClick={(e) => e.target === e.currentTarget && onClose()}>
-      <div className="cgm-drawer cgm-view-drawer" role="dialog" aria-label="Member details" aria-modal="true">
+  return createPortal(
+    <div
+      className={`cgm-root cgm-overlay cgm-drawer-overlay cgm-profile-workspace${closing ? " is-closing" : ""}`}
+      role="presentation"
+      onClick={(event) => event.target === event.currentTarget && requestClose()}
+    >
+      <div className="cgm-drawer cgm-view-drawer" role="dialog" aria-labelledby="cgm-profile-title" aria-modal="true" onKeyDown={handleDialogKeyDown}>
         <div className="cgm-drawer-header cgm-profile-drawer-header">
-          <div className="cgm-profile-brand"><img src={groupLogo} alt="Soldout Ministry logo" /> <span>{CELL_GROUP_NAME.toUpperCase()}</span></div>
-          <button type="button" className="cgm-close-btn" onClick={onClose} aria-label="Close"><Icon name="x" /></button>
+          <div className="cgm-profile-brand">
+            <img src={groupLogo} alt="" />
+            <div><span>MEMBER REPORT</span><strong>{CELL_GROUP_NAME}</strong></div>
+          </div>
+          <button ref={closeButtonRef} type="button" className="cgm-close-btn cgm-profile-close" onClick={requestClose} aria-label="Close member report"><Icon name="x" /></button>
         </div>
         <div className="cgm-drawer-body">
           <section className="cgm-profile-hero">
             <div className="cgm-profile-initials" aria-hidden="true">
               <MemberIdentity profile={member.profile} size="profile" />
             </div>
-            <div><p>{member.user_id ? "Application account linked" : "No application account"}</p><h2>{member.profile?.full_name || "Unnamed"}</h2><span className={statusMeta.pillClass}>{statusMeta.label}</span></div>
+            <div className="cgm-profile-hero-copy">
+              <p>{member.user_id ? "Application account linked" : "Membership record"}</p>
+              <h2 id="cgm-profile-title">{fullName || "Member profile"}</h2>
+              <div className="cgm-profile-hero-tags">
+                <span className={statusMeta.pillClass}>{statusMeta.label}</span>
+                {departmentValue ? <span className="cgm-profile-department-tag"><Icon name="users" size={13} /> {departmentValue}</span> : null}
+              </div>
+            </div>
           </section>
-          <ProfileSection title="Personal information">
-            <ProfileCard label="Full Name" value={member.profile?.full_name || ""} />
-            <ProfileCard label="Application Account" value={member.user_id ? "Linked" : "Not linked"} />
-            {member.profile?.email ? <ProfileCard label="Email" value={member.profile.email} /> : null}
-            {member.phone ? <ProfileCard label="Phone" value={member.phone} /> : null}
-            {member.gender ? <ProfileCard label="Gender" value={member.gender} /> : null}
-            {birthday !== "Not provided" ? <ProfileCard label="Birthday" value={birthday} /> : null}
-            {member.favorite_food ? <ProfileCard label="Favorite Food" value={member.favorite_food} /> : null}
-          </ProfileSection>
-          <ProfileSection title="Membership information">
-            <ProfileCard label="Membership Status" value={statusMeta.label} />
-            {member.joined_month && member.joined_year ? <ProfileCard label="Joined Month & Year" value={formatJoinedDate(member)} /> : null}
-            {member.joined_date ? <ProfileCard label="Exact Joined Date" value={profileDate(member.joined_date)} /> : null}
-          </ProfileSection>
-          <ProfileSection title="Serving / Department information">
-            <ProfileCard label="Department(s) serving in" value={departmentValue} />
-            {member.custom_department ? <ProfileCard label="Custom department" value={member.custom_department} /> : null}
-          </ProfileSection>
-          <ProfileSection title="Discipleship">
-            <ProfileCard label="Completed Discipleship Class?" value={discYes ? "Yes" : "No"} highlight={discYes} />
-          </ProfileSection>
-          {member.bio || member.notes ? <ProfileSection title="Additional information">
-            {member.bio ? <ProfileCard label="Short Bio" value={member.bio} /> : null}
-            {member.notes ? <ProfileCard label="Notes" value={member.notes} /> : null}
-          </ProfileSection> : null}
+          <div className="cgm-profile-sections">
+            {hasPersonalInfo ? <ProfileSection title="Personal information">
+              {member.gender ? <ProfileCard label="Gender" value={member.gender} /> : null}
+              {birthday !== "Not provided" ? <ProfileCard label="Birthday" value={birthday} /> : null}
+              {member.favorite_food ? <ProfileCard label="Favorite Food" value={member.favorite_food} /> : null}
+            </ProfileSection> : null}
+            {hasContactInfo ? <ProfileSection title="Contact information">
+              {member.profile?.email ? <ProfileCard label="Email" value={member.profile.email} /> : null}
+              {member.phone ? <ProfileCard label="Phone" value={member.phone} /> : null}
+            </ProfileSection> : null}
+            <ProfileSection title="Membership information">
+              <ProfileCard label="Membership Status" value={statusMeta.label} />
+              <ProfileCard label="Application Account" value={member.user_id ? "Linked" : "Not linked"} />
+              {member.joined_month && member.joined_year ? <ProfileCard label="Joined Month & Year" value={formatJoinedDate(member)} /> : null}
+              {member.joined_date ? <ProfileCard label="Exact Joined Date" value={profileDate(member.joined_date)} /> : null}
+            </ProfileSection>
+            {hasDepartmentInfo ? <ProfileSection title="Department & service">
+              {departmentValue ? <ProfileCard label="Department(s) serving in" value={departmentValue} /> : null}
+              {member.custom_department ? <ProfileCard label="Custom department" value={member.custom_department} /> : null}
+            </ProfileSection> : null}
+            {hasDiscipleshipInfo ? <ProfileSection title="Discipleship">
+              <ProfileCard label="Completed Discipleship Class?" value={discYes ? "Yes" : "No"} highlight={discYes} />
+            </ProfileSection> : null}
+            {member.bio || member.notes ? <ProfileSection title="Additional details">
+              {member.bio ? <ProfileCard label="Short Bio" value={member.bio} /> : null}
+              {member.notes ? <ProfileCard label="Notes" value={member.notes} /> : null}
+            </ProfileSection> : null}
+          </div>
         </div>
         <footer className="cgm-profile-footer">
           <div className="cgm-profile-actions">
-            <button type="button" className="cgm-btn cgm-btn-download" onClick={onDownload} disabled={downloading}>
+            <button type="button" className="cgm-btn cgm-btn-secondary" onClick={onDownload} disabled={downloading}>
               <Icon name="download" /> {downloading ? "Preparing Member Profile..." : "Download PDF"}
             </button>
             {canEdit ? <button type="button" className="cgm-btn cgm-btn-primary" onClick={onEdit}>
@@ -1837,7 +2116,8 @@ function MemberViewDrawer({ member, onClose, onEdit, onDownload, downloading, on
           </button> : null}
         </footer>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 

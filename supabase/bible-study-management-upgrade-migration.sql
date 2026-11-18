@@ -8,9 +8,30 @@ begin;
 alter table public.bible_study_readings
   add column if not exists deleted_at timestamptz;
 
+-- Legacy installations may still have the original global reading_date,
+-- sort_order, or book/chapter/date constraints. Remove them before adding
+-- group-scoped rules, because these constraints also block separate group plans.
+alter table public.bible_study_readings
+  drop constraint if exists bible_study_readings_reading_date_key;
+alter table public.bible_study_readings
+  drop constraint if exists bible_study_readings_sort_order_key;
+alter table public.bible_study_readings
+  drop constraint if exists bible_study_readings_book_chapter_reading_date_key;
+drop index if exists public.bible_study_readings_reading_date_key;
+drop index if exists public.bible_study_readings_sort_order_key;
+drop index if exists public.bible_study_readings_book_chapter_reading_date_key;
+
+-- One date may contain several chapters, but a chapter cannot be scheduled
+-- twice for the same group and date. Soft-deleted readings do not reserve slots.
 drop index if exists public.bible_study_readings_group_date_unique;
+drop index if exists public.bible_study_readings_group_order_unique;
+drop index if exists public.bible_study_readings_group_book_chapter_date_unique;
 create unique index if not exists bible_study_readings_group_book_chapter_date_unique
-  on public.bible_study_readings(group_id, book, chapter, reading_date);
+  on public.bible_study_readings(group_id, book, chapter, reading_date)
+  where deleted_at is null;
+create unique index if not exists bible_study_readings_group_order_unique
+  on public.bible_study_readings(group_id, sort_order)
+  where deleted_at is null;
 create index if not exists idx_bible_study_readings_group_date
   on public.bible_study_readings(group_id, reading_date, sort_order)
   where deleted_at is null;
@@ -511,7 +532,7 @@ begin
   select profile.id, 'bible_study_question_posted'::public.notification_type,
     'A member completed today''s group reading',
     format('%s completed %s %s.', coalesce(profile.full_name, 'A member'), reading_row.book, reading_row.chapter),
-    'bible_study_completions', new.id, reading_row.group_id
+    'bible_study_readings', reading_row.id, reading_row.group_id
   from public.profiles profile
   where profile.is_active = true and profile.id <> new.user_id
     and profile.role = 'admin'

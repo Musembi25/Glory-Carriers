@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { supabase } from "../lib/supabase";
 import { MemberInitials } from "./MemberInitials.jsx";
 import { DEFAULT_BIBLE_TIMEZONE, addReadingDays, getReadingDateInTimezone, getReadingWeekStart } from "../lib/personalBibleStudy.js";
@@ -31,6 +32,9 @@ function PartnerIcon({ name }) {
     arrow: <><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></>,
     chevronLeft: <path d="m15 18-6-6 6-6"/>, chevronRight: <path d="m9 18 6-6-6-6"/>,
     close: <><path d="m18 6-12 12"/><path d="m6 6 12 12"/></>,
+    more: <><circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/></>,
+    trash: <><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="m19 6-1 14H6L5 6"/><path d="M10 11v5M14 11v5"/></>,
+    chevronDown: <path d="m6 9 6 6 6-6"/>,
     book: <><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v17H6.5A2.5 2.5 0 0 1 4 17.5z"/><path d="M4 16a3 3 0 0 1 3-3h13M8 7h8"/></>,
     users: <><path d="M16 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="10" cy="7" r="4"/><path d="M20 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></>,
     calendar: <><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 10h18"/></>,
@@ -164,6 +168,12 @@ export function BibleStudyPartnerStreaks({ user, profiles = [], readings = [], c
   const [notice, setNotice] = useState("");
   const [activeSection, setActiveSection] = useState("overview");
   const [selectedMember, setSelectedMember] = useState(null);
+  const [challengeSuccess, setChallengeSuccess] = useState(null);
+  const [deleteConfirm, setDeleteConfirm] = useState(null);
+  const [deleteBusy, setDeleteBusy] = useState(false);
+  const [openActionMenu, setOpenActionMenu] = useState("");
+  const [momentsExpanded, setMomentsExpanded] = useState(true);
+  const [recentMessagesExpanded, setRecentMessagesExpanded] = useState(true);
   const [calendarMonth, setCalendarMonth] = useState("");
   const [selectedDate, setSelectedDate] = useState("");
   const [invitees, setInvitees] = useState([]);
@@ -172,6 +182,8 @@ export function BibleStudyPartnerStreaks({ user, profiles = [], readings = [], c
   const [messageDraft, setMessageDraft] = useState("");
   const [messagePartnership, setMessagePartnership] = useState("");
   const reactionLocks = useRef(new Set());
+  const challengeSuccessCloseRef = useRef(null);
+  const partnerProfileCloseRef = useRef(null);
 
   const today = getReadingDateInTimezone(new Date(), timezone);
   const currentMonth = monthKey(new Date(`${today}T12:00:00Z`));
@@ -184,6 +196,9 @@ export function BibleStudyPartnerStreaks({ user, profiles = [], readings = [], c
   }, [memberships]);
   const activePartnerships = useMemo(() => partnerships.filter((item) => item.status === "active"
     && memberships.some((member) => member.partnership_id === item.id && member.user_id === user?.id && member.status === "active")), [partnerships, memberships, user?.id]);
+  const selectedChallengePartnership = activePartnerships.find((item) => item.id === challengeForm.partnershipId)
+    || activePartnerships[0]
+    || null;
   const pendingInvitations = useMemo(() => partnerships.filter((item) => item.status === "pending"
     && memberships.some((member) => member.partnership_id === item.id && member.user_id === user?.id && member.status === "pending")), [partnerships, memberships, user?.id]);
 
@@ -260,10 +275,92 @@ export function BibleStudyPartnerStreaks({ user, profiles = [], readings = [], c
 
   useEffect(() => {
     if (!selectedMember) return undefined;
-    const onKeyDown = (event) => { if (event.key === "Escape") setSelectedMember(null); };
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
+    const previousFocus = document.activeElement;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    partnerProfileCloseRef.current?.focus({ preventScroll: true });
+    const onKeyDown = (event) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        setSelectedMember(null);
+        return;
+      }
+      if (event.key !== "Tab") return;
+      const dialog = document.querySelector(".partner-profile-sheet");
+      const focusable = [...(dialog?.querySelectorAll('a[href],button:not(:disabled),[tabindex]:not([tabindex="-1"])') || [])];
+      if (!focusable.length) {
+        event.preventDefault();
+        return;
+      }
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      document.removeEventListener("keydown", onKeyDown);
+      if (previousFocus instanceof HTMLElement && previousFocus.isConnected) previousFocus.focus({ preventScroll: true });
+    };
   }, [selectedMember]);
+  useEffect(() => {
+    if (!challengeSuccess || typeof document === "undefined") return undefined;
+    const previousFocus = document.activeElement;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    challengeSuccessCloseRef.current?.focus({ preventScroll: true });
+    const onKeyDown = (event) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        setChallengeSuccess(null);
+        return;
+      }
+      if (event.key !== "Tab") return;
+      const dialog = document.querySelector(".partner-challenge-success-dialog");
+      const focusable = [...(dialog?.querySelectorAll("button:not(:disabled)") || [])];
+      if (!focusable.length) {
+        event.preventDefault();
+        return;
+      }
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      document.removeEventListener("keydown", onKeyDown);
+      if (previousFocus instanceof HTMLElement && previousFocus.isConnected) previousFocus.focus({ preventScroll: true });
+    };
+  }, [challengeSuccess]);
+
+  useEffect(() => {
+    if (!openActionMenu) return undefined;
+    const dismiss = (event) => {
+      if (!event.target.closest?.(".partner-action-menu")) setOpenActionMenu("");
+    };
+    const onKeyDown = (event) => {
+      if (event.key === "Escape") setOpenActionMenu("");
+    };
+    document.addEventListener("pointerdown", dismiss);
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("pointerdown", dismiss);
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, [openActionMenu]);
 
   const memberDetails = (partnership) => (membersByPartnership.get(partnership.id) || []).filter((member) => member.status === "active");
   const assignedToday = useMemo(() => readings.filter((reading) => reading.reading_date === today && reading.deleted_at == null && !["draft", "archived"].includes(reading.status)), [readings, today]);
@@ -372,20 +469,148 @@ export function BibleStudyPartnerStreaks({ user, profiles = [], readings = [], c
       setError(reactionError.message || "That reaction could not be saved.");
     } finally { reactionLocks.current.delete(lockKey); }
   };
-  const createChallenge = (event) => {
+  const createChallenge = async (event) => {
     event.preventDefault();
-    if (!challengeForm.partnershipId || !challengeForm.title.trim()) return;
-    void action(async () => {
-      const challengeDays = Number(challengeForm.duration === "custom" ? challengeForm.customDuration : challengeForm.duration);
-      if (!Number.isInteger(challengeDays) || challengeDays < 3 || challengeDays > 365) throw new Error("Choose a challenge length from 3 to 365 days.");
-      const { error: rpcError } = await supabase.rpc("create_bible_partner_challenge", { target_partnership: challengeForm.partnershipId, challenge_title: challengeForm.title, challenge_days: challengeDays });
-      if (rpcError) throw rpcError;
-    }, "The challenge is live for your partnership.");
+    setError("");
+    setNotice("");
+    if (!user?.id) {
+      setError("Sign in to start a partnership challenge.");
+      return;
+    }
+    if (!supabase) {
+      setError("Challenges are temporarily unavailable. Please try again later.");
+      return;
+    }
+    const partnership = activePartnerships.find((item) => item.id === selectedChallengePartnership?.id);
+    if (!partnership) {
+      setError("Choose an active partnership before starting a challenge.");
+      return;
+    }
+    const title = challengeForm.title.trim();
+    const challengeDays = Number(challengeForm.duration === "custom" ? challengeForm.customDuration : challengeForm.duration);
+    if (title.length < 3 || title.length > 100) {
+      setError("Challenge names must be between 3 and 100 characters.");
+      return;
+    }
+    if (!Number.isInteger(challengeDays) || challengeDays < 3 || challengeDays > 365) {
+      setError("Choose a challenge length from 3 to 365 days.");
+      return;
+    }
+    const existing = challenges.find((challenge) => challenge.partnership_id === partnership.id
+      && challenge.status === "active"
+      && challenge.ends_on >= today
+      && challenge.duration_days === challengeDays
+      && challenge.title.trim().toLowerCase() === title.toLowerCase());
+    if (existing) {
+      setNotice("This challenge is already active for your partnership.");
+      window.requestAnimationFrame(() => document.getElementById(`partner-challenge-${existing.id}`)?.scrollIntoView({
+        behavior: window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth",
+        block: "center"
+      }));
+      return;
+    }
+    setBusy(true);
+    try {
+      const { data, error: rpcError } = await supabase.rpc("create_bible_partner_challenge", {
+        target_partnership: partnership.id,
+        challenge_title: title,
+        challenge_days: challengeDays
+      });
+      if (rpcError) {
+        if (rpcError.code === "23505" || /already exists for your partnership/i.test(rpcError.message || "")) {
+          setNotice("This challenge is already active for your partnership.");
+          void load();
+          return;
+        }
+        throw rpcError;
+      }
+      const createdChallenge = Array.isArray(data) ? data[0] : data;
+      if (!createdChallenge?.id) throw new Error("The challenge could not be confirmed after saving.");
+      const newMembers = memberships.filter((member) => member.partnership_id === partnership.id && member.status === "active")
+        .map((member) => ({ challenge_id: createdChallenge.id, user_id: member.user_id }));
+      setChallenges((current) => [createdChallenge, ...current.filter((item) => item.id !== createdChallenge.id)]);
+      setChallengeMembers((current) => [
+        ...current.filter((item) => item.challenge_id !== createdChallenge.id),
+        ...newMembers
+      ]);
+      setChallengeSuccess(createdChallenge);
+      void load();
+    } catch (challengeError) {
+      console.error("Bible partner challenge could not be started:", challengeError);
+      if (challengeError?.code === "42501") {
+        setError("You must be an accepted member of an active partnership to start a challenge.");
+      } else if (challengeError?.code === "22023") {
+        setError("Check the challenge name and duration, then try again.");
+      } else {
+        setError("The challenge could not be started. Please try again.");
+      }
+    } finally {
+      setBusy(false);
+    }
+  };
+  const viewStartedChallenge = () => {
+    const challengeId = challengeSuccess?.id;
+    setChallengeSuccess(null);
+    if (!challengeId) return;
+    setActiveSection("challenges");
+    window.requestAnimationFrame(() => {
+      const challengeCard = document.getElementById(`partner-challenge-${challengeId}`);
+      challengeCard?.scrollIntoView({
+        behavior: window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth",
+        block: "center"
+      });
+      challengeCard?.focus({ preventScroll: true });
+    });
   };
   const endChallenge = (challenge) => void action(async () => {
     const { error: rpcError } = await supabase.rpc("end_bible_partner_challenge", { target_challenge: challenge.id });
     if (rpcError) throw rpcError;
   }, "Challenge closed.");
+  const confirmDelete = async () => {
+    if (!deleteConfirm || deleteBusy) return;
+    setDeleteBusy(true);
+    setError("");
+    try {
+      if (deleteConfirm.kind === "challenge") {
+        const { error: rpcError } = await supabase.rpc("delete_bible_partner_challenge", { target_challenge: deleteConfirm.item.id });
+        if (rpcError) throw rpcError;
+        setChallenges((current) => current.filter((item) => item.id !== deleteConfirm.item.id));
+        setChallengeMembers((current) => current.filter((item) => item.challenge_id !== deleteConfirm.item.id));
+        setNotice("Challenge deleted.");
+      } else if (deleteConfirm.kind === "message") {
+        const { error: rpcError } = await supabase.rpc("delete_bible_partner_message", { target_message: deleteConfirm.item.id });
+        if (rpcError) throw rpcError;
+        setMessages((current) => current.filter((item) => item.id !== deleteConfirm.item.id));
+        setMessageReactions((current) => current.filter((item) => item.message_id !== deleteConfirm.item.id));
+        setEvents((current) => current.filter((item) => item.metadata?.message_id !== deleteConfirm.item.id));
+        setNotice("Encouragement deleted.");
+      } else {
+        const { error: deleteError } = await supabase
+          .from("bible_study_partner_events")
+          .delete()
+          .eq("id", deleteConfirm.item.id)
+          .eq("actor_id", user.id);
+        if (deleteError) throw deleteError;
+        setEvents((current) => current.filter((item) => item.id !== deleteConfirm.item.id));
+        setEventReactions((current) => current.filter((item) => item.event_id !== deleteConfirm.item.id));
+        setNotice("Activity deleted.");
+      }
+      setDeleteConfirm(null);
+      setOpenActionMenu("");
+      void load();
+    } catch (deleteError) {
+      console.error("Partner management delete failed:", deleteError);
+      setError(deleteConfirm.kind === "challenge"
+        ? "The challenge could not be deleted. Please try again."
+        : deleteConfirm.kind === "message"
+          ? "The encouragement could not be deleted. Please try again."
+          : deleteError?.code === "42501"
+            ? "Activity deletion is not enabled yet. Please ask an administrator to update the partner permissions."
+            : "The activity could not be deleted. Please try again.");
+    } finally {
+      setDeleteBusy(false);
+    }
+  };
 
   const jumpTo = (section) => setActiveSection(section);
   const openMember = (member, partnershipId) => {
@@ -400,7 +625,8 @@ export function BibleStudyPartnerStreaks({ user, profiles = [], readings = [], c
     <div className="partner-skeleton partner-skeleton--hero"/><div className="partner-skeleton-grid"><i/><i/><i/><i/></div><span>Gathering your shared reading rhythm…</span>
   </section>;
 
-  return <section className="partner-experience" aria-labelledby="partner-title">
+  return <>
+  <section className="partner-experience" aria-labelledby="partner-title">
     <header className="partner-hero">
       <div className="partner-hero-copy"><div className="partner-eyebrow"><PartnerIcon name="spark"/> BIBLE STREAK PARTNERS <span className={`partner-live partner-live--${realtime}`}>{realtime === "live" ? "LIVE" : realtime === "offline" ? "RECONNECTING" : "SYNCING"}</span></div>
         <h2 id="partner-title">Grow in the Word,<br/><em>side by side.</em></h2>
@@ -490,10 +716,10 @@ export function BibleStudyPartnerStreaks({ user, profiles = [], readings = [], c
       <div className="partner-section-title"><div><small>GENTLE ACCOUNTABILITY</small><h3>Challenges &amp; milestones</h3></div><p>Celebrate steady progress without turning Scripture into a contest.</p></div>
       <div className="partner-challenge-layout"><div className="partner-challenge-create"><span className="partner-challenge-create-mark"><PartnerIcon name="calendar"/></span><small>BEGIN A SHARED JOURNEY</small><h4>Choose your next rhythm</h4><p>Set a reading intention together. Your progress is based on completed personal readings, shared only within this accepted partnership.</p>
         {activePartnerships.length ? <form onSubmit={createChallenge}>
-          <label className="partner-field"><span>Partnership</span><select value={challengeForm.partnershipId || activePartnerships[0]?.id || ""} onChange={(event) => setChallengeForm((current) => ({...current, partnershipId:event.target.value}))}>{activePartnerships.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
+          <label className="partner-field"><span>Partnership</span><select value={selectedChallengePartnership?.id || ""} onChange={(event) => setChallengeForm((current) => ({...current, partnershipId:event.target.value}))}>{activePartnerships.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
           <label className="partner-field"><span>Challenge</span><select value={challengeForm.duration === "custom" ? "custom" : challengeForm.duration} onChange={(event) => setChallengeForm((current) => ({...current,duration:event.target.value==="custom"?"custom":event.target.value,title:event.target.value==="7"?"7-Day Bible Reading Challenge":event.target.value==="14"?"14-Day Consistency Challenge":event.target.value==="30"?"30-Day Bible Reading Challenge":current.title}))}><option value="7">7-Day Bible Reading Challenge</option><option value="14">14-Day Consistency Challenge</option><option value="30">30-Day Bible Reading Challenge</option><option value="custom">Custom duration</option></select></label>
           {challengeForm.duration === "custom" ? <><label className="partner-field"><span>Challenge name</span><input value={challengeForm.title} onChange={(event) => setChallengeForm((current) => ({...current,title:event.target.value}))} maxLength={100} minLength={3} placeholder="A name for your challenge"/></label><label className="partner-field"><span>Length in days</span><input type="number" min="3" max="365" value={challengeForm.customDuration || "21"} onChange={(event) => setChallengeForm((current) => ({...current,customDuration:event.target.value}))}/></label></> : null}
-          <button type="submit" className="partner-primary-action" disabled={busy}>{busy ? "Starting…" : "Start challenge"}<PartnerIcon name="arrow"/></button>
+          <button type="submit" className="partner-primary-action partner-challenge-submit" disabled={busy || !user?.id || !selectedChallengePartnership} aria-busy={busy}>{busy ? <span className="partner-button-spinner" aria-hidden="true"/> : null}{busy ? "Starting Challenge..." : "Start Challenge"}{!busy ? <PartnerIcon name="arrow"/> : null}</button>
         </form> : <div className="partner-inline-empty"><strong>Start a partnership first</strong><span>Challenges become available after everyone accepts an invitation.</span></div>}
       </div><div className="partner-challenge-list">
         <div className="partner-milestone-shelf"><small>SHARED MILESTONES</small><div>{MILESTONES.map((milestone) => <article key={milestone} className={strongestSharedStreak >= milestone ? "is-earned" : ""}><span><PartnerIcon name="spark"/></span><strong>{milestone}</strong><small>{strongestSharedStreak >= milestone ? "Earned" : "days"}</small></article>)}</div><p>{nextMilestone ? `${Math.max(nextMilestone - strongestSharedStreak,0)} more completed reading ${nextMilestone - strongestSharedStreak === 1 ? "day" : "days"} to your next shared milestone.` : "You’ve reached every shared streak milestone. Keep walking together."}</p></div>
@@ -509,7 +735,24 @@ export function BibleStudyPartnerStreaks({ user, profiles = [], readings = [], c
           const finished = participantStats.length > 0 && participantStats.every((item) => item.completedDays >= challenge.duration_days);
           const closed = challenge.status === "ended" || challenge.ends_on < today;
           const remaining = Math.max(0,Math.round((new Date(`${challenge.ends_on}T12:00:00Z`) - new Date(`${today}T12:00:00Z`))/86400000));
-          return <article className={`partner-challenge-card${finished ? " is-finished" : ""}`} key={challenge.id}><div className="partner-challenge-card-heading"><span className="partner-challenge-badge"><PartnerIcon name={finished?"check":"flame"}/></span><div><small>{finished ? "CHALLENGE COMPLETE" : closed ? "CHALLENGE CLOSED" : `${remaining} DAYS LEFT`}</small><h4>{challenge.title}</h4></div><strong>{progress}%</strong></div><div className="partner-challenge-track"><i style={{width:`${progress}%`}}/></div><div className="partner-challenge-dates"><span>{formatDate(challenge.starts_on)} – {formatDate(challenge.ends_on)}</span><span>{participants.length} participants</span></div><div className="partner-challenge-contributors">{participantStats.map(({participant,summary,completedDays}) => <div key={participant.user_id}><Identity person={profileById.get(participant.user_id)} size="small"/><span>{participant.user_id===user.id?"You":profileById.get(participant.user_id)?.full_name||"Partner"}</span><strong>{Math.min(completedDays,challenge.duration_days)}/{challenge.duration_days} days</strong>{summary?.calendar?.some((day)=>day.date===today&&day.status==="completed")?<i aria-label="Completed today"><PartnerIcon name="check"/></i>:null}</div>)}</div>{challenge.status === "active" && !closed && challenge.created_by === user.id ? <button type="button" className="partner-text-action" onClick={() => endChallenge(challenge)} disabled={busy}>Close challenge</button> : null}</article>;
+          return <article id={`partner-challenge-${challenge.id}`} tabIndex={-1} className={`partner-challenge-card${finished ? " is-finished" : ""}`} key={challenge.id}>
+            <div className="partner-challenge-card-heading">
+              <span className="partner-challenge-badge"><PartnerIcon name={finished?"check":"flame"}/></span>
+              <div><small>{finished ? "CHALLENGE COMPLETE" : closed ? "CHALLENGE CLOSED" : `${remaining} DAYS LEFT`}</small><h4>{challenge.title}</h4></div>
+              <strong className="partner-challenge-progress-value">{progress}%</strong>
+              <div className="partner-action-menu">
+                <button type="button" className="partner-action-menu-button" aria-label={`Actions for ${challenge.title}`} aria-expanded={openActionMenu === `challenge-${challenge.id}`} onClick={() => setOpenActionMenu(openActionMenu === `challenge-${challenge.id}` ? "" : `challenge-${challenge.id}`)}><PartnerIcon name="more"/></button>
+                {openActionMenu === `challenge-${challenge.id}` ? <div className="partner-action-menu-popover" role="menu">
+                  <button type="button" role="menuitem" onClick={() => { setOpenActionMenu(""); window.requestAnimationFrame(() => document.getElementById(`partner-challenge-${challenge.id}`)?.scrollIntoView({block:"center"})); }}><PartnerIcon name="arrow"/>View Challenge</button>
+                  {challenge.status === "active" && !closed && challenge.created_by === user.id ? <button type="button" role="menuitem" disabled={busy} onClick={() => { setOpenActionMenu(""); endChallenge(challenge); }}><PartnerIcon name="check"/>Close Challenge</button> : null}
+                  {closed && challenge.created_by === user.id ? <button type="button" role="menuitem" className="is-danger" onClick={() => { setOpenActionMenu(""); setDeleteConfirm({kind:"challenge",item:challenge}); }}><PartnerIcon name="trash"/>Delete Challenge</button> : null}
+                </div> : null}
+              </div>
+            </div>
+            <div className="partner-challenge-track" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow={progress}><i style={{width:`${progress}%`}}/></div>
+            <div className="partner-challenge-dates"><span>{formatDate(challenge.starts_on)} – {formatDate(challenge.ends_on)}</span><span>{challenge.duration_days} days · {participants.length} participants</span></div>
+            <div className="partner-challenge-contributors">{participantStats.map(({participant,summary,completedDays}) => <div key={participant.user_id}><Identity person={profileById.get(participant.user_id)} size="small"/><span className="partner-challenge-contributor-name">{participant.user_id===user.id?"You":profileById.get(participant.user_id)?.full_name||"Partner"}</span><strong>{Math.min(completedDays,challenge.duration_days)} / {challenge.duration_days} days</strong>{summary?.calendar?.some((day)=>day.date===today&&day.status==="completed")?<i aria-label="Completed today"><PartnerIcon name="check"/></i>:null}</div>)}</div>
+          </article>;
         })}</div> : <div className="partner-challenge-empty"><div className="partner-challenge-empty-mark"><PartnerIcon name="spark"/></div><strong>Your first shared challenge starts here</strong><span>Choose a gentle 7, 14, or 30-day rhythm with your circle.</span></div>}
       </div></div>
     </section> : null}
@@ -521,19 +764,49 @@ export function BibleStudyPartnerStreaks({ user, profiles = [], readings = [], c
           <div className="partner-quick-messages">{QUICK_MESSAGES.map((message) => <button type="button" key={message} disabled={busy} onClick={() => sendMessage(messagePartnership || activePartnerships[0]?.id,message)}>{message}</button>)}</div>
           <form className="partner-message-form" onSubmit={(event) => { event.preventDefault(); void sendMessage(messagePartnership || activePartnerships[0]?.id,messageDraft); }}><textarea value={messageDraft} onChange={(event) => setMessageDraft(event.target.value.slice(0,300))} maxLength={300} placeholder="Write something kind…" aria-label="Write an encouragement"/><div><small>{messageDraft.length}/300</small><button type="submit" className="partner-primary-action" disabled={busy || !messageDraft.trim()}><PartnerIcon name="message"/> Send</button></div></form>
         </> : <p className="partner-moments-empty">Start a partnership to send encouragement and celebrate together.</p>}
-        {messages.length ? <div className="partner-recent-messages"><small>RECENT ENCOURAGEMENTS</small>{messages.slice(0,4).map((message) => {const author=profileById.get(message.user_id);const own=message.user_id===user.id;return <article key={message.id}><Identity person={author} size="small"/><div><strong>{own?"You":author?.full_name||"Partner"}</strong><time>{relativeCopy(message.created_at)}</time><p>{message.content}</p><div className="partner-reaction-row">{REACTIONS.map(([reaction,emoji,label])=>{const matching=messageReactions.filter((row)=>row.message_id===message.id&&row.reaction===reaction);const mine=matching.some((row)=>row.user_id===user.id);return <button key={reaction} type="button" title={label} aria-label={`${label} reaction${mine?", remove yours":""}`} aria-pressed={mine} onClick={()=>void toggleReaction("bible_study_partner_message_reactions","message_id",message.id,reaction,messageReactions,setMessageReactions)}>{emoji}<small>{matching.length||""}</small></button>;})}</div></div></article>;})}</div>:null}
+        {messages.length ? <section className="partner-recent-messages" aria-label="Recent encouragement">
+          <div className="partner-recent-messages-heading">
+            <div><small>RECENT ENCOURAGEMENTS</small><span>{recentMessagesExpanded ? "The latest words shared in your circle." : `${messages.length} recent ${messages.length === 1 ? "message" : "messages"}`}</span></div>
+            <button type="button" className={`partner-moments-toggle${recentMessagesExpanded ? " is-expanded" : ""}`} aria-label={`${recentMessagesExpanded ? "Collapse" : "Expand"} Recent Encouragement`} aria-expanded={recentMessagesExpanded} onClick={() => setRecentMessagesExpanded((current) => !current)}><PartnerIcon name="chevronDown"/></button>
+          </div>
+          {recentMessagesExpanded ? messages.slice(0,4).map((message) => {
+            const author = profileById.get(message.user_id);
+            const own = message.user_id === user.id;
+            return <article key={message.id}>
+              <Identity person={author} size="small"/>
+              <div><strong>{own ? "You" : author?.full_name || "Partner"}</strong><time>{relativeCopy(message.created_at)}</time><p>{message.content}</p>
+                <div className="partner-reaction-row">{REACTIONS.map(([reaction,emoji,label]) => {
+                  const matching = messageReactions.filter((row) => row.message_id === message.id && row.reaction === reaction);
+                  const mine = matching.some((row) => row.user_id === user.id);
+                  return <button key={reaction} type="button" title={label} aria-label={`${label} reaction${mine ? ", remove yours" : ""}`} aria-pressed={mine} onClick={() => void toggleReaction("bible_study_partner_message_reactions","message_id",message.id,reaction,messageReactions,setMessageReactions)}>{emoji}<small>{matching.length || ""}</small></button>;
+                })}</div>
+              </div>
+              {own ? <div className="partner-action-menu partner-message-action-menu">
+                <button type="button" className="partner-action-menu-button" aria-label="Encouragement actions" aria-expanded={openActionMenu === `message-${message.id}`} onClick={() => setOpenActionMenu(openActionMenu === `message-${message.id}` ? "" : `message-${message.id}`)}><PartnerIcon name="more"/></button>
+                {openActionMenu === `message-${message.id}` ? <div className="partner-action-menu-popover" role="menu"><button type="button" role="menuitem" className="is-danger" onClick={() => { setOpenActionMenu(""); setDeleteConfirm({kind:"message",item:message}); }}><PartnerIcon name="trash"/>Delete Encouragement</button></div> : null}
+              </div> : null}
+            </article>;
+          }) : null}
+        </section> : null}
       </div>
-      <div className="partner-activity-panel"><div className="partner-activity-heading"><span className="partner-activity-mark"><PartnerIcon name="spark"/></span><div><strong>Moments that matter</strong><small>Real reading milestones from your circle.</small></div></div>
-        {events.length ? <div className="partner-activity-feed">{events.slice(0,8).map((event) => {
+      <div className="partner-activity-panel"><div className="partner-activity-heading"><span className="partner-activity-mark"><PartnerIcon name="spark"/></span><div><strong>Moments that matter</strong><small>{momentsExpanded ? "Real reading milestones from your circle." : `${events.length} ${events.length === 1 ? "moment" : "moments"} in your circle`}</small></div><button type="button" className={`partner-moments-toggle${momentsExpanded?" is-expanded":""}`} aria-label={`${momentsExpanded?"Collapse":"Expand"} Moments that matter`} aria-expanded={momentsExpanded} onClick={() => setMomentsExpanded((current) => !current)}><PartnerIcon name="chevronDown"/></button></div>
+        {momentsExpanded && (events.length ? <div className="partner-activity-feed">{events.slice(0,8).map((event) => {
           const author=profileById.get(event.actor_id);const reading=readings.find((item)=>item.id===event.reading_id);const activityMember=(membersByPartnership.get(event.partnership_id)||[]).find((member)=>member.user_id===event.actor_id&&member.status==="active");let eventText=event.event_type==="group_reading_completed"?`completed ${reading?`${reading.book} ${reading.chapter}`:"a shared reading"}`:event.event_type==="personal_reading_completed"?"completed a personal Bible reading":event.event_type==="shared_day_completed"?"joined everyone in completing today’s assignment":event.event_type==="encouragement_sent"?"sent a word of encouragement":event.event_type==="milestone_reached"?"reached a streak milestone":"completed a reading challenge";const matching=eventReactions.filter((row)=>row.event_id===event.id);
           if(event.event_type==="milestone_reached")eventText=`reached a ${event.metadata?.milestone||"shared"}-day shared milestone`;
           if(event.event_type==="challenge_completed")eventText=`completed “${event.metadata?.title||"a reading challenge"}” together`;
-          return <article className="partner-activity-item" key={event.id}><Identity person={author} size="small"/><div className="partner-activity-copy"><p><strong>{author?.full_name||"A partner"}</strong> {eventText}</p><time dateTime={event.created_at}>{relativeCopy(event.created_at)}</time><div className="partner-reaction-row">{REACTIONS.map(([reaction,emoji,label])=>{const mine=matching.some((row)=>row.user_id===user.id&&row.reaction===reaction);const count=matching.filter((row)=>row.reaction===reaction).length;return <button key={reaction} type="button" title={label} aria-label={`${label} reaction${mine?", remove yours":""}`} aria-pressed={mine} onClick={()=>void toggleReaction("bible_study_partner_event_reactions","event_id",event.id,reaction,eventReactions,setEventReactions)}>{emoji}<small>{count||""}</small></button>;})}</div>{activityMember&&activityMember.user_id!==user.id?<button type="button" className="partner-activity-profile-action" onClick={()=>openMember(activityMember,event.partnership_id)}>View {author?.full_name?.split(" ")[0]||"partner"}’s reading progress <PartnerIcon name="arrow"/></button>:null}</div><span className="partner-activity-event-icon"><PartnerIcon name={event.event_type==="group_reading_completed"?"book":"spark"}/></span></article>;
-        })}</div> : <div className="partner-challenge-empty"><div className="partner-challenge-empty-mark"><PartnerIcon name="book"/></div><strong>Your first shared moment is ahead</strong><span>Reading completions and partner celebrations will appear here as they happen.</span></div>}
+          return <article className="partner-activity-item" key={event.id}>
+            <Identity person={author} size="small"/>
+            <div className="partner-activity-copy"><p><strong>{author?.full_name||"A partner"}</strong> {eventText}</p><time dateTime={event.created_at}>{relativeCopy(event.created_at)}</time><div className="partner-reaction-row">{REACTIONS.map(([reaction,emoji,label])=>{const mine=matching.some((row)=>row.user_id===user.id&&row.reaction===reaction);const count=matching.filter((row)=>row.reaction===reaction).length;return <button key={reaction} type="button" title={label} aria-label={`${label} reaction${mine?", remove yours":""}`} aria-pressed={mine} onClick={()=>void toggleReaction("bible_study_partner_event_reactions","event_id",event.id,reaction,eventReactions,setEventReactions)}>{emoji}<small>{count||""}</small></button>;})}</div>{activityMember&&activityMember.user_id!==user.id?<button type="button" className="partner-activity-profile-action" onClick={()=>openMember(activityMember,event.partnership_id)}>View {author?.full_name?.split(" ")[0]||"partner"}’s reading progress <PartnerIcon name="arrow"/></button>:null}</div>
+            {event.actor_id === user.id ? <div className="partner-action-menu partner-activity-action-menu">
+              <button type="button" className="partner-action-menu-button" aria-label="Activity actions" aria-expanded={openActionMenu === `event-${event.id}`} onClick={() => setOpenActionMenu(openActionMenu === `event-${event.id}` ? "" : `event-${event.id}`)}><PartnerIcon name="more"/></button>
+              {openActionMenu === `event-${event.id}` ? <div className="partner-action-menu-popover" role="menu"><button type="button" role="menuitem" className="is-danger" onClick={() => { setOpenActionMenu(""); setDeleteConfirm({kind:"activity",item:event}); }}><PartnerIcon name="trash"/>Delete Activity</button></div> : null}
+            </div> : <span className="partner-activity-event-icon"><PartnerIcon name={event.event_type==="group_reading_completed"?"book":"spark"}/></span>}
+          </article>;
+        })}</div> : <div className="partner-challenge-empty"><div className="partner-challenge-empty-mark"><PartnerIcon name="book"/></div><strong>Your first shared moment is ahead</strong><span>Reading completions and partner celebrations will appear here as they happen.</span></div>)}
       </div></div>
     </section> : null}
 
-    {selectedMember ? (() => {
+    {selectedMember && typeof document !== "undefined" ? createPortal((() => {
       const person = profileById.get(selectedMember.memberId);
       const summary = partnerSummaries[selectedMember.memberId];
       const mySummary = partnerSummaries[user.id];
@@ -547,16 +820,54 @@ export function BibleStudyPartnerStreaks({ user, profiles = [], readings = [], c
       const nextSharedMilestone = MILESTONES.find((milestone) => milestone > sharedDays);
       const partnership = partnershipsById.get(selectedMember.partnershipId);
       const memberStatus = assignedToday.length ? hasReadings(selectedMember.memberId) ? "completed" : "pending" : "scheduled";
-      return <div className="partner-profile-backdrop" role="presentation" onMouseDown={(event)=>{if(event.target===event.currentTarget)setSelectedMember(null);}}><section className="partner-profile-sheet" role="dialog" aria-modal="true" aria-labelledby="partner-profile-title">
-        <header className="partner-profile-header"><div className="partner-profile-person"><Identity person={person} size="large"/><div><small>PARTNER READING PROFILE</small><h2 id="partner-profile-title">{person?.full_name||"Your partner"}</h2><span>{partnership?.name||"Shared reading circle"}</span></div></div><button type="button" className="partner-sheet-close" aria-label="Close partner profile" onClick={()=>setSelectedMember(null)}><PartnerIcon name="close"/></button></header>
-        {!summary ? <div className="partner-profile-private-state"><PartnerIcon name="book"/><strong>Reading history isn’t available yet</strong><span>Once the partner history update is active, accepted members can view reading dates and totals. Private notes remain private.</span></div> : <>
-          <div className="partner-profile-stats"><article className="is-highlight"><small>PERSONAL STREAK</small><strong><PartnerIcon name="flame"/>{summary.current_streak||0}<span>days</span></strong><span>Longest {summary.longest_streak||0} days</span></article><article><small>CHAPTERS READ</small><strong>{summary.completed_chapters||0}</strong><span>Completed Scripture readings</span></article><article><small>THIS WEEK</small><strong>{percent(summary.weekly_completed||0,summary.weekly_elapsed||0)}%</strong><span>{summary.weekly_completed||0} reading days</span></article><article><small>THIS MONTH</small><strong>{percent(summary.monthly_completed||0,summary.monthly_elapsed||0)}%</strong><span>{summary.monthly_completed||0} reading days</span></article></div>
-          {mySummary ? <section className="partner-profile-comparison" aria-label="Your personal reading compared with your partner"><div className="partner-profile-comparison-heading"><div><small>PERSONAL PROGRESS · SIDE BY SIDE</small><strong>Your shared rhythm</strong></div><span>{sharedDays ? `${sharedDays} overlapping days` : partnerRun.days > myRun.days ? "Your partner is ahead" : myRun.days > partnerRun.days ? "You are ahead" : "Ready to grow together"}</span></div><div className="partner-profile-comparison-grid">{[[user.id,"You",mySummary,myRun],[selectedMember.memberId,person?.full_name||"Partner",summary,partnerRun]].map(([memberId,label,progress,run])=>{const week=percent(progress?.weekly_completed||0,progress?.weekly_elapsed||0);const month=percent(progress?.monthly_completed||0,progress?.monthly_elapsed||0);return <article key={memberId} className="partner-profile-compare-person"><div><Identity person={profileById.get(memberId)} size="small"/><span><strong>{label}</strong><small>{run.days} day current run · {progress?.longest_streak||0} longest</small></span></div><span className="partner-profile-compare-bar"><small>This week <b>{week}%</b></small><i><em style={{width:`${week}%`}}/></i></span><span className="partner-profile-compare-bar"><small>This month <b>{month}%</b></small><i><em style={{width:`${month}%`}}/></i></span><small className="partner-profile-compare-chapters">{progress?.completed_chapters||0} completed chapters</small></article>;})}</div><p>{sharedDays ? `You’ve shared ${sharedDays} consecutive current day${sharedDays===1?"":"s"}.` : "Your personal reading histories stay separate while you encourage each other."}{nextSharedMilestone?` ${nextSharedMilestone-sharedDays} more overlapping days to the next shared milestone.`:" You’ve reached the final shared milestone."}</p></section> : null}
-          <div className="partner-profile-today"><span className={`partner-profile-today-mark is-${memberStatus}`}>{memberStatus==="completed"?<PartnerIcon name="check"/>:memberStatus==="scheduled"?<PartnerIcon name="calendar"/>:"·"}</span><div><small>TODAY’S READING</small><strong>{memberStatus==="completed"?"Reading complete":memberStatus==="scheduled"?"No chapter scheduled":"Reading still to come"}</strong><span>{assignedToday.length?assignedToday.map((reading)=>`${reading.book} ${reading.chapter}`).join(", "):"Their reading activity stays private outside accepted partnerships."}</span></div></div>
-          <ReadingCalendar summary={summary} month={calendarMonth||currentMonth} onMonthChange={setCalendarMonth} selectedDate={selectedDate} onSelectDate={setSelectedDate} today={today}/>
-          <div className="partner-profile-note"><PartnerIcon name="spark"/><span>Only reading dates, completed chapter totals, and streak summaries are shared in this partnership. Personal notes and reflections stay private.</span></div>
-        </>}
+      return <div className="partner-profile-backdrop partner-experience" role="presentation" onMouseDown={(event)=>{if(event.target===event.currentTarget)setSelectedMember(null);}}><section className="partner-profile-sheet" role="dialog" aria-modal="true" aria-labelledby="partner-profile-title" aria-describedby="partner-profile-description" tabIndex={-1}>
+        <header className="partner-profile-header"><div className="partner-profile-person"><Identity person={person} size="large"/><div><small id="partner-profile-description">PARTNER READING PROFILE</small><h2 id="partner-profile-title">{person?.full_name||"Your partner"}</h2><span>{partnership?.name||"Shared reading circle"}</span></div></div><button ref={partnerProfileCloseRef} type="button" className="partner-sheet-close" aria-label="Close partner profile" onClick={()=>setSelectedMember(null)}><PartnerIcon name="close"/></button></header>
+        <div className="partner-profile-content">
+          {!summary ? <div className="partner-profile-private-state"><PartnerIcon name="book"/><strong>Reading history isn’t available yet</strong><span>Once the partner history update is active, accepted members can view reading dates and totals. Private notes remain private.</span></div> : <>
+            <div className="partner-profile-stats"><article className="is-highlight"><small>PERSONAL STREAK</small><strong><PartnerIcon name="flame"/>{summary.current_streak||0}<span>days</span></strong><span>Longest {summary.longest_streak||0} days</span></article><article><small>CHAPTERS READ</small><strong>{summary.completed_chapters||0}</strong><span>Completed Scripture readings</span></article><article><small>THIS WEEK</small><strong>{percent(summary.weekly_completed||0,summary.weekly_elapsed||0)}%</strong><span>{summary.weekly_completed||0} reading days</span></article><article><small>THIS MONTH</small><strong>{percent(summary.monthly_completed||0,summary.monthly_elapsed||0)}%</strong><span>{summary.monthly_completed||0} reading days</span></article></div>
+            {mySummary ? <section className="partner-profile-comparison" aria-label="Your personal reading compared with your partner"><div className="partner-profile-comparison-heading"><div><small>PERSONAL PROGRESS · SIDE BY SIDE</small><strong>Your shared rhythm</strong></div><span>{sharedDays ? `${sharedDays} overlapping days` : partnerRun.days > myRun.days ? "Your partner is ahead" : myRun.days > partnerRun.days ? "You are ahead" : "Ready to grow together"}</span></div><div className="partner-profile-comparison-grid">{[[user.id,"You",mySummary,myRun],[selectedMember.memberId,person?.full_name||"Partner",summary,partnerRun]].map(([memberId,label,progress,run])=>{const week=percent(progress?.weekly_completed||0,progress?.weekly_elapsed||0);const month=percent(progress?.monthly_completed||0,progress?.monthly_elapsed||0);return <article key={memberId} className="partner-profile-compare-person"><div><Identity person={profileById.get(memberId)} size="small"/><span><strong>{label}</strong><small>{run.days} day current run · {progress?.longest_streak||0} longest</small></span></div><span className="partner-profile-compare-bar"><small>This week <b>{week}%</b></small><i><em style={{width:`${week}%`}}/></i></span><span className="partner-profile-compare-bar"><small>This month <b>{month}%</b></small><i><em style={{width:`${month}%`}}/></i></span><small className="partner-profile-compare-chapters">{progress?.completed_chapters||0} completed chapters</small></article>;})}</div><p>{sharedDays ? `You’ve shared ${sharedDays} consecutive current day${sharedDays===1?"":"s"}.` : "Your personal reading histories stay separate while you encourage each other."}{nextSharedMilestone?` ${nextSharedMilestone-sharedDays} more overlapping days to the next shared milestone.`:" You’ve reached the final shared milestone."}</p></section> : null}
+            <div className="partner-profile-today"><span className={`partner-profile-today-mark is-${memberStatus}`}>{memberStatus==="completed"?<PartnerIcon name="check"/>:memberStatus==="scheduled"?<PartnerIcon name="calendar"/>:"·"}</span><div><small>TODAY’S READING</small><strong>{memberStatus==="completed"?"Reading complete":memberStatus==="scheduled"?"No chapter scheduled":"Reading still to come"}</strong><span>{assignedToday.length?assignedToday.map((reading)=>`${reading.book} ${reading.chapter}`).join(", "):"Their reading activity stays private outside accepted partnerships."}</span></div></div>
+            <ReadingCalendar summary={summary} month={calendarMonth||currentMonth} onMonthChange={setCalendarMonth} selectedDate={selectedDate} onSelectDate={setSelectedDate} today={today}/>
+            <div className="partner-profile-note"><PartnerIcon name="spark"/><span>Only reading dates, completed chapter totals, and streak summaries are shared in this partnership. Personal notes and reflections stay private.</span></div>
+          </>}
+        </div>
       </section></div>;
-    })() : null}
-  </section>;
+    })(), document.body) : null}
+  </section>
+  {deleteConfirm && typeof document !== "undefined" ? createPortal(
+    <div className="partner-confirm-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget && !deleteBusy) setDeleteConfirm(null); }}>
+      <section className="partner-confirm-dialog" role="alertdialog" aria-modal="true" aria-labelledby="partner-confirm-title" aria-describedby="partner-confirm-copy">
+        <span className="partner-confirm-mark" aria-hidden="true"><PartnerIcon name="trash"/></span>
+        <h2 id="partner-confirm-title">{deleteConfirm.kind === "challenge" ? "Delete this challenge?" : deleteConfirm.kind === "message" ? "Delete this encouragement?" : "Delete this activity?"}</h2>
+        <p id="partner-confirm-copy">{deleteConfirm.kind === "challenge"
+          ? "This challenge and its participation history will be removed. This action cannot be undone."
+          : deleteConfirm.kind === "message"
+            ? "This encouragement and its related activity entry will be removed from your circle. This action cannot be undone."
+            : "This activity will be removed from your shared history. This action cannot be undone."}</p>
+        <div className="partner-confirm-actions">
+          <button type="button" className="partner-confirm-cancel" disabled={deleteBusy} onClick={() => setDeleteConfirm(null)}>Cancel</button>
+          <button type="button" className="partner-confirm-delete" disabled={deleteBusy} onClick={() => void confirmDelete()}>{deleteBusy ? "Deleting..." : deleteConfirm.kind === "challenge" ? "Delete Challenge" : deleteConfirm.kind === "message" ? "Delete Encouragement" : "Delete Activity"}</button>
+        </div>
+      </section>
+    </div>,
+    document.body
+  ) : null}
+  {challengeSuccess && typeof document !== "undefined" ? createPortal(
+    <div className="partner-challenge-success-backdrop" role="presentation" onMouseDown={(event) => {
+      if (event.target === event.currentTarget) setChallengeSuccess(null);
+    }}>
+      <section className="partner-challenge-success-dialog" role="dialog" aria-modal="true" aria-labelledby="partner-challenge-success-title" aria-describedby="partner-challenge-success-copy">
+        <button ref={challengeSuccessCloseRef} type="button" className="partner-challenge-success-close" aria-label="Close challenge confirmation" onClick={() => setChallengeSuccess(null)}><PartnerIcon name="close"/></button>
+        <span className="partner-challenge-success-mark" aria-hidden="true"><PartnerIcon name="check"/></span>
+        <p className="partner-challenge-success-eyebrow">YOUR SHARED JOURNEY BEGINS</p>
+        <h2 id="partner-challenge-success-title">Challenge Started!</h2>
+        <p id="partner-challenge-success-copy">A steady rhythm grows one day at a time. Your partnership is ready to begin this reading journey together.</p>
+        <strong className="partner-challenge-success-name">{challengeSuccess.title}</strong>
+        <span className="partner-challenge-success-dates">{challengeSuccess.duration_days} days · {formatDate(challengeSuccess.starts_on)} – {formatDate(challengeSuccess.ends_on)}</span>
+        <button type="button" className="partner-challenge-success-action" onClick={viewStartedChallenge}>View Challenge <PartnerIcon name="arrow"/></button>
+      </section>
+    </div>,
+    document.body
+  ) : null}
+  </>;
 }

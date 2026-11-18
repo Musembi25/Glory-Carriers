@@ -62,8 +62,10 @@ export function BibleStudySection({ user, profile, profiles, isAdmin, groupId, f
   const [editingReadingId, setEditingReadingId] = useState("");
   const [readingAdminError, setReadingAdminError] = useState("");
   const [reader, setReader] = useState(null), [chapter, setChapter] = useState([]), [readerLoading, setReaderLoading] = useState(false), [readerError, setReaderError] = useState(""), [readerProgress, setReaderProgress] = useState(0), [actionError, setActionError] = useState(""), [reactionErrors, setReactionErrors] = useState({}), [selected, setSelected] = useState(""), [takeaway, setTakeaway] = useState(""), [takeawayReference, setTakeawayReference] = useState(""), [question, setQuestion] = useState(""), [replyDrafts, setReplyDrafts] = useState({}), [answerDrafts, setAnswerDrafts] = useState({}), [editing, setEditing] = useState(null), [editDraft, setEditDraft] = useState(""), [actionMenu, setActionMenu] = useState(""), [loading, setLoading] = useState(true), [saving, setSaving] = useState(false);
-  const readerCloseRef = useRef(null), readerOverlayRef = useRef(null), readerContentRef = useRef(null), readerLoadIdRef = useRef(0), activeReadingSessionRef = useRef(""), sessionHeartbeatRef = useRef(null), reactionLocksRef = useRef(new Set());
+  const [groupCompletionSuccess, setGroupCompletionSuccess] = useState(null);
+  const readerCloseRef = useRef(null), readerDialogRef = useRef(null), readerOverlayRef = useRef(null), readerContentRef = useRef(null), completionDialogRef = useRef(null), completionContinueRef = useRef(null), groupCompletionRef = useRef(null), readerLoadIdRef = useRef(0), activeReadingSessionRef = useRef(""), sessionHeartbeatRef = useRef(null), completionLocksRef = useRef(new Set()), reactionLocksRef = useRef(new Set());
   const [reactionBusy, setReactionBusy] = useState({});
+  groupCompletionRef.current = groupCompletionSuccess;
   useEffect(() => {
     if (!focusPartnerStreaks) return;
     setActiveJourney("group");
@@ -162,13 +164,76 @@ export function BibleStudySection({ user, profile, profiles, isAdmin, groupId, f
   const startReadingSession=async(reading)=>{if(!reading||!supabase)return;if(activeReadingSessionRef.current&&activeReadingSessionRef.current!==reading.id)await stopReadingSession();const now=new Date().toISOString();activeReadingSessionRef.current=reading.id;const {data,error}=await supabase.from("bible_study_reading_sessions").upsert({reading_id:reading.id,group_id:groupId,user_id:user.id,started_at:now,last_seen_at:now,ended_at:null},{onConflict:"reading_id,user_id"}).select().single();if(error){activeReadingSessionRef.current="";console.error("Bible Study reading session could not start:",error);return;}setState((currentState)=>({...currentState,sessions:[...currentState.sessions.filter((item)=>!(item.reading_id===reading.id&&item.user_id===user.id)),data]}));clearInterval(sessionHeartbeatRef.current);sessionHeartbeatRef.current=setInterval(async()=>{const lastSeen=new Date().toISOString();const {error:heartbeatError}=await supabase.from("bible_study_reading_sessions").update({last_seen_at:lastSeen}).eq("reading_id",reading.id).eq("user_id",user.id).is("ended_at",null);if(!heartbeatError)setState((currentState)=>({...currentState,sessions:currentState.sessions.map((item)=>item.reading_id===reading.id&&item.user_id===user.id?{...item,last_seen_at:lastSeen}:item)}));},60000);};
   useEffect(()=>()=>{clearInterval(sessionHeartbeatRef.current);const readingId=activeReadingSessionRef.current;if(readingId&&supabase)void supabase.from("bible_study_reading_sessions").update({ended_at:new Date().toISOString()}).eq("reading_id",readingId).eq("user_id",user.id);},[user.id]);
   const openReader=async(reading)=>{const requestId=++readerLoadIdRef.current;if(readerOverlayRef.current)readerOverlayRef.current.scrollTop=0;if(readerContentRef.current)readerContentRef.current.scrollTop=0;setReader(reading);setChapter([]);setReaderError("");setActionError("");setReaderLoading(true);setReaderProgress(0);if(activeReadingSessionRef.current&&activeReadingSessionRef.current!==reading.id)await stopReadingSession();try{const response=await fetch(fileFor(reading.book));if(!response.ok)throw new Error("This chapter could not be loaded. Check your connection and try again.");const source=await response.json();const verses=source.filter((verse)=>verse.chapterNumber===reading.chapter&&/text$/.test(verse.type));if(requestId===readerLoadIdRef.current){setChapter(verses);if(verses.length)await startReadingSession(reading);}}catch(error){if(requestId===readerLoadIdRef.current)setReaderError(error.message||"This chapter could not be loaded.");}finally{if(requestId===readerLoadIdRef.current)setReaderLoading(false);}};
-  const closeReader=()=>{readerLoadIdRef.current+=1;void stopReadingSession();setReader(null);setReaderProgress(0);};
-  const readerReadingIndex=state.readings.findIndex((item)=>item.id===reader?.id);
-  const moveReader=(direction)=>{const next=state.readings[readerReadingIndex+direction];if(next)void openReader(next);};
+  const closeReader=()=>{readerLoadIdRef.current+=1;void stopReadingSession();setReader(null);setGroupCompletionSuccess(null);setReaderProgress(0);};
+  const readerReadingIndex=visibleReadings.findIndex((item)=>item.id===reader?.id);
+  const readerDateLabel=reader?.reading_date?new Intl.DateTimeFormat(undefined,{month:"long",day:"numeric",year:"numeric",timeZone:"UTC"}).format(new Date(`${reader.reading_date}T12:00:00Z`)):"";
+  const moveReader=(direction)=>{const next=visibleReadings[readerReadingIndex+direction];if(next)void openReader(next);};
   const updateReaderProgress=(event)=>{const element=event?.currentTarget||readerContentRef.current;if(!element)return;const available=element.scrollHeight-element.clientHeight;setReaderProgress(available>0?Math.round(element.scrollTop/available*100):100);};
-  useEffect(()=>{if(!reader)return undefined;const oldOverflow=document.body.style.overflow;document.body.style.overflow="hidden";readerCloseRef.current?.focus({preventScroll:true});const closeOnEscape=(event)=>{if(event.key==="Escape"){event.preventDefault();closeReader();}};document.addEventListener("keydown",closeOnEscape);return()=>{document.body.style.overflow=oldOverflow;document.removeEventListener("keydown",closeOnEscape);};},[Boolean(reader)]);
+  useEffect(()=>{
+    if(!reader&&!groupCompletionSuccess)return undefined;
+    const previousFocus=document.activeElement,oldOverflow=document.body.style.overflow;
+    document.body.style.overflow="hidden";
+    if(groupCompletionSuccess)completionContinueRef.current?.focus({preventScroll:true});
+    else readerCloseRef.current?.focus({preventScroll:true});
+    const handleKeyDown=(event)=>{
+      if(event.key==="Escape"){
+        event.preventDefault();
+        event.stopPropagation();
+        if(groupCompletionRef.current)setGroupCompletionSuccess(null);
+        else closeReader();
+        return;
+      }
+      if(event.key!=="Tab")return;
+      const dialog=groupCompletionRef.current?completionDialogRef.current:readerDialogRef.current;
+      const focusable=[...(dialog?.querySelectorAll("button:not(:disabled),a[href]")||[])];
+      if(!focusable.length){event.preventDefault();return;}
+      const first=focusable[0],last=focusable[focusable.length-1];
+      if(event.shiftKey&&document.activeElement===first){event.preventDefault();last.focus();}
+      else if(!event.shiftKey&&document.activeElement===last){event.preventDefault();first.focus();}
+    };
+    document.addEventListener("keydown",handleKeyDown);
+    return()=>{
+      document.body.style.overflow=oldOverflow;
+      document.removeEventListener("keydown",handleKeyDown);
+      if(previousFocus instanceof HTMLElement&&previousFocus.isConnected)previousFocus.focus({preventScroll:true});
+    };
+  },[Boolean(reader||groupCompletionSuccess)]);
+  useEffect(()=>{
+    if(groupCompletionSuccess)completionContinueRef.current?.focus({preventScroll:true});
+    else if(reader)readerCloseRef.current?.focus({preventScroll:true});
+  },[Boolean(groupCompletionSuccess),Boolean(reader)]);
   const mentions=async(type,id,content)=>{const targets=profiles.filter((item)=>{if(!item.is_active||item.id===user.id||!item.full_name)return false;const escaped=item.full_name.trim().replace(/[.*+?^${}()|[\]\\]/g,"\\$&");return new RegExp(`@${escaped}(?=$|[\\s.,!?])`,"i").test(content);});if(targets.length){const {error}=await supabase.from("bible_study_mentions").insert(targets.map((item)=>({content_type:type,content_id:id,group_id:groupId,mentioned_user_id:item.id,mentioned_by:user.id})));if(error){console.error("Bible Study mentions could not be saved:",error);setActionError("Your contribution was shared, but one or more @mention notifications could not be sent.");}}};
-  const completeReading=async(reading)=>{if(!reading||done(reading)||saving)return;const optimistic={id:`pending-${reading.id}`,reading_id:reading.id,user_id:user.id,completed_at:new Date().toISOString()};setActionError("");setState((currentState)=>({...currentState,completions:[...currentState.completions,optimistic]}));setSaving(true);const {data,error}=await supabase.from("bible_study_completions").insert({reading_id:reading.id,user_id:user.id}).select().single();if(error&&error.code!=="23505"){setState((currentState)=>({...currentState,completions:currentState.completions.filter((item)=>item.id!==optimistic.id)}));setActionError(error.message||"Your reading progress could not be saved.");}else if(data){setState((currentState)=>({...currentState,completions:currentState.completions.map((item)=>item.id===optimistic.id?data:item)}));}setSaving(false);if(!error){if(activeReadingSessionRef.current===reading.id)await stopReadingSession(reading.id);await load(false);}};
+  const completeReading=async(reading)=>{
+    if(!reading||done(reading)||saving||completionLocksRef.current.has(reading.id))return;
+    completionLocksRef.current.add(reading.id);
+    setActionError("");
+    setSaving(true);
+    try{
+      const {data,error}=await supabase.from("bible_study_completions").insert({reading_id:reading.id,user_id:user.id}).select().single();
+      if(error?.code==="23505"){
+        const refreshed=await load(false);
+        if(refreshed?.[1]?.error)setActionError("This chapter was already completed, but its status could not be refreshed. Please reload and try again.");
+        return;
+      }
+      if(error)throw error;
+      if(!data)throw new Error("Your reading progress could not be confirmed. Please try again.");
+      setState((currentState)=>({...currentState,completions:[...currentState.completions.filter((item)=>!(item.reading_id===reading.id&&item.user_id===user.id)),data]}));
+      if(activeReadingSessionRef.current===reading.id)await stopReadingSession(reading.id);
+      await load(false);
+      setGroupCompletionSuccess({readingId:reading.id,book:reading.book,chapter:reading.chapter});
+    }catch(error){
+      setActionError(error.message||"Your reading progress could not be saved.");
+    }finally{
+      completionLocksRef.current.delete(reading.id);
+      setSaving(false);
+    }
+  };
+  const viewGroupProgress=()=>{
+    setActiveTab("progress");
+    if(reader)closeReader();
+    else setGroupCompletionSuccess(null);
+    window.requestAnimationFrame(()=>document.getElementById("bible-tab-progress")?.focus({preventScroll:true}));
+  };
   const uploadVoiceNote=async(note)=>{
     if(!note?.file)return {};
     const file=note.file,mimeType=(file.type||"").split(";")[0].toLowerCase();
@@ -201,7 +266,7 @@ export function BibleStudySection({ user, profile, profiles, isAdmin, groupId, f
   const publishQuestion=async(event)=>{event.preventDefault();const content=question.trim();if(!content&&!questionAudioDraft?.file)return;await saveTextPost("bible_study_questions",{group_id:groupId,user_id:user.id,content:content||null},async(item)=>{if(content)await mentions("question",item.id,content);setQuestion("");setQuestionAudioDraft(null);},questionAudioDraft);};
   const publishTakeawayReply=async(event,post,parentReplyId=null)=>{event.preventDefault();const draftKey=parentReplyId||post.id,content=replyDrafts[draftKey]?.trim(),audio=replyAudioDrafts[draftKey];if(!content&&!audio?.file)return;await saveTextPost("bible_study_takeaway_replies",{takeaway_id:post.id,parent_reply_id:parentReplyId,user_id:user.id,content:content||null},async(item)=>{if(content)await mentions("takeaway_reply",item.id,content);setReplyDrafts((drafts)=>({...drafts,[draftKey]:""}));setReplyAudioDrafts((drafts)=>({...drafts,[draftKey]:null}));},audio);};
   const publishQuestionAnswer=async(event,post)=>{event.preventDefault();const content=answerDrafts[post.id]?.trim(),audio=answerAudioDrafts[post.id];if(!content&&!audio?.file)return;await saveTextPost("bible_study_question_answers",{question_id:post.id,user_id:user.id,content:content||null},async(item)=>{if(content)await mentions("question_answer",item.id,content);setAnswerDrafts((drafts)=>({...drafts,[post.id]:""}));setAnswerAudioDrafts((drafts)=>({...drafts,[post.id]:null}));},audio);};
-  const saveReading=async(event)=>{event.preventDefault();const book=readingDraft.book,chapterNumber=Number(readingDraft.chapter),date=readingDraft.reading_date;if(!BIBLE_BOOK_CHAPTERS[book]||!Number.isInteger(chapterNumber)||chapterNumber<1||chapterNumber>BIBLE_BOOK_CHAPTERS[book]||!date||(!editingReadingId&&date<today)){setReadingAdminError("Choose a valid book, chapter, and a date from today onward.");return;}setReadingAdminError("");setSaving(true);const existing=state.readings.find((item)=>item.id===editingReadingId);const payload={book,chapter:chapterNumber,reading_date:date,updated_at:new Date().toISOString()};const result=existing?await supabase.from("bible_study_readings").update(payload).eq("id",existing.id).eq("group_id",groupId).select("id").maybeSingle():await supabase.from("bible_study_readings").insert({...payload,group_id:groupId,sort_order:Math.max(0,...state.readings.map((item)=>item.sort_order))+1,status:"scheduled",created_by:user.id}).select("id").maybeSingle();if(result.error||!result.data)setReadingAdminError(result.error?.code==="23505"?"That chapter is already scheduled for this date.":result.error?.message||"This reading was not changed. Check that you still have permission to manage this group plan.");else{setReadingDraft({book:"",chapter:"",reading_date:""});setEditingReadingId("");await load(false);}setSaving(false);};
+  const saveReading=async(event)=>{event.preventDefault();const book=readingDraft.book,chapterNumber=Number(readingDraft.chapter),date=readingDraft.reading_date;if(!BIBLE_BOOK_CHAPTERS[book]||!Number.isInteger(chapterNumber)||chapterNumber<1||chapterNumber>BIBLE_BOOK_CHAPTERS[book]||!date||(!editingReadingId&&date<today)){setReadingAdminError("Choose a valid book, chapter, and a date from today onward.");return;}const duplicate=state.readings.some((item)=>item.deleted_at==null&&item.id!==editingReadingId&&item.book===book&&Number(item.chapter)===chapterNumber&&item.reading_date===date);if(duplicate){setReadingAdminError("That chapter is already scheduled for this date.");return;}setReadingAdminError("");setSaving(true);const existing=state.readings.find((item)=>item.id===editingReadingId);const payload={book,chapter:chapterNumber,reading_date:date,updated_at:new Date().toISOString()};const result=existing?await supabase.from("bible_study_readings").update(payload).eq("id",existing.id).eq("group_id",groupId).select("id").maybeSingle():await supabase.from("bible_study_readings").insert({...payload,group_id:groupId,sort_order:Math.max(0,...state.readings.filter((item)=>item.deleted_at==null).map((item)=>item.sort_order))+1,status:"scheduled",created_by:user.id}).select("id").maybeSingle();if(result.error||!result.data)setReadingAdminError(result.error?.code==="23505"?"That chapter is already scheduled for this date.":result.error?.message||"This reading was not changed. Check that you still have permission to manage this group plan.");else{setReadingDraft({book:"",chapter:"",reading_date:""});setEditingReadingId("");await load(false);}setSaving(false);};
   const saveDailyContent=async(event)=>{event.preventDefault();const contentDate=dailyDraft.content_date||today;if(!contentDate||(!dailyDraft.verse_text.trim()&&!dailyDraft.encouragement_message.trim()&&!dailyDraft.instructions.trim())){setDailyAdminError("Add a date and at least a verse, encouragement, or reading instruction.");return;}if(Boolean(dailyDraft.verse_reference.trim())!==Boolean(dailyDraft.verse_text.trim())){setDailyAdminError("Add both the verse reference and its text, or leave both blank.");return;}setSaving(true);setDailyAdminError("");const payload=Object.fromEntries(Object.entries(dailyDraft).map(([key,value])=>[key,value.trim()||null]));payload.content_date=contentDate;payload.status="published";payload.updated_at=new Date().toISOString();const result=editingDailyId?await supabase.from("bible_study_daily_content").update(payload).eq("id",editingDailyId).eq("group_id",groupId).select("id").maybeSingle():await supabase.from("bible_study_daily_content").insert({...payload,group_id:groupId,created_by:user.id}).select("id").maybeSingle();if(result.error||!result.data)setDailyAdminError(result.error?.code==="23505"?"Daily content already exists for this date. Edit that post instead.":result.error?.message||"This message was not changed. Check that you still have permission to manage daily Bible Study content.");else{setDailyDraft({content_date:"",verse_reference:"",verse_text:"",verse_encouragement:"",encouragement_title:"",encouragement_message:"",instructions:"",reflection_questions:""});setEditingDailyId("");await load(false);}setSaving(false);};
   const editDailyContent=(item)=>{setEditingDailyId(item.id);setDailyDraft({content_date:item.content_date||"",verse_reference:item.verse_reference||"",verse_text:item.verse_text||"",verse_encouragement:item.verse_encouragement||"",encouragement_title:item.encouragement_title||"",encouragement_message:item.encouragement_message||"",instructions:item.instructions||"",reflection_questions:item.reflection_questions||""});setDailyAdminError("");};
   const changeDailyStatus=async(item,status)=>{setSaving(true);setDailyAdminError("");const {data,error}=await supabase.from("bible_study_daily_content").update({status,updated_at:new Date().toISOString()}).eq("id",item.id).eq("group_id",groupId).select("id").maybeSingle();if(error||!data)setDailyAdminError(error?.message||"This daily post was not changed. Check that you still have permission to manage this group.");else await load(false);setSaving(false);};
@@ -549,12 +614,13 @@ export function BibleStudySection({ user, profile, profiles, isAdmin, groupId, f
       </section>
     </section>:null}
 
-    {reader ? <div ref={readerOverlayRef} className="bible-reader-overlay" onScroll={updateReaderProgress} onMouseDown={(event)=>{if(event.target===event.currentTarget)closeReader();}}><section className="bible-reader" role="dialog" aria-modal="true" aria-labelledby="assigned-reading-title" aria-describedby="assigned-reading-progress">
+    {typeof document !== "undefined" && (reader || groupCompletionSuccess) ? createPortal(<>
+    {reader ? <div ref={readerOverlayRef} className="bible-reader-overlay" onScroll={updateReaderProgress} onMouseDown={(event)=>{if(event.target===event.currentTarget){if(groupCompletionSuccess)setGroupCompletionSuccess(null);else closeReader();}}} aria-hidden={Boolean(groupCompletionSuccess)} inert={Boolean(groupCompletionSuccess)}><section ref={readerDialogRef} className="bible-reader" role="dialog" aria-modal="true" aria-labelledby="assigned-reading-title" aria-describedby="assigned-reading-progress">
       <header className="bible-reader-heading">
-        <div><small>WORLD ENGLISH BIBLE</small><h2 id="assigned-reading-title">{reader.book} {reader.chapter}</h2></div>
+        <div><small>GROUP READING · WORLD ENGLISH BIBLE</small><h2 id="assigned-reading-title">{reader.book} {reader.chapter}</h2><span className="bible-reader-scheduled-date">Scheduled for {readerDateLabel}</span></div>
         <nav className="bible-reader-navigation" aria-label="Reading plan chapters">
-          <button type="button" onClick={()=>moveReader(-1)} disabled={readerReadingIndex<=0} aria-label="Previous plan reading">Previous</button>
-          <button type="button" onClick={()=>moveReader(1)} disabled={readerReadingIndex<0||readerReadingIndex>=state.readings.length-1} aria-label="Next plan reading">Next</button>
+          <button type="button" onClick={()=>moveReader(-1)} disabled={readerReadingIndex<=0} aria-label="Previous chapter in group plan">Previous Chapter</button>
+          <button type="button" onClick={()=>moveReader(1)} disabled={readerReadingIndex<0||readerReadingIndex>=visibleReadings.length-1} aria-label="Next chapter in group plan">Next Chapter</button>
         </nav>
         <button ref={readerCloseRef} className="bible-reader-close" type="button" onClick={closeReader}>Close</button>
       </header>
@@ -565,15 +631,30 @@ export function BibleStudySection({ user, profile, profiles, isAdmin, groupId, f
         {readerLoading ? <div className="bible-reader-skeleton" role="status" aria-label="Loading chapter">{Array.from({length:8},(_,index)=><i key={index}/>)}</div> : readerError ? <p className="bible-reader-error" role="alert">{readerError}</p> : chapter.length ? chapter.map((verse, index) => <p key={String(verse.verseNumber) + "-" + index}><sup>{verse.verseNumber}</sup>{verse.value}</p>) : <p className="bible-muted">No text is available for this chapter.</p>}
       </main>
       <footer>
-        <div aria-live="polite">{done(reader) ? <span className="bible-completed-label"><span aria-hidden="true">✓</span> Chapter completed</span> : reader.status==="archived"?<span>This reading is archived and available for review.</span>:<span>Take your time with today's reading.</span>}</div>
+        <div aria-live="polite">{done(reader) ? <span className="bible-completed-label"><span aria-hidden="true">✓</span> Chapter completed</span> : reader.status==="archived"?<span>This reading is archived and available for review.</span>:<span>Take your time with this group reading.</span>}</div>
         <div className="bible-reader-complete-actions">
           {actionError ? <span className="bible-reader-error" role="alert">{actionError}</span> : null}
-          <button className={done(reader)?"bible-btn primary bible-complete-button is-complete":"bible-btn primary bible-complete-button"} disabled={done(reader)||reader.status==="archived"||saving||readerLoading||Boolean(readerError)} onClick={()=>void completeReading(reader)} aria-live="polite">
-            <span className="bible-complete-check" aria-hidden="true">✓</span>{done(reader)?"Completed":"Mark as complete"}
+          <button className={done(reader)?"bible-btn primary bible-complete-button is-complete":"bible-btn primary bible-complete-button"} disabled={done(reader)||reader.status==="archived"||saving||readerLoading||Boolean(readerError)} onClick={()=>void completeReading(reader)} aria-busy={saving}>
+            {saving?<svg className="bible-completion-spinner" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="2.5" opacity=".3"/><path d="M21 12a9 9 0 0 0-9-9" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"/></svg>:<span className="bible-complete-check" aria-hidden="true">✓</span>}{saving?"Saving…":done(reader)?"Already completed":"Mark as complete"}
           </button>
         </div>
       </footer>
     </section></div> : null}
+    {groupCompletionSuccess ? <div className="full-bible-completion-backdrop bible-group-completion-backdrop" role="presentation" onMouseDown={(event)=>{if(event.target===event.currentTarget)setGroupCompletionSuccess(null);}}>
+      <section ref={completionDialogRef} className="full-bible-completion-dialog bible-group-completion-dialog" role="dialog" aria-modal="true" aria-labelledby="group-reading-completion-title" aria-describedby="group-reading-completion-message">
+        <div className="full-bible-completion-confetti" aria-hidden="true">{Array.from({length:10},(_,index)=><i key={index}/>)}</div>
+        <span className="full-bible-completion-mark" aria-hidden="true"><svg viewBox="0 0 64 64" fill="none"><circle className="full-bible-completion-ring" cx="32" cy="32" r="27" stroke="currentColor" strokeWidth="3"/><path className="full-bible-completion-check" d="m19 32 9 9 18-19" stroke="currentColor" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round"/></svg></span>
+        <p className="full-bible-completion-eyebrow">A MOMENT ROOTED IN THE WORD</p>
+        <h2 id="group-reading-completion-title">Chapter Completed!</h2>
+        <p id="group-reading-completion-message" className="full-bible-completion-message">You&apos;ve completed this group reading. Keep growing in God&apos;s Word.</p>
+        <strong className="full-bible-completion-passage">{groupCompletionSuccess.book} {groupCompletionSuccess.chapter}</strong>
+        <div className="bible-group-completion-actions">
+          <button ref={completionContinueRef} type="button" className="full-bible-completion-continue" onClick={()=>setGroupCompletionSuccess(null)}>Continue Reading</button>
+          <button type="button" className="bible-group-completion-progress" onClick={viewGroupProgress}>View My Progress</button>
+        </div>
+      </section>
+    </div> : null}
+    </>, document.body) : null}
     </> : null}
     {libraryReaderMounted && typeof document !== "undefined" ? createPortal(
       <FullBibleReader

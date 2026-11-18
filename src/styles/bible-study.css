@@ -224,17 +224,18 @@
 .bible-reader-heading { display:grid;grid-template-columns:minmax(0,1fr) auto auto;align-items:center;gap:.8rem;padding:1rem 1.25rem;border-bottom:1px solid var(--border); }
 .bible-reader-heading small { color:var(--primary-strong);font-size:.68rem;font-weight:800;letter-spacing:.09em; }
 .bible-reader-heading h2 { margin:.2rem 0 0;font-size:clamp(1.1rem,2vw,1.4rem);letter-spacing:-.025em; }
+.bible-reader-scheduled-date { display:block;margin-top:.2rem;color:var(--text-muted);font-size:.76rem; }
 .bible-reader-navigation { display:flex;gap:.35rem; }
-.bible-reader-navigation button,.bible-reader-close { display:inline-flex;align-items:center;justify-content:center;min-height:2.65rem;padding:.5rem .75rem;border:1px solid var(--border);border-radius:.7rem;color:var(--text);background:var(--surface-strong);font:650 .8rem inherit;cursor:pointer;transition:background 160ms ease,transform 160ms ease,border-color 160ms ease; }
+.bible-reader-navigation button,.bible-reader-close { display:inline-flex;align-items:center;justify-content:center;min-height:2.65rem;padding:.5rem .75rem;border:1px solid var(--border);border-radius:.7rem;color:var(--text);background:var(--surface-strong);font-family:inherit;font-size:.8rem;font-weight:650;cursor:pointer;transition:background 160ms ease,transform 160ms ease,border-color 160ms ease; }
 .bible-reader-navigation button:hover:not(:disabled),.bible-reader-close:hover { border-color:color-mix(in srgb,var(--primary-strong) 36%,var(--border));background:var(--surface-muted); }
 .bible-reader-navigation button:active:not(:disabled),.bible-reader-close:active { transform:scale(.97); }
-.bible-reader-navigation button:disabled { opacity:.42;cursor:not-allowed; }
+.bible-reader-navigation button:disabled { color:var(--text-muted);background:var(--surface-muted);opacity:.72;cursor:not-allowed; }
 .bible-reader-navigation button:focus-visible,.bible-reader-close:focus-visible,.bible-complete-button:focus-visible { outline:2px solid var(--primary-strong);outline-offset:2px; }
 .bible-reading-progress { display:flex;align-items:center;gap:.75rem;padding:.55rem 1.25rem;border-bottom:1px solid var(--border);background:var(--surface-muted); }
 .bible-reading-progress > span { display:block;flex:1;height:.32rem;overflow:hidden;border-radius:99px;background:color-mix(in srgb,var(--primary-strong) 16%,var(--surface-strong)); }
 .bible-reading-progress i { display:block;height:100%;border-radius:inherit;background:var(--primary-strong);transition:width 180ms ease; }
 .bible-reading-progress small { min-width:4.5rem;color:var(--text-muted);font-size:.72rem;font-variant-numeric:tabular-nums;text-align:right; }
-.bible-reader > main { min-height:0;overflow:auto;padding:clamp(1.25rem,5vw,3.7rem);overscroll-behavior:contain;-webkit-overflow-scrolling:touch;scroll-behavior:smooth;font-family:Georgia,"Times New Roman",serif;line-height:1.95; }
+.bible-reader > main { min-height:0;overflow:auto;padding:clamp(1.25rem,5vw,3.7rem);overscroll-behavior:contain;-webkit-overflow-scrolling:touch;scroll-behavior:smooth;scrollbar-color:var(--primary-strong) var(--surface-muted);font-family:Georgia,"Times New Roman",serif;line-height:1.95; }
 .bible-reader > main p { max-width:44rem;margin:0 auto 1.05rem;color:var(--text);font-size:clamp(1.05rem,1.45vw,1.18rem);line-height:1.92; }
 .bible-reader > main sup { margin-right:.45rem;color:var(--primary-strong);font:750 .7rem Inter,system-ui,sans-serif; }
 .bible-reader-skeleton { display:grid;gap:.8rem;width:min(100%,44rem);margin:0 auto; }
@@ -243,17 +244,28 @@
 .bible-reader-skeleton i:nth-child(3n + 1) { width:91%; }
 .bible-reader-error { color:var(--danger);font:600 .82rem/1.5 Inter,system-ui,sans-serif; }
 .bible-reader > footer { display:flex;align-items:center;justify-content:space-between;gap:1rem;min-height:4.4rem;padding:.75rem 1.25rem;border-top:1px solid var(--border);color:var(--text-muted);font-size:.8rem; }
-.bible-reader-complete-actions { display:grid;justify-items:end;gap:.4rem; }
-.bible-complete-button { min-height:2.9rem;padding:.75rem 1.05rem;border:1px solid transparent;border-radius:.8rem;color:var(--color-on-primary);background:var(--primary);box-shadow:0 3px 10px color-mix(in srgb,var(--primary-strong) 24%,transparent);transition:transform 160ms ease,box-shadow 160ms ease,background 160ms ease; }
+.bible-reader > footer > div:first-child { min-width:0;flex:1 1 auto;line-height:1.45;overflow-wrap:anywhere; }
+.bible-reader-complete-actions { display:grid;width:min(100%,16rem);min-width:0;flex:0 1 16rem;justify-items:stretch;gap:.4rem; }
+.bible-complete-button { min-width:min(100%,14rem);min-height:3.15rem;padding:.78rem 1.1rem;border:1px solid color-mix(in srgb,var(--color-on-accent) 28%,var(--color-accent));border-radius:.8rem;color:var(--color-on-accent);background:var(--color-accent);font-weight:800;box-shadow:0 3px 10px color-mix(in srgb,var(--color-accent) 28%,transparent);transition:transform 160ms ease,box-shadow 160ms ease,background 160ms ease; }
+.bible-reader .bible-complete-button { display:inline-flex;width:100%;min-width:0;min-height:3.25rem;align-items:center;justify-content:center;gap:.55rem;padding:.72rem .95rem;border:2px solid color-mix(in srgb,var(--color-on-accent,#fff) 24%,var(--color-accent,var(--accent,#764ba2)));color:var(--color-on-accent,#fff);background:var(--color-accent,var(--accent,#764ba2));font-family:inherit;font-size:.95rem;font-weight:800;line-height:1.3;text-align:center;white-space:normal;overflow-wrap:anywhere; }
+.bible-reader .bible-complete-button:not(.is-complete):not(:disabled) { color:var(--color-on-accent,#fff);background:var(--color-accent,var(--accent,#764ba2)); }
+.bible-reader .bible-complete-button .bible-complete-check,.bible-reader .bible-complete-button .bible-completion-spinner { flex:none; }
+.bible-reader .bible-complete-button.is-complete { color:var(--success);border-color:color-mix(in srgb,var(--success) 35%,var(--border));background:var(--success-soft); }
+.bible-reader .bible-complete-button:focus-visible { outline:3px solid var(--primary-strong);outline-offset:3px; }
 .bible-complete-button:hover:not(:disabled) { transform:translateY(-1px);box-shadow:0 6px 16px color-mix(in srgb,var(--primary-strong) 30%,transparent); }
 .bible-complete-button:active:not(:disabled) { transform:scale(.97); }
+.bible-complete-button:focus-visible { outline:3px solid var(--primary-strong);outline-offset:3px; }
 .bible-complete-button:disabled { cursor:default; }
+.bible-complete-button:disabled:not(.is-complete):not([aria-busy="true"]) { border-color:var(--border);color:var(--text-muted);background:var(--surface-muted);box-shadow:none; }
+.bible-complete-button[aria-busy="true"] { cursor:progress; }
+.bible-completion-spinner { width:1.1rem;height:1.1rem;animation:bible-completion-spin 850ms linear infinite; }
 .bible-complete-button.is-complete { color:var(--success);border-color:color-mix(in srgb,var(--success) 28%,var(--border));background:var(--success-soft);box-shadow:none; }
 .bible-complete-check { display:inline-grid;place-items:center;width:1.15rem;height:1.15rem;border:1.5px solid currentColor;border-radius:50%;font-size:.72rem;line-height:1; }
 .bible-complete-button.is-complete .bible-complete-check { animation:bible-completion-pop 380ms cubic-bezier(.2,.8,.2,1) both; }
 @keyframes bible-reader-enter { from { opacity:0; } to { opacity:1; } }
 @keyframes bible-reading-shimmer { to { background-position:-200% 0; } }
 @keyframes bible-completion-pop { 0% { transform:scale(.55);opacity:.35; } 65% { transform:scale(1.16); } 100% { transform:scale(1);opacity:1; } }
+@keyframes bible-completion-spin { to { transform:rotate(360deg); } }
 @media(max-width:700px) {
   .bible-study { padding:.2rem 0; }
   .bible-page-header { align-items:flex-start; }
@@ -289,24 +301,31 @@
   .bible-answers { margin-left:.25rem; padding-left:.55rem; }
 }
 @media(max-width:640px) {
-  .bible-reader-overlay { padding:0; }
-  .bible-reader-overlay { display:block;height:100%;height:100dvh;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch; }
-  .bible-reader { width:100%;height:auto;min-height:100%;min-height:100dvh;border:0;border-radius:0;grid-template-rows:auto auto auto auto;overflow:visible; }
+  .bible-reader-overlay { display:grid;height:100dvh;overflow:hidden;padding:0;overscroll-behavior:contain; }
+  .bible-reader { width:100%;height:100%;max-height:100dvh;min-height:0;border:0;border-radius:0;grid-template-rows:auto auto minmax(0,1fr) auto;overflow:hidden; }
   .bible-reader-heading { grid-template-columns:minmax(0,1fr) auto;padding:calc(.7rem + env(safe-area-inset-top)) 1rem .7rem;gap:.55rem; }
   .bible-reader-navigation { grid-column:1/-1;grid-row:2; }
-  .bible-reader-navigation button { min-width:5rem; }
+  .bible-reader-navigation button { min-width:5rem;flex:1; }
   .bible-reader-close { grid-column:2;grid-row:1; }
   .bible-reading-progress { padding:.5rem 1rem; }
-  .bible-reader > main { min-height:0;overflow:visible;padding:1.35rem 1.2rem;overscroll-behavior:auto;scroll-behavior:auto; }
-  .bible-reader > main p { font-size:1.08rem;line-height:1.9; }
+  .bible-reader > main { min-height:0;overflow:auto;padding:1.35rem 1.2rem;overscroll-behavior:contain;scroll-behavior:auto; }
+  .bible-reader > main p { font-size:1.08rem;line-height:1.8; }
   .bible-reader > footer { align-items:stretch;flex-direction:column;gap:.55rem;padding:.7rem 1rem calc(.7rem + env(safe-area-inset-bottom)); }
-  .bible-reader-complete-actions { justify-items:stretch; }
-  .bible-complete-button { width:100%;min-height:3rem; }
+  .bible-reader-complete-actions { width:100%;flex-basis:auto;justify-items:stretch; }
+  .bible-group-completion-actions { grid-template-columns:1fr; }
+  .bible-group-completion-actions button { min-height:3rem; }
+}
+@media(max-height:650px) and (min-width:641px) {
+  .bible-reader { height:calc(100dvh - 2rem);min-height:0; }
+  .bible-reader-heading { padding:.65rem 1rem; }
+  .bible-reader > main { padding:1.2rem 2rem; }
+  .bible-reader > footer { min-height:3.8rem;padding:.55rem .9rem; }
 }
 @media(prefers-reduced-motion:reduce) {
   .bible-reader-overlay { animation:none; }
   .bible-reader-skeleton i { animation:none; }
-  .bible-reading-progress i,.bible-reader-navigation button,.bible-reader-close,.bible-complete-button { transition:none; }
+  .bible-reading-progress i,.bible-reader-navigation button,.bible-reader-close,.bible-complete-button,.bible-group-completion-progress { transition:none; }
+  .bible-completion-spinner { animation:none; }
   .bible-complete-button.is-complete .bible-complete-check { animation:none; }
   .bible-voice-live-indicator { animation:none; }
   .bible-voice-waveform i { transition:none; }
@@ -837,7 +856,9 @@
 .personal-bible-plan-select .personal-bible-status { white-space: nowrap; }
 .personal-bible-plan-actions { display: flex; gap: .2rem; }
 .personal-bible-plan-actions button { min-height: 2.15rem; padding: .3rem .48rem; border: 1px solid var(--border); border-radius: .55rem; color: var(--text-muted); background: var(--surface-strong); font: 750 .65rem inherit; cursor: pointer; }
+.personal-bible-plan-actions button.personal-bible-plan-mark-read { border-color: var(--primary-strong); color: var(--color-on-primary, #fff); background: var(--primary-strong); }
 .personal-bible-plan-actions button:hover:not(:disabled) { border-color: var(--primary-strong); color: var(--primary-strong); }
+.personal-bible-plan-actions button.personal-bible-plan-mark-read:hover:not(:disabled) { color: var(--color-on-primary, #fff); background: var(--primary-hover, var(--primary-strong)); }
 .personal-bible-plan-actions button.danger { color: var(--danger); }
 .personal-bible-plan-actions button:disabled { opacity: .55; cursor: wait; }
 @media (max-width: 520px) {
@@ -1053,6 +1074,7 @@
 .partner-roster-member { display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:center; gap:.26rem .55rem; padding:.43rem .48rem; border:1px solid #f0ebf2; border-radius:.72rem; background:#fff; }
 .partner-roster-profile { display:inline-flex; align-items:center; gap:.48rem; min-width:0; padding:0; border:0; text-align:left; color:inherit; background:transparent; cursor:pointer; }
 .partner-identity { display:grid; place-items:center; flex:none; width:2.15rem; height:2.15rem; overflow:hidden; border:2px solid #fff; border-radius:50%; color:#5b3876; background:linear-gradient(145deg,#f1e8f6,#e2d4ed); box-shadow:0 1px 5px #26123715; font-size:.64rem; font-weight:850; }
+.partner-identity > img { object-position:center; }
 .partner-identity--small { width:1.72rem; height:1.72rem; font-size:.53rem; }
 .partner-identity--large { width:3.5rem; height:3.5rem; font-size:.95rem; }
 .partner-profile-comparison { display:grid; gap:.65rem; margin:1rem 0; padding:.9rem; border:1px solid color-mix(in srgb,var(--color-accent) 28%,var(--border)); border-radius:1rem; background:color-mix(in srgb,var(--color-accent) 5%,var(--surface-strong)); }
@@ -1127,13 +1149,51 @@
 .partner-invitation-actions .partner-primary-action { min-height:2.25rem; }
 .partner-text-action { min-height:1.8rem; padding:.3rem .45rem; border:0; color:#7f7386; background:transparent; font-size:.57rem!important; font-weight:750!important; cursor:pointer; }
 .partner-challenge-layout { display:grid; grid-template-columns:minmax(14rem,.72fr) minmax(0,1.4fr); align-items:start; gap:.75rem; }
-.partner-challenge-create { display:grid; gap:.45rem; padding:.9rem; border:1px solid #e7dfeb; border-radius:1rem; background:linear-gradient(150deg,#f8f3fa,#fff); }
+.partner-challenge-create { position:sticky; top:1rem; display:grid; gap:.45rem; min-width:0; padding:1rem; border:1px solid var(--partner-line); border-radius:1rem; background:var(--partner-raised); }
 .partner-challenge-create-mark { margin-bottom:.1rem; }
 .partner-challenge-create > small { font-size:.52rem; }
 .partner-challenge-create h4 { margin:0; font-size:.9rem; }
 .partner-challenge-create > p { margin:0; color:var(--partner-muted); font-size:.62rem; line-height:1.5; }
 .partner-challenge-create form { display:grid; gap:.55rem; margin-top:.2rem; }
 .partner-challenge-create .partner-primary-action { justify-self:start; }
+.partner-challenge-submit:disabled { cursor:wait; opacity:.78; transform:none; box-shadow:none; }
+.partner-button-spinner { width:1rem; height:1rem; border:2px solid currentColor; border-right-color:transparent; border-radius:50%; animation:partnerChallengeSpin .8s linear infinite; }
+@keyframes partnerChallengeSpin { to { transform:rotate(360deg); } }
+.partner-challenge-submit { min-height:2.75rem; width:100%; justify-content:center; color:#fff!important; background:var(--partner-plum)!important; }
+.partner-challenge-submit:hover:not(:disabled) { filter:brightness(1.08); }
+.partner-action-menu { position:relative; flex:none; }
+.partner-action-menu-button { display:grid; place-items:center; width:2.35rem; height:2.35rem; padding:0; border:1px solid var(--partner-line); border-radius:.65rem; color:var(--partner-muted); background:var(--partner-raised); cursor:pointer; }
+.partner-action-menu-button svg { width:1.1rem; height:1.1rem; }
+.partner-action-menu-popover { position:absolute; z-index:30; top:calc(100% + .35rem); right:0; display:grid; min-width:11.5rem; padding:.35rem; border:1px solid var(--partner-line); border-radius:.75rem; background:var(--partner-surface); box-shadow:var(--partner-shadow); }
+.partner-action-menu-popover button { display:flex; align-items:center; gap:.45rem; min-height:2.35rem; padding:.45rem .55rem; border:0; border-radius:.52rem; color:var(--partner-ink); background:transparent; font:inherit; font-size:.78rem; text-align:left; cursor:pointer; }
+.partner-action-menu-popover button:hover { background:var(--partner-soft); }
+.partner-action-menu-popover button.is-danger { color:var(--partner-danger); }
+.partner-action-menu-popover svg { width:.95rem; height:.95rem; }
+.partner-confirm-backdrop { position:fixed; z-index:2100; inset:0; display:grid; place-items:center; overflow:auto; padding:calc(1rem + env(safe-area-inset-top)) 1rem calc(1rem + env(safe-area-inset-bottom)); background:rgb(17 12 22 / 68%); backdrop-filter:blur(8px); }
+.partner-confirm-dialog { display:grid; justify-items:center; gap:.75rem; width:min(100%,28rem); padding:clamp(1.25rem,4vw,2rem); border:1px solid var(--partner-line); border-radius:1.15rem; color:var(--partner-ink); background:var(--partner-surface); box-shadow:var(--partner-shadow); text-align:center; }
+.partner-confirm-mark { display:grid; place-items:center; width:3.25rem; height:3.25rem; border-radius:1rem; color:var(--partner-danger); background:color-mix(in srgb,var(--partner-danger) 12%,var(--partner-surface)); }
+.partner-confirm-mark svg { width:1.35rem; height:1.35rem; }
+.partner-confirm-dialog h2 { margin:0; font-size:1.35rem; }
+.partner-confirm-dialog p { max-width:23rem; margin:0; color:var(--partner-muted); line-height:1.55; }
+.partner-confirm-actions { display:grid; grid-template-columns:1fr 1fr; gap:.55rem; width:100%; margin-top:.35rem; }
+.partner-confirm-actions button { min-height:2.75rem; border-radius:.75rem; font:inherit; font-weight:800; cursor:pointer; }
+.partner-confirm-cancel { border:1px solid var(--partner-line); color:var(--partner-ink); background:var(--partner-raised); }
+.partner-confirm-delete { border:1px solid var(--partner-danger); color:#fff; background:var(--partner-danger); }
+.partner-challenge-success-backdrop { position:fixed; z-index:2000; inset:0; display:grid; place-items:center; overflow:auto; padding:calc(1rem + env(safe-area-inset-top)) 1rem calc(1rem + env(safe-area-inset-bottom)); background:rgb(17 12 22 / 68%); backdrop-filter:blur(8px); animation:partnerFadeIn .18s ease-out both; }
+.partner-challenge-success-dialog { position:relative; display:grid; justify-items:center; gap:.7rem; width:min(100%,34rem); max-height:100%; overflow:auto; padding:clamp(1.4rem,4vw,2.2rem); border:1px solid var(--border); border-radius:1.3rem; color:var(--text); background:var(--surface-strong); box-shadow:var(--shadow-lg); text-align:center; }
+.partner-challenge-success-close { position:absolute; top:.75rem; right:.75rem; display:grid; place-items:center; width:2.4rem; height:2.4rem; border:1px solid var(--border); border-radius:.7rem; color:var(--text-muted); background:var(--surface-muted); cursor:pointer; }
+.partner-challenge-success-close svg { width:1rem; height:1rem; }
+.partner-challenge-success-close:focus-visible,.partner-challenge-success-action:focus-visible { outline:3px solid var(--primary-strong); outline-offset:3px; }
+.partner-challenge-success-mark { display:grid; place-items:center; width:3.5rem; height:3.5rem; border:1px solid color-mix(in srgb,var(--primary-strong) 34%,var(--border)); border-radius:1.1rem; color:var(--primary-strong); background:var(--primary-soft); }
+.partner-challenge-success-mark svg { width:1.7rem; height:1.7rem; stroke-width:2.2; }
+.partner-challenge-success-eyebrow { margin:.2rem 0 0; color:var(--primary-strong); font-size:.67rem; font-weight:850; letter-spacing:.12em; }
+.partner-challenge-success-dialog h2 { margin:0; font-size:clamp(1.5rem,5vw,2rem); letter-spacing:-.04em; }
+.partner-challenge-success-dialog > p:not(.partner-challenge-success-eyebrow) { max-width:27rem; margin:0; color:var(--text-muted); line-height:1.6; }
+.partner-challenge-success-name { width:100%; padding:.85rem 1rem; border:1px solid var(--border); border-radius:.85rem; color:var(--text); background:var(--surface-muted); font-size:1.05rem; }
+.partner-challenge-success-dates { color:var(--text-muted); font-size:.85rem; }
+.partner-challenge-success-action { display:inline-flex; align-items:center; justify-content:center; gap:.55rem; min-height:3rem; margin-top:.35rem; padding:.7rem 1.1rem; border:1px solid var(--color-brand-deep,#35165c); border-radius:.8rem; color:#fff; background:var(--color-brand-deep,#35165c); font:inherit; font-weight:800; cursor:pointer; transition:transform .16s ease,filter .16s ease; }
+.partner-challenge-success-action:hover { filter:brightness(1.12); transform:translateY(-1px); }
+.partner-challenge-success-action svg { width:1rem; height:1rem; }
 .partner-inline-empty { display:grid; gap:.15rem; padding:.65rem; border:1px dashed #d4c8dc; border-radius:.65rem; color:#65596e; background:#fff; }
 .partner-inline-empty strong { font-size:.65rem; }
 .partner-inline-empty span { font-size:.57rem; line-height:1.4; }
@@ -1152,6 +1212,7 @@
 .partner-milestone-shelf > p { margin:.15rem 0 0; color:var(--partner-muted); font-size:.57rem; line-height:1.4; }
 .partner-active-challenges { display:grid; gap:.55rem; }
 .partner-challenge-card { display:grid; gap:.48rem; padding:.75rem; border:1px solid var(--partner-line); border-radius:.9rem; background:#fff; }
+.partner-challenge-card:focus { outline:3px solid var(--primary-strong); outline-offset:3px; }
 .partner-challenge-card.is-finished { border-color:#e4d5ae; background:#fffdf5; }
 .partner-challenge-card-heading { display:flex; align-items:center; gap:.5rem; }
 .partner-challenge-badge { display:grid; place-items:center; width:2rem; height:2rem; flex:none; border-radius:.65rem; color:#74469b; background:#f1e9f5; }
@@ -1166,11 +1227,29 @@
 .partner-challenge-dates { display:flex; justify-content:space-between; gap:.4rem; color:var(--partner-muted); font-size:.52rem; }
 .partner-challenge-contributors { display:grid; gap:.3rem; }
 .partner-challenge-contributors > div { display:flex; align-items:center; gap:.4rem; min-width:0; padding:.34rem .42rem; border-radius:.6rem; background:#faf8fb; }
-.partner-challenge-contributors > div > span { overflow:hidden; flex:1; font-size:.55rem; text-overflow:ellipsis; white-space:nowrap; }
+.partner-challenge-contributors > div > .partner-identity--small { flex:0 0 2.5rem; width:2.5rem; height:2.5rem; }
+.partner-challenge-contributor-name { min-width:0; overflow:hidden; flex:1 1 0; font-size:.55rem; text-overflow:ellipsis; white-space:nowrap; }
 .partner-challenge-contributors > div > strong { color:#64596b; font-size:.53rem; white-space:nowrap; }
 .partner-challenge-contributors > div > i { display:grid; place-items:center; color:#438055; font-style:normal; }
 .partner-challenge-contributors > div > i svg { width:.8rem; height:.8rem; }
 .partner-challenge-card > .partner-text-action { justify-self:end; }
+.partner-challenge-card { position:relative; gap:.38rem; padding:.65rem; background:var(--partner-surface); }
+.partner-challenge-card-heading { min-width:0; }
+.partner-challenge-card-heading h4 { max-width:100%; font-size:.82rem; }
+.partner-challenge-progress-value { color:var(--partner-purple); font-size:.78rem!important; }
+.partner-challenge-track { height:.42rem; border-radius:99px; background:var(--partner-soft); }
+.partner-challenge-track i { display:block; height:100%; border-radius:99px; background:linear-gradient(90deg,var(--partner-purple),var(--partner-gold)); }
+.partner-challenge-dates { color:var(--partner-muted); }
+.partner-challenge-contributors > div { background:var(--partner-raised); }
+.partner-moments-toggle { margin-left:auto; display:grid; place-items:center; width:2.25rem; height:2.25rem; border:1px solid var(--partner-line); border-radius:.65rem; color:var(--partner-muted); background:var(--partner-raised); cursor:pointer; }
+.partner-moments-toggle svg { width:1rem; height:1rem; transition:transform .18s ease; }
+.partner-moments-toggle.is-expanded svg { transform:rotate(180deg); }
+.partner-activity-heading { flex-wrap:nowrap; }
+.partner-activity-heading > div { flex:1; min-width:0; }
+.partner-activity-panel,.partner-message-panel { background:var(--partner-surface); }
+.partner-activity-feed { max-height:none; }
+.partner-activity-item { grid-template-columns:auto minmax(0,1fr) auto; }
+.partner-activity-action-menu { align-self:start; }
 .partner-challenge-empty { display:grid; justify-items:center; gap:.3rem; min-height:9rem; text-align:center; }
 .partner-challenge-empty-mark { display:grid; place-items:center; width:2rem; height:2rem; border-radius:.7rem; color:#79569a; background:#f0e8f5; }
 .partner-challenge-empty-mark svg { width:1rem; height:1rem; }
@@ -1194,8 +1273,13 @@
 .partner-message-form .partner-primary-action { min-height:2rem; padding:.4rem .58rem; }
 .partner-moments-empty { margin:.1rem 0; padding:.5rem; border-radius:.6rem; color:var(--partner-muted); background:#faf8fb; font-size:.58rem; line-height:1.5; }
 .partner-recent-messages { display:grid; gap:.4rem; padding-top:.48rem; border-top:1px solid #f0ebf2; }
+.partner-recent-messages-heading { display:flex; align-items:center; gap:.6rem; }
+.partner-recent-messages-heading > div { display:grid; flex:1; min-width:0; gap:.15rem; }
+.partner-recent-messages-heading > div > small { color:var(--partner-purple); font-size:.5rem; font-weight:850; letter-spacing:.08em; }
+.partner-recent-messages-heading > div > span { color:var(--partner-muted); font-size:.54rem; }
 .partner-recent-messages > small { color:var(--partner-purple); font-size:.5rem; font-weight:850; letter-spacing:.08em; }
 .partner-recent-messages > article { display:flex; align-items:flex-start; gap:.42rem; padding:.38rem; border-radius:.65rem; background:#faf8fb; }
+.partner-recent-messages > article > .partner-action-menu { margin-left:auto; }
 .partner-recent-messages > article > div { display:grid; grid-template-columns:minmax(0,1fr) auto; gap:.1rem .35rem; flex:1; min-width:0; }
 .partner-recent-messages > article strong { overflow:hidden; font-size:.55rem; text-overflow:ellipsis; white-space:nowrap; }
 .partner-recent-messages > article time { color:#968a9d; font-size:.48rem; }
@@ -1408,9 +1492,12 @@
   .partner-calendar-legend > span { font-size:.43rem; }
 }
 @media(prefers-reduced-motion:reduce) {
-  .partner-experience *, .partner-profile-backdrop,.partner-profile-sheet { scroll-behavior:auto!important; animation:none!important; transition:none!important; }
+  .partner-experience *, .partner-profile-backdrop,.partner-profile-sheet,.partner-challenge-success-backdrop,.partner-button-spinner { scroll-behavior:auto!important; animation:none!important; transition:none!important; }
   .partner-angel,.partner-angel-wing,.partner-angel-eyes,.partner-angel-halo,.partner-hero-spark { animation:none!important; }
   .partner-calendar-day:hover,.partner-primary-action:hover,.partner-partnership-card:hover,.partner-reaction-row button:hover { transform:none; }
+}
+@media(max-width:640px) {
+  .partner-challenge-submit,.partner-challenge-success-action { width:100%; }
 }
 
 /* Spacious Partner Streak experience with independently tuned app themes. */
@@ -1646,7 +1733,7 @@
 .partner-challenge-card.is-finished .partner-challenge-track { background:var(--partner-warning-soft); }
 .partner-challenge-dates { color:var(--partner-muted); font-size:.82rem; }
 .partner-challenge-contributors > div { gap:.6rem; padding:.55rem; color:var(--partner-ink); background:var(--partner-raised); }
-.partner-challenge-contributors > div > span { color:var(--partner-ink); font-size:.88rem; }
+.partner-challenge-contributor-name { color:var(--partner-ink); font-size:.88rem; }
 .partner-challenge-contributors > div > strong { color:var(--partner-muted); font-size:.82rem; }
 .partner-challenge-empty { gap:.55rem; min-height:12rem; color:var(--partner-muted); }
 .partner-challenge-empty > strong { color:var(--partner-ink); font-size:1rem; }
@@ -1664,6 +1751,9 @@
 .partner-message-form > div > small { color:var(--partner-muted); font-size:.8rem; }
 .partner-moments-empty { padding:.8rem; color:var(--partner-muted); background:var(--partner-raised); font-size:.9rem; }
 .partner-recent-messages { gap:.6rem; padding-top:.8rem; border-color:var(--partner-line); }
+.partner-recent-messages-heading { gap:.75rem; }
+.partner-recent-messages-heading > div > small { font-size:.78rem; }
+.partner-recent-messages-heading > div > span { color:var(--partner-muted); font-size:.8rem; }
 .partner-recent-messages > small { color:var(--partner-purple); font-size:.78rem; }
 .partner-recent-messages > article { gap:.65rem; padding:.6rem; background:var(--partner-raised); }
 .partner-recent-messages > article strong { color:var(--partner-ink); font-size:.88rem; }
@@ -1805,6 +1895,15 @@
   .partner-calendar-selected span { text-align:left; }
   .partner-profile-sheet { width:100%; max-height:94vh; padding:1rem; }
   .partner-profile-stats { grid-template-columns:repeat(2,minmax(0,1fr)); }
+  .partner-challenge-create { position:static; }
+  .partner-challenge-submit { width:100%; }
+  .partner-challenge-card-heading h4 { font-size:.95rem; }
+  .partner-challenge-dates { align-items:flex-start; flex-direction:column; }
+  .partner-challenge-contributors > div { display:grid; grid-template-columns:2.5rem minmax(0,1fr) auto auto; }
+  .partner-action-menu-popover { position:fixed; right:.75rem; left:.75rem; top:auto; bottom:calc(.75rem + env(safe-area-inset-bottom)); width:auto; min-width:0; }
+  .partner-confirm-actions { grid-template-columns:1fr; }
+  .partner-confirm-dialog { max-height:calc(100vh - 2rem); overflow:auto; }
+  .partner-activity-item { grid-template-columns:auto minmax(0,1fr) auto; }
 }
 @media(max-width:420px) {
   .partner-hero { padding:1rem; }
@@ -1916,6 +2015,155 @@
 .bible-library-launcher-heading .bible-page-eyebrow { font-size: .66rem; }
 .bible-library-launcher-progress { display: grid; gap: .2rem; color: var(--text-muted); font-size: .78rem; }
 .bible-library-launcher-progress small { color: var(--text-muted); font-size: .7rem; }
+
+.partner-profile-backdrop.partner-experience {
+  position: fixed;
+  z-index: 2100;
+  inset: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr);
+  place-items: center;
+  place-content: center;
+  justify-content: center;
+  align-content: center;
+  width: auto;
+  min-height: 100vh;
+  min-height: 100dvh;
+  max-height: 100dvh;
+  margin: 0;
+  padding: max(.75rem, env(safe-area-inset-top)) max(.75rem, env(safe-area-inset-right)) max(.75rem, env(safe-area-inset-bottom)) max(.75rem, env(safe-area-inset-left));
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  background: color-mix(in srgb, #110b18 72%, transparent);
+  animation: partnerFadeIn .18s ease-out both;
+}
+.partner-profile-backdrop.partner-experience .partner-profile-sheet {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  width: min(100%, 68rem);
+  height: auto;
+  max-height: min(60rem, calc(100vh - 1.5rem));
+  max-height: min(60rem, calc(100dvh - 1.5rem - env(safe-area-inset-top) - env(safe-area-inset-bottom)));
+  min-height: 0;
+  overflow: hidden;
+  padding: clamp(1rem, 2.4vw, 1.8rem);
+  border: 1px solid var(--partner-line);
+  border-radius: 1.35rem;
+  color: var(--partner-ink);
+  background: var(--partner-surface);
+  box-shadow: 0 28px 90px #0e071b70;
+  animation: partnerProfileEnter .22s cubic-bezier(.2, .8, .25, 1) both;
+}
+.partner-profile-backdrop.partner-experience .partner-profile-header {
+  min-width: 0;
+  padding-bottom: 1rem;
+}
+.partner-profile-backdrop.partner-experience .partner-profile-person {
+  min-width: 0;
+}
+.partner-profile-backdrop.partner-experience .partner-profile-person > div {
+  min-width: 0;
+}
+.partner-profile-backdrop.partner-experience .partner-profile-person h2 {
+  overflow-wrap: anywhere;
+}
+.partner-profile-backdrop.partner-experience .partner-sheet-close {
+  flex: 0 0 auto;
+  width: 2.75rem;
+  height: 2.75rem;
+}
+.partner-profile-backdrop.partner-experience .partner-sheet-close:focus-visible {
+  outline: 3px solid var(--partner-gold);
+  outline-offset: 3px;
+}
+.partner-profile-content {
+  display: grid;
+  align-content: start;
+  gap: 1rem;
+  min-width: 0;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: .15rem .15rem .5rem;
+  scrollbar-gutter: stable;
+  -webkit-overflow-scrolling: touch;
+}
+.partner-profile-content > * { min-width: 0; }
+.partner-profile-backdrop.partner-experience .partner-profile-stats {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: .75rem;
+}
+.partner-profile-backdrop.partner-experience .partner-profile-stats article {
+  min-width: 0;
+  min-height: 7rem;
+  padding: .9rem;
+}
+.partner-profile-backdrop.partner-experience .partner-profile-comparison {
+  margin: 0;
+}
+.partner-profile-backdrop.partner-experience .partner-calendar {
+  min-width: 0;
+}
+.partner-profile-backdrop.partner-experience .partner-calendar-day {
+  min-width: 0;
+}
+.partner-profile-backdrop.partner-experience .partner-profile-today > div span {
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+@keyframes partnerProfileEnter {
+  from { opacity: .7; transform: translateY(.5rem) scale(.99); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+@media(max-width:720px) {
+  .partner-profile-backdrop.partner-experience {
+    padding: max(.5rem, env(safe-area-inset-top)) max(.5rem, env(safe-area-inset-right)) max(.5rem, env(safe-area-inset-bottom)) max(.5rem, env(safe-area-inset-left));
+  }
+  .partner-profile-backdrop.partner-experience .partner-profile-sheet {
+    width: 100%;
+    max-height: calc(100vh - 1rem);
+    max-height: calc(100dvh - 1rem - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+    padding: 1rem;
+    border-radius: 1.05rem;
+  }
+  .partner-profile-backdrop.partner-experience .partner-profile-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .partner-profile-backdrop.partner-experience .partner-profile-comparison-grid {
+    grid-template-columns: 1fr;
+  }
+}
+@media(max-width:420px) {
+  .partner-profile-backdrop.partner-experience .partner-profile-sheet {
+    padding: .85rem;
+  }
+  .partner-profile-backdrop.partner-experience .partner-profile-header {
+    align-items: flex-start;
+    gap: .5rem;
+  }
+  .partner-profile-backdrop.partner-experience .partner-profile-person {
+    gap: .55rem;
+  }
+  .partner-profile-backdrop.partner-experience .partner-profile-person h2 {
+    font-size: 1.2rem;
+  }
+  .partner-profile-backdrop.partner-experience .partner-profile-stats {
+    gap: .5rem;
+  }
+  .partner-profile-backdrop.partner-experience .partner-profile-stats article {
+    min-height: 6rem;
+    padding: .65rem;
+  }
+  .partner-profile-backdrop.partner-experience .partner-calendar {
+    padding: .65rem;
+  }
+}
+@media(prefers-reduced-motion:reduce) {
+  .partner-profile-backdrop.partner-experience,
+  .partner-profile-backdrop.partner-experience .partner-profile-sheet { animation: none; }
+}
 
 @keyframes full-bible-overlay-enter { from { opacity: 0; } to { opacity: 1; } }
 @keyframes full-bible-reader-enter { from { opacity: 0; transform: translateY(.6rem) scale(.99); } to { opacity: 1; transform: translateY(0) scale(1); } }
@@ -2217,6 +2465,39 @@
 .full-bible-completion-continue:hover { filter: brightness(1.08); box-shadow: 0 10px 24px color-mix(in srgb, var(--color-accent, var(--accent)) 34%, transparent); transform: translateY(-1px); }
 .full-bible-completion-continue:active { filter: brightness(.96); transform: translateY(1px) scale(.99); }
 .full-bible-completion-continue:focus-visible { outline: 3px solid var(--primary-strong); outline-offset: 3px; }
+
+.full-bible-completion-backdrop.bible-group-completion-backdrop {
+  --completion-gutter: clamp(.8rem, 3vw, 2rem);
+  position: fixed;
+  z-index: 1400;
+  inset: 0;
+  height: 100vh;
+  height: 100dvh;
+  max-height: 100dvh;
+  box-sizing: border-box;
+  overflow-y: auto;
+  padding: calc(var(--completion-gutter) + env(safe-area-inset-top)) var(--completion-gutter) calc(var(--completion-gutter) + env(safe-area-inset-bottom));
+  place-items: center;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+.bible-group-completion-dialog {
+  box-sizing: border-box;
+  width: min(100%, 34rem);
+  max-height: calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom) - var(--completion-gutter) - var(--completion-gutter));
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+.bible-group-completion-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .65rem; width: 100%; margin-top: 1.4rem; }
+.bible-group-completion-actions .full-bible-completion-continue { min-height: 3rem; margin: 0; }
+.bible-group-completion-progress { min-height: 3rem; padding: .7rem 1rem; border: 1px solid var(--border); border-radius: .85rem; color: var(--text); background: var(--surface-muted); font: inherit; font-weight: 750; cursor: pointer; transition: background 150ms ease, border-color 150ms ease, transform 150ms ease; }
+.bible-group-completion-progress:hover { border-color: color-mix(in srgb, var(--primary-strong) 38%, var(--border)); background: var(--primary-soft); transform: translateY(-1px); }
+.bible-group-completion-progress:active { transform: translateY(1px) scale(.99); }
+.bible-group-completion-progress:focus-visible { outline: 3px solid var(--primary-strong); outline-offset: 3px; }
+@media(max-width:640px) {
+  .bible-group-completion-actions { grid-template-columns: 1fr; }
+}
 
 @media(max-width:780px) {
   .full-bible-modal-header { grid-template-columns: minmax(0, 1fr) auto; gap: .6rem .8rem; }

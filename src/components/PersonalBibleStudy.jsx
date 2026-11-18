@@ -168,6 +168,16 @@ export function PersonalBibleStudy({ user, onReadingsChange }) {
     setReaderOpen(true);
   }
 
+  function markPlanReadingAsRead(reading) {
+    if (saving || !streakAvailable || reading.status === "completed") return;
+    setReaderSelection((current) => ({ book: reading.book, chapter: reading.chapter, key: current.key + 1 }));
+    setSelectedReadingId(reading.id);
+    setActionError("");
+    setNotice("");
+    setReaderOpen(true);
+    void setReadingStatus("completed", reading);
+  }
+
   function dismissChapterCompletion() {
     setCompletionSuccess(null);
     setCelebration(null);
@@ -235,12 +245,12 @@ export function PersonalBibleStudy({ user, onReadingsChange }) {
     setActionError("");
   }
 
-  async function setReadingStatus(status) {
+  async function setReadingStatus(status, readingOverride = null) {
     if (saving || (status === "completed" && completionInFlightRef.current)) return;
-    const book = readerSelection.book;
-    const chapter = readerSelection.chapter;
+    const book = readingOverride?.book || readerSelection.book;
+    const chapter = readingOverride?.chapter ?? readerSelection.chapter;
     const existingToday = readings.find((row) => row.book === book && row.chapter === chapter && row.reading_date === today) || null;
-    const existing = existingToday
+    const existing = readingOverride || existingToday
       || (selectedReading && selectedReading.book === book && selectedReading.chapter === chapter && selectedReading.status !== "completed" ? selectedReading : null)
       || readings.find((row) => row.book === book && row.chapter === chapter && row.status !== "completed")
       || (selectedReading && selectedReading.book === book && selectedReading.chapter === chapter ? selectedReading : null)
@@ -446,7 +456,7 @@ export function PersonalBibleStudy({ user, onReadingsChange }) {
             <div className="personal-bible-plan-form-actions"><button type="submit" className="bible-btn primary" disabled={saving || Boolean(loadError)}>{saving ? "Saving…" : editingReadingId ? "Save chapter" : "Add to my plan"}</button>{editingReadingId ? <button type="button" className="bible-btn secondary" onClick={cancelReadingEdit} disabled={saving}>Cancel</button> : null}</div>
           </form>
           <div className="personal-bible-plan-list">
-            {orderedReadings.length ? orderedReadings.map((reading) => <div key={reading.id} className={`personal-bible-plan-row${selectedReadingId === reading.id ? " selected" : ""}`}><button type="button" className="personal-bible-plan-select" onClick={() => selectPlanReading(reading)}><span className="personal-bible-plan-mark" aria-hidden="true">{reading.status === "completed" ? "✓" : reading.status === "in_progress" ? "–" : "○"}</span><span><strong>{reading.book} {reading.chapter}</strong><small>{formatDate(reading.reading_date)}</small></span><StatusLabel status={reading.status} /></button>{reading.status !== "completed" ? <div className="personal-bible-plan-actions"><button type="button" onClick={() => beginEditReading(reading)} disabled={saving} aria-label={`Edit ${reading.book} ${reading.chapter} in your plan`}>Edit</button><button type="button" className="danger" onClick={() => void deletePlannedReading(reading)} disabled={saving} aria-label={`Remove ${reading.book} ${reading.chapter} from your plan`}>Remove</button></div> : null}</div>) : <p className="bible-muted">Your personal plan is empty. Add a chapter to begin.</p>}
+            {orderedReadings.length ? orderedReadings.map((reading) => <div key={reading.id} className={`personal-bible-plan-row${selectedReadingId === reading.id ? " selected" : ""}`}><button type="button" className="personal-bible-plan-select" onClick={() => selectPlanReading(reading)}><span className="personal-bible-plan-mark" aria-hidden="true">{reading.status === "completed" ? "✓" : reading.status === "in_progress" ? "–" : "○"}</span><span><strong>{reading.book} {reading.chapter}</strong><small>{formatDate(reading.reading_date)}</small></span><StatusLabel status={reading.status} /></button>{reading.status !== "completed" ? <div className="personal-bible-plan-actions"><button type="button" className="personal-bible-plan-mark-read" onClick={() => markPlanReadingAsRead(reading)} disabled={saving || !streakAvailable} aria-label={`Mark ${reading.book} ${reading.chapter} as read`}>Mark as Read</button><button type="button" onClick={() => beginEditReading(reading)} disabled={saving} aria-label={`Edit ${reading.book} ${reading.chapter} in your plan`}>Edit</button><button type="button" className="danger" onClick={() => void deletePlannedReading(reading)} disabled={saving} aria-label={`Remove ${reading.book} ${reading.chapter} from your plan`}>Remove</button></div> : null}</div>) : <p className="bible-muted">Your personal plan is empty. Add a chapter to begin.</p>}
           </div>
         </section>
 
@@ -503,7 +513,7 @@ export function PersonalBibleStudy({ user, onReadingsChange }) {
         startDisabled={readerCompletedToday}
         completeDisabled={readerCompletedToday || !streakAvailable}
         startLabel={readerInProgress ? "Continue Reading" : "Start Reading"}
-        completeLabel={readerCompletedToday ? "Completed today" : "Mark This Chapter Complete"}
+        completeLabel={readerCompletedToday ? "Completed today" : "Mark as Read"}
         readingProgress={stats.completionPercent}
         progressLabel={stats.totalCount ? `${stats.completedCount} of ${stats.totalCount} chapters complete` : "No planned chapters yet"}
         successMessage={readerNotice}
